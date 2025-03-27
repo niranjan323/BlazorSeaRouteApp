@@ -29,6 +29,12 @@
                 @if (selectedForm == 0)
                 {
                     <!-- Show Selection Options -->
+                    <div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
+                        <label class="cls_main_label">
+                            Select your calculation option below:
+                        </label>
+                    </div>
+                
                     <div class="calculation-options">
                         <div class="option-card" @onclick="() => ShowForm(1)">
                             <img src="reduction-factor.png" alt="Reduction Factor">
@@ -40,293 +46,196 @@
                         </div>
                     </div>
                 }
-                else if (selectedForm == 1)
+                @if (selectedForm == 1)
                 {
-                    <!-- Reduction Factor Form -->
+                    <!-- Back Button -->
                     <button class="back-btn" @onclick="GoBack">⬅ Back</button>
+
                     <div class="route_content">
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-
-                        <h3 class="route_content_heading">Customize Route</h3>
-
-                        <div class="content_div">
-                            <label class="content_div_label">Route Name</label>
-                            <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
-                        </div>
-                            </div>
-                        </div>
-
-                    <!-- Departure Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-
-
-                            <h4 class="route_content_heading1">Port of Departure</h4>
-                            <div class="content_div">
-
-                                <div class="cls_sub_heading">
-                                    <span class="content_div_label"> FRMRS</span>
-                                    <span class="content_div_label">Marselle,France</span>
-                     </div>
-
-                                <input type="text" class="content_div_input" @bind="routeModel.DepartureLocation" />
-                            </div>
-                            <div class="cls_btn_div">
-                                <button class="btn btn-outline-primary" @onclick="AddDeparturePort">+ Add Port</button>
-                                <button class="btn btn-outline-secondary" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                            </div>
-                            </div>
-
-                        </div>
-
-                    <!-- Dynamic Departure Ports -->
-                    @foreach (var port in routeModel.DeparturePorts)
-                    {
-                            <div class="content_div">
-                                <button class="btn btn-outline-danger" style="width:2%; margin-left:361px" @onclick="() => RemoveDeparturePort(port)">-</button>
-                                <span class="content_div_label">Port of Departure</span>
-                                <div class="cls_sub_heading">
-                                    <span class="content_div_label"> FRMRS</span>
-                                    <span class="content_div_label">Marselle,France</span>
-                                </div>
-                                <input type="text" class="content_div_input w-100" @bind="port.Location"  />
-                                <div class="cls_btn_div">
-                                    <button class="btn btn-outline-primary" @onclick="AddDeparturePort">+ Add Port</button>
-                                    <button class="btn btn-outline-secondary" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                </div>
-                           
-                        </div>
-                    }
-
-                    <!-- Dynamic Departure Waypoints -->
-                    @foreach (var waypoint in routeModel.DepartureWaypoints)
-                    {
-                        <div class="waypoint-card">
-                                <button class="btn btn-outline-danger" @onclick="() => RemoveDepartureWaypoint(waypoint)">-</button>
-                            <label>Waypoint Name:</label>
-                                <input type="text" class="content_div_input" @bind="waypoint.Name" />
-                                <div class="cls_btn_div">
-                                    <button class="btn btn-outline-primary" @onclick="AddDeparturePort">+ Add Port</button>
-                                    <button class="btn btn-outline-secondary" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                </div>
-                          
-                        </div>
-                    }
+                        <!-- Route Name Section -->
 
                         <div class="cls_route_div">
                             <div class="cls_route_div_rep">
-
-
-                    <!-- Arrival Section -->
-                            <h4 class="route_content_heading1">Port of Arrival</h4>
-                            <div class="content_div">
-                                <div class="cls_sub_heading">
-                                    <label class="content_div_label">SGSIN</label>
-                                    <label class="content_div_label">China</label>
-                                </div>
-
-                                <input type="text" class="content_div_input" @bind="routeModel.ArrivalLocation" />
-                            </div>
-
-                            <div class="cls_btn_div">
-                                <button class="btn btn-outline-primary" @onclick="AddArrivalPort">+ Add Port</button>
-                                <button class="btn btn-outline-secondary" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
-                            </div>
-
+                                <h3 class="route_content_heading">
+                                    <img src="group-92@1x.png" alt="Route Icon" class="icon" />
+                                    Customize Route
+                                </h3>
                             </div>
                         </div>
 
-                    <!-- Dynamic Arrival Ports -->
-                    @foreach (var port in routeModel.ArrivalPorts)
-                    {
-                        <div class="port-card">
-                            <h4>Port of Arrival</h4>
-                            <input type="text" class="form-control" @bind="port.Location" />
-                            <button class="btn btn-outline-danger" @onclick="() => RemoveArrivalPort(port)">- Remove Port</button>
-                        </div>
-                    }
 
-                    <!-- Dynamic Arrival Waypoints -->
-                    @foreach (var waypoint in routeModel.ArrivalWaypoints)
-                    {
-                        <div class="waypoint-card">
-                            <label>Waypoint Name:</label>
-                            <input type="text" class="form-control" @bind="waypoint.Name" />
-                            <button class="btn btn-outline-danger" @onclick="() => RemoveArrivalWaypoint(waypoint)">- Remove Waypoint</button>
-                        </div>
-                    }
-                        <div class="content_div" style="align-items:center;">
-                            <button class="btn btn-primary ">Calculate Route Reduction Factor</button>
-
-                    </div>
-
-                    </div>
-                }
-                else if (selectedForm == 2)
-                {
-                    <!-- Limited Short Voyage Form -->
-                    <button class="back-btn" @onclick="GoBack">⬅ Back</button>
-                    <div class="route_content">
                         <div class="cls_route_div">
                             <div class="cls_route_div_rep">
-                                <h3 class="route_content_heading">Limited Short Voyage Reduction Factor</h3>
-                                <div class="content_div margin_top_12px">
-                                    <p>This reduction is based on the LSV calculation criteria and the reduced Course can sailing Program.</p>
-                                    <p>The maximum value of the Short Voyage Reduction Factor is 0.25 and need to be rounded to 3 digits after the decimal point.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Vessel Details Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Vessel Details</h4>
+                                
                                 <div class="content_div">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Vessel Name</span>
-                                        <span class="content_div_label">Vessel IMO</span>
-                                        <span class="content_div_label">Dwt/GT (mt)</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="100,000" />
-                                    </div>
+                                    <label class="content_div_label">Route Name</label>
+                                    <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Port of Departure Section -->
+                        <!-- Departure Section -->
                         <div class="cls_route_div">
                             <div class="cls_route_div_rep">
                                 <h4 class="route_content_heading1">Port of Departure</h4>
-                                <div class="content_div">
+
+                                    <!-- Static Display for First Time -->
                                     <div class="cls_sub_heading">
-                                        <span class="content_div_label">NLRTM</span>
-                                        <span class="content_div_label">Rotterdam, Netherlands</span>
+                                    <span class="content_div_label_blue">FRMRS</span>
+                                        <span class="content_div_label">Marseille, France</span>
                                     </div>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.DeparturePort" />
-                                        <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                    </div>
-                                </div>
-                                <div class="content_div margin_top_12px">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Date of Departure</span>
-                                        <span class="content_div_label">Estimated Time of Departure</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="date" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="time" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                    </div>
+                               @*  <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
+                                <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-484@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" />
+
+                                <!-- Add Port Button -->
+                                <div class="cls_btn_div">
+                                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Port of Arrival Section -->
+
+                        <!-- Dynamic Departure Ports Section -->
+                        @foreach (var port in routeModel.DeparturePorts)
+                        {
+                            <div class="cls_route_div port-card">
+                                <div class="cls_route_div_rep">
+
+                                <div class="cls_sub_heading">
+                                    <span class="content_div_label">Port of Departure</span>
+                                   @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
+                                        <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveArrivalPort(port)" />
+
+                                </div>
+
+                                    <div class="cls_sub_heading">
+                                    <span class="content_div_label">@port.Port?.Unlocode</span>
+                                        <span class="content_div_label_blue">@port.Port?.Name  @port.Port?.Country</span>
+                                </div>
+
+                                <!-- Port Search Section -->
+                                <div class="port-search-container">
+                                    <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                                           @bind="port.SearchTerm"
+                                           @bind:event="oninput"
+                                           @onkeyup="() => SearchDeparturePortsForExisting(port)"
+                                           placeholder="Search ports..." />
+                                    @if (port.SearchResults.Any())
+                                    {
+                                        <div class="search-results">
+                                            @foreach (var result in port.SearchResults)
+                                            {
+                                                <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
+                                                    <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <div class="cls_btn_div">
+                                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                                </div>
+                            </div>
+                            </div>
+
+                        }
+
+
+                        <!-- Dynamic Departure Waypoints -->
+                        @foreach (var waypoint in routeModel.DepartureWaypoints)
+                        {
+                            <div class="waypoint-card">
+                          
+                                <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveDepartureWaypoint(waypoint)" />
+                                <label>Waypoint Name:</label>
+                                <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" @bind="waypoint.Name" />
+                            </div>
+                        }
+
+                        <!-- Arrival Section -->
                         <div class="cls_route_div">
                             <div class="cls_route_div_rep">
                                 <h4 class="route_content_heading1">Port of Arrival</h4>
-                                <div class="content_div">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">GBLON</span>
-                                        <span class="content_div_label">London, UK</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.ArrivalPort" />
-                                        <button class="btn btn-outline-danger" style="height: 37px; font-size: 12px;">×</button>
-                                    </div>
+
+                                <!-- Static Display for First Time -->
+                                <div class="cls_sub_heading">
+                                    <span class="content_div_label_blue">SGSIN</span>
+                                    <span class="content_div_label">Singapore</span>
                                 </div>
-                                <div class="content_div margin_top_12px">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Date of Arrival</span>
-                                        <span class="content_div_label">Estimated time of Arrival</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="date" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="time" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                    </div>
+                                @* <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
+                                <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-424-7@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" />
+                                <!-- Add Port Button -->
+                                <div class="cls_btn_div">
+                                    <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                                    <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Distance Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Distance (nm)</h4>
-                                <div class="content_div">
-                                    <input type="number" class="content_div_input" @bind="voyageModel.Distance" placeholder="120" />
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Dynamic Arrival Ports Section -->
+                        @foreach (var port in routeModel.ArrivalPorts)
+                        {
+                            <div class="cls_route_div port-card">
+                                <div class="cls_sub_heading">
+                                    <span class="content_div_label">Port of Arrival</span>
+                                   @*  <button class="cls_button_light btn-small" @onclick="() => RemoveArrivalPort(port)">-</button> *@
+                                    <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveArrivalPort(port)" />
 
-                        <!-- Weather Forecast Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Weather Forecast</h4>
-                                <div class="content_div">
-                                    <span class="content_div_label">Sea State</span>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.SeaState" placeholder="4" />
-                                        <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                    </div>
                                 </div>
-                                <div class="content_div margin_top_12px">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Wind Speed</span>
-                                        <span class="content_div_label">Wave Height</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="number" class="content_div_input" style="flex: 1;" @bind="voyageModel.WindSpeed" placeholder="16" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+
+                                <div class="content_div">
+                                    <span class="content_div_label">@port.Port?.Unlocode</span>
+                                    <span class="content_div_label">@port.Port?.Name, @port.Port?.Country</span>
+                                </div>
+
+                                <!-- Port Search Section -->
+                                <div class="port-search-container">
+                                    <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                                           value="@port.Port?.Name"
+                                           @oninput="e => port.SearchTerm = e.Value.ToString()"
+                                           @onkeyup="() => SearchArrivalPortsForExisting(port)"
+                                           placeholder="Search ports..." />
+
+                                    @if (port.SearchResults.Any())
+                                    {
+                                        <div class="search-results">
+                                            @foreach (var result in port.SearchResults)
+                                            {
+                                                <div class="search-result-item" @onclick="() => UpdateArrivalPort(port, result)">
+                                                    <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                                </div>
+                                            }
                                         </div>
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="number" class="content_div_input" style="flex: 1;" @bind="voyageModel.WaveHeight" placeholder="2.0" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                    </div>
+                                    }
                                 </div>
                             </div>
-                        </div>
+                        }
 
-                        <!-- Forecast Maximum Significant Wave Height Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Forecast Maximum Significant Wave Height</h4>
-                                <div class="content_div">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Period (m)</span>
-                                        <span class="content_div_label">Wavelength</span>
-                                        <span class="content_div_label">Height (m)</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="12" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="100" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="2.4" />
-                                    </div>
-                                </div>
+                        <!-- Dynamic Arrival Waypoints -->
+                        @foreach (var waypoint in routeModel.ArrivalWaypoints)
+                        {
+                            <div class="waypoint-card">
+                            
+                                <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveArrivalWaypoint(waypoint)" />
+                                <label>Waypoint Name:</label>
+                                <input type="text" class="content_div_input cls_margin_top_6px" @bind="waypoint.Name" />
                             </div>
-                        </div>
+                        }
 
-                        <!-- Button Section -->
-                        <div class="content_div" style="align-items:center; margin-top: 15px;">
-                            <button class="btn btn-primary">Calculate Limited Short Voyage</button>
+                        <div class="flex-row-2">
+                            <div class="calculate_route_reduction_factor">
+                                <span>Calculate Route Reduction Factor</span>
+                            </div>
                         </div>
                     </div>
+                }
+
+                else if (selectedForm == 2)
+                {
+                    <!-- Limited Short Voyage Form -->
+                    <!-- implement later-->
                 }
             }
             else if (selectedTab == 2)
@@ -337,26 +246,22 @@
     </div>
 </div>
 
-@code {
+@code {  
     private int selectedTab = 1;
     private int selectedForm = 0;
-    private RouteModel routeModel = new();
-    private VoyageModel voyageModel = new();
 
     private void SelectTab(int tab) => selectedTab = tab;
     private void CloseOverlay() { /* Logic to hide overlay */ }
     private void ShowForm(int option) => selectedForm = option;
     private void GoBack() => selectedForm = 0;
+    private List<PortModel> _ports;
 
-    private void AddDeparturePort() => routeModel.DeparturePorts.Add(new PortModel());
-    private void AddArrivalPort() => routeModel.ArrivalPorts.Add(new PortModel());
-    private void AddDepartureWaypoint() => routeModel.DepartureWaypoints.Add(new WaypointModel());
-    private void AddArrivalWaypoint() => routeModel.ArrivalWaypoints.Add(new WaypointModel());
+    protected async override Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+        await GetSampleports();
+    }
 
-    private void RemoveDeparturePort(PortModel port) => routeModel.DeparturePorts.Remove(port);
-    private void RemoveArrivalPort(PortModel port) => routeModel.ArrivalPorts.Remove(port);
-    private void RemoveDepartureWaypoint(WaypointModel waypoint) => routeModel.DepartureWaypoints.Remove(waypoint);
-    private void RemoveArrivalWaypoint(WaypointModel waypoint) => routeModel.ArrivalWaypoints.Remove(waypoint);
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -369,36 +274,206 @@
             // }
         }
     }
+    private RouteModel routeModel = new RouteModel();
+    private string departureSearchTerm = string.Empty;
+    private string arrivalSearchTerm = string.Empty;
+    private List<PortModel> departureSearchResults = new List<PortModel>();
+    private List<PortModel> arrivalSearchResults = new List<PortModel>();
+
+    private void SearchDeparturePorts()
+    {
+        departureSearchResults = SearchPorts(departureSearchTerm);
+    }
+
+    private void SearchArrivalPorts()
+    {
+        arrivalSearchResults = SearchPorts(arrivalSearchTerm);
+    }
+
+    private void SelectDeparturePort(PortModel port)
+    {
+        var portSelection = new PortSelectionModel { Port = port };
+        routeModel.DeparturePorts.Add(portSelection);
+        departureSearchTerm = string.Empty;
+        departureSearchResults.Clear();
+    }
+
+    private void SelectArrivalPort(PortModel port)
+    {
+        var portSelection = new PortSelectionModel { Port = port };
+        routeModel.ArrivalPorts.Add(portSelection);
+        arrivalSearchTerm = string.Empty;
+        arrivalSearchResults.Clear();
+    }
+
+    private void SearchDeparturePortsForExisting(PortSelectionModel portSelection)
+    {
+        if (portSelection?.SearchTerm == null || _ports == null)
+        {
+            return;
+        }
+        portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+    }
+
+    private void SearchArrivalPortsForExisting(PortSelectionModel portSelection)
+    {
+        if (portSelection?.SearchTerm == null || _ports == null)
+        {
+            return;
+        }
+        portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+    }
+
+    private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
+    {
+        portSelection.Port = newPort;
+        portSelection.SearchTerm = newPort.Name;
+        portSelection.SearchResults.Clear();
+    }
+
+    private void UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
+    {
+        portSelection.Port = newPort;
+        portSelection.SearchTerm = newPort.Name;
+        portSelection.SearchResults.Clear();
+    }
+
+    private void AddDeparturePort()
+    {
+        routeModel.DeparturePorts.Add(new PortSelectionModel());
+    }
+
+    private void AddArrivalPort()
+    {
+        routeModel.ArrivalPorts.Add(new PortSelectionModel());
+    }
+
+    private void RemoveDeparturePort(PortSelectionModel port)
+    {
+        routeModel.DeparturePorts.Remove(port);
+    }
+
+    private void RemoveArrivalPort(PortSelectionModel port)
+    {
+        routeModel.ArrivalPorts.Remove(port);
+    }
+
+    private void AddDepartureWaypoint()
+    {
+        routeModel.DepartureWaypoints.Add(new WaypointModel());
+    }
+
+    private void AddArrivalWaypoint()
+    {
+        routeModel.ArrivalWaypoints.Add(new WaypointModel());
+    }
+
+    private void RemoveDepartureWaypoint(WaypointModel waypoint)
+    {
+        routeModel.DepartureWaypoints.Remove(waypoint);
+    }
+
+    private void RemoveArrivalWaypoint(WaypointModel waypoint)
+    {
+        routeModel.ArrivalWaypoints.Remove(waypoint);
+    }
+
+    private void CalculateRouteReductionFactor()
+    {
+        // Placeholder for route reduction factor calculation
+        Console.WriteLine("Calculating Route Reduction Factor...");
+    }
+
+
     public class RouteModel
     {
-        public string RouteName { get; set; } = "";
-        public string DepartureCode { get; set; } = "";
-        public string DepartureLocation { get; set; } = "";
-        public string ArrivalCode { get; set; } = "";
-        public string ArrivalLocation { get; set; } = "";
-        public List<PortModel> DeparturePorts { get; set; } = new();
-        public List<PortModel> ArrivalPorts { get; set; } = new();
-        public List<WaypointModel> DepartureWaypoints { get; set; } = new();
-        public List<WaypointModel> ArrivalWaypoints { get; set; } = new();
+        public string RouteName { get; set; } = string.Empty;
+        public string DepartureLocation { get; set; } = string.Empty;
+        public string ArrivalLocation { get; set; } = string.Empty;
+        public List<PortSelectionModel> DeparturePorts { get; set; } = new List<PortSelectionModel>();
+        public List<PortSelectionModel> ArrivalPorts { get; set; } = new List<PortSelectionModel>();
+        public List<WaypointModel> DepartureWaypoints { get; set; } = new List<WaypointModel>();
+        public List<WaypointModel> ArrivalWaypoints { get; set; } = new List<WaypointModel>();
     }
-    public class VoyageModel
+
+    public class PortSelectionModel
     {
-        public string DeparturePort { get; set; } = "";
-        public string ArrivalPort { get; set; } = "";
-        public int Distance { get; set; }
-        public string SeaState { get; set; } = "";
-        public int WindSpeed { get; set; }
-        public int WaveHeight { get; set; }
+        public PortModel? Port { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public List<PortModel> SearchResults { get; set; } = new List<PortModel>();
     }
 
     public class PortModel
     {
-        public string Code { get; set; } = "";
-        public string Location { get; set; } = "";
+        public int Legacy_Place_Id { get; set; }
+        public string Port_Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Country_Id { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string Country_Code { get; set; } = string.Empty;
+        public string Admiralty_Chart { get; set; } = string.Empty;
+        public string Unlocode { get; set; } = string.Empty;
+        public string Principal_Facilities { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public string Port_Authority { get; set; } = string.Empty;
+        public DateTime Last_Updated { get; set; }
     }
 
     public class WaypointModel
     {
-        public string Name { get; set; } = "";
+        public string Name { get; set; } = string.Empty;
     }
+
+    protected async Task GetSampleports()
+    {
+        _ports = new List<PortModel>
+{
+new PortModel
+{
+Legacy_Place_Id = 5000,
+Port_Id = "POR-03000",
+Name = "Marseille",
+Country = "France",
+Country_Code = "FRA",
+Unlocode = "FRMRS",
+Latitude = 43.2965,
+Longitude = 5.3698
+},
+new PortModel
+{
+Legacy_Place_Id = 5001,
+Port_Id = "POR-03001",
+Name = "Singapore",
+Country = "Singapore",
+Country_Code = "SGP",
+Unlocode = "SGSIN",
+Latitude = 1.3521,
+Longitude = 103.8198
+},
+// Add more sample ports as needed
+};
+
+    }
+
+
+
+    public List<PortModel> SearchPorts(string searchTerm)
+    {
+
+        if (string.IsNullOrWhiteSpace(searchTerm) || _ports == null)
+        {
+            departureSearchResults.Clear();
+            return [] ;
+        }
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return new List<PortModel>();
+
+        return _ports.Where(p =>
+        p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+        p.Country.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+        p.Unlocode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+    }
+
 }
