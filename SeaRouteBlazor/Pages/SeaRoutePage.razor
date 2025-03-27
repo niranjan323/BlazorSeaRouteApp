@@ -105,7 +105,7 @@
                                 <div class="cls_sub_heading">
                                     <span class="content_div_label">Port of Departure</span>
                                    @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
-                                        <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveArrivalPort(port)" />
+                                        <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveDeparturePort(port)" />
 
                                 </div>
 
@@ -235,7 +235,167 @@
                 else if (selectedForm == 2)
                 {
                     <!-- Limited Short Voyage Form -->
-                    <!-- implement later-->
+                    <button class="back-btn" @onclick="GoBack">⬅ Back</button>
+                    <div class="route_content">
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h3 class="route_content_heading">Limited Short Voyage Reduction Factor</h3>
+                                <div class="content_div margin_top_12px">
+                                    <p>This reduction is based on the LSV calculation criteria and the reduced Course can sailing Program.</p>
+                                    <p>The maximum value of the Short Voyage Reduction Factor is 0.25 and need to be rounded to 3 digits after the decimal point.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vessel Details Section -->
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h4 class="route_content_heading1">Vessel Details</h4>
+                                <div class="content_div">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">Vessel Name</span>
+                                        <span class="content_div_label">Vessel IMO</span>
+                                        <span class="content_div_label">Dwt/GT (mt)</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" />
+                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" />
+                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="100,000" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Port of Departure Section -->
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h4 class="route_content_heading1">Port of Departure</h4>
+                                <div class="content_div">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">NLRTM</span>
+                                        <span class="content_div_label">Rotterdam, Netherlands</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.DeparturePort" />
+                                        <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                    </div>
+                                </div>
+                                <div class="content_div margin_top_12px">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">Date of Departure</span>
+                                        <span class="content_div_label">Estimated Time of Departure</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <div style="display: flex; gap: 8px; flex: 1;">
+                                            <input type="date" class="content_div_input" style="flex: 1;" />
+                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; flex: 1;">
+                                            <input type="time" class="content_div_input" style="flex: 1;" />
+                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Port of Arrival Section -->
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h4 class="route_content_heading1">Port of Arrival</h4>
+                                <div class="content_div">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">GBLON</span>
+                                        <span class="content_div_label">London, UK</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.ArrivalPort" />
+                                        <button class="btn btn-outline-danger" style="height: 37px; font-size: 12px;">×</button>
+                                    </div>
+                                </div>
+                                <div class="content_div margin_top_12px">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">Date of Arrival</span>
+                                        <span class="content_div_label">Estimated time of Arrival</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <div style="display: flex; gap: 8px; flex: 1;">
+                                            <input type="date" class="content_div_input" style="flex: 1;" />
+                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; flex: 1;">
+                                            <input type="time" class="content_div_input" style="flex: 1;" />
+                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Distance Section -->
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h4 class="route_content_heading1">Distance (nm)</h4>
+                                <div class="content_div">
+                                    <input type="number" class="content_div_input" @bind="voyageModel.Distance" placeholder="120" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weather Forecast Section -->
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h4 class="route_content_heading1">Weather Forecast</h4>
+                                <div class="content_div">
+                                    <span class="content_div_label">Sea State</span>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.SeaState" placeholder="4" />
+                                        <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                    </div>
+                                </div>
+                                <div class="content_div margin_top_12px">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">Wind Speed</span>
+                                        <span class="content_div_label">Wave Height</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <div style="display: flex; gap: 8px; flex: 1;">
+                                            <input type="number" class="content_div_input" style="flex: 1;" @bind="voyageModel.WindSpeed" placeholder="16" />
+                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; flex: 1;">
+                                            <input type="number" class="content_div_input" style="flex: 1;" @bind="voyageModel.WaveHeight" placeholder="2.0" />
+                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Forecast Maximum Significant Wave Height Section -->
+                        <div class="cls_route_div">
+                            <div class="cls_route_div_rep">
+                                <h4 class="route_content_heading1">Forecast Maximum Significant Wave Height</h4>
+                                <div class="content_div">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">Period (m)</span>
+                                        <span class="content_div_label">Wavelength</span>
+                                        <span class="content_div_label">Height (m)</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="12" />
+                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="100" />
+                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="2.4" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Button Section -->
+                        <div class="content_div" style="align-items:center; margin-top: 15px;">
+                            <button class="btn btn-primary">Calculate Limited Short Voyage</button>
+                        </div>
+                    </div>
                 }
             }
             else if (selectedTab == 2)
@@ -255,6 +415,7 @@
     private void ShowForm(int option) => selectedForm = option;
     private void GoBack() => selectedForm = 0;
     private List<PortModel> _ports;
+    private VoyageModel voyageModel = new();
 
     protected async override Task OnInitializedAsync()
     {
@@ -476,4 +637,13 @@ Longitude = 103.8198
         ).ToList();
     }
 
+    public class VoyageModel
+    {
+        public string DeparturePort { get; set; } = "";
+        public string ArrivalPort { get; set; } = "";
+        public int Distance { get; set; }
+        public string SeaState { get; set; } = "";
+        public int WindSpeed { get; set; }
+        public int WaveHeight { get; set; }
+    }
 }
