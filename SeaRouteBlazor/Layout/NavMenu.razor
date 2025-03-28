@@ -1,13 +1,71 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">SeaRouteBlazor</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+﻿@inject NavigationManager NavigationManager
+
+<div class="nav-menu">
+    <div class="nav-items">
+        <!-- Home -->
+        <div class="nav-item active">
+            <button class="nav-button" @onclick='() => NavigationManager.NavigateTo("/")'>
+                <img src="home-selected@1x.png" alt="Home" class="nav-icon" />
+            </button>
+            <span class="nav-label">Home</span>
+        </div>
+
+        <!-- Routes -->
+        <div class="nav-item">
+            <button class="nav-button" @onclick='() => NavigationManager.NavigateTo("/counterddd")'>
+                <img src="my-routes-selected-1@1x.png" alt="Routes" class="nav-icon" />
+            </button>
+            <span class="nav-label">My Routes</span>
+        </div>
+
+        <!-- Location -->
+        <div class="nav-item">
+            <button class="nav-button" @onclick='() => NavigationManager.NavigateTo("/weather")'>
+                <img src="path-7508-1@1x.png" alt="Location" class="nav-icon" />
+            </button>
+            <span class="nav-label">Reports</span>
+        </div>
     </div>
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+
+
+
+
+
+
+
+
+
+@* <div class="nav-menu">
+    <div class="nav-items">
+        <div class="nav-item active">
+            <button class="nav-button">
+                <i class="nav-icon home-icon"></i>
+            </button>
+        </div>
+
+        <div class="nav-item">
+            <button class="nav-button">
+                <i class="nav-icon routes-icon"></i>
+            </button>
+        </div>
+
+        <div class="nav-item">
+            <button class="nav-button">
+                <i class="nav-icon location-icon"></i>
+            </button>
+        </div>
+    </div>
+</div>
+ *@
+
+
+
+
+
+
+@* <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -16,12 +74,12 @@
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span>my Routes
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> reports
             </NavLink>
         </div>
     </nav>
@@ -36,4 +94,5 @@
     {
         collapseNavMenu = !collapseNavMenu;
     }
-}
+} *@
+

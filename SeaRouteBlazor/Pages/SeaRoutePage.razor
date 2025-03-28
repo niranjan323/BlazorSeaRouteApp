@@ -49,6 +49,8 @@
                 @if (selectedForm == 1)
                 {
                     <!-- Back Button -->
+                    @* <button class="back-btn" @onclick="GoBack">⬅ Back</button> *@
+
                     <button class="back-btn" @onclick="GoBack">⬅ Back</button>
 
                     <div class="route_content">
@@ -56,19 +58,21 @@
 
                         <div class="cls_route_div">
                             <div class="cls_route_div_rep">
-                                <h3 class="route_content_heading">
+                                <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
                                     <img src="group-92@1x.png" alt="Route Icon" class="icon" />
-                                    Customize Route
-                                </h3>
+                                    <h3 class="route_content_heading">
+                                        Customize Route
+                                    </h3>
+                                </div>
                             </div>
                         </div>
 
 
                         <div class="cls_route_div">
                             <div class="cls_route_div_rep">
-                                
+
                                 <div class="content_div">
-                                    <label class="content_div_label">Route Name</label>
+                                    <label class="content_div_label1">Route Name</label>
                                     <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
                                 </div>
                             </div>
@@ -79,13 +83,17 @@
                             <div class="cls_route_div_rep">
                                 <h4 class="route_content_heading1">Port of Departure</h4>
 
-                                    <!-- Static Display for First Time -->
-                                    <div class="cls_sub_heading">
+                                <!-- Static Display for First Time -->
+                                <div class="cls_sub_heading">
                                     <span class="content_div_label_blue">FRMRS</span>
-                                        <span class="content_div_label">Marseille, France</span>
-                                    </div>
-                               @*  <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
-                                <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-484@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" />
+                                    <span class="content_div_label">Marseille, France</span>
+                                </div>
+                                @*  <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
+                                <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
+                                    <input type="text" class=" " value="Marseille" placeholder="Enter route name" />
+                                    <img src="./path-484@1x.png" class="icon" />
+                                </div>
+
 
                                 <!-- Add Port Button -->
                                 <div class="cls_btn_div">
@@ -100,44 +108,53 @@
                         @foreach (var port in routeModel.DeparturePorts)
                         {
                             <div class="cls_route_div port-card">
+
                                 <div class="cls_route_div_rep">
-
-                                <div class="cls_sub_heading">
-                                    <span class="content_div_label">Port of Departure</span>
-                                   @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
-                                        <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveDeparturePort(port)" />
-
-                                </div>
+                                    <h4 class="route_content_heading1">landing port1</h4>
 
                                     <div class="cls_sub_heading">
-                                    <span class="content_div_label">@port.Port?.Unlocode</span>
-                                        <span class="content_div_label_blue">@port.Port?.Name  @port.Port?.Country</span>
-                                </div>
+                                        <span class="content_div_label_blue">FRMRS</span>
 
-                                <!-- Port Search Section -->
-                                <div class="port-search-container">
-                                    <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                           @bind="port.SearchTerm"
-                                           @bind:event="oninput"
-                                           @onkeyup="() => SearchDeparturePortsForExisting(port)"
-                                           placeholder="Search ports..." />
-                                    @if (port.SearchResults.Any())
-                                    {
-                                        <div class="search-results">
-                                            @foreach (var result in port.SearchResults)
-                                            {
-                                                <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
-                                                    <span>@result.Name, @result.Country (@result.Unlocode)</span>
-                                                </div>
-                                            }
+                                        <div class="cls_flex cls_flex_gap_8px">
+                                            <span class="content_div_label">Port of Departure</span>
+                                            @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
+                                            @* <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveDeparturePort(port)" /> *@
+                                            <div class="cls_btn_minimize" @onclick="() => RemoveDeparturePort(port)">
+                                                <div class="cls_btn_minimize_div"></div>
+                                            </div>
                                         </div>
-                                    }
+
+                                    </div>
+
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">@port.Port?.Unlocode</span>
+                                        <span class="content_div_label_blue">@port.Port?.Name  @port.Port?.Country</span>
+                                    </div>
+
+                                    <!-- Port Search Section -->
+                                    <div class="port-search-container">
+                                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                                               @bind="port.SearchTerm"
+                                               @bind:event="oninput"
+                                               @onkeyup="() => SearchDeparturePortsForExisting(port)"
+                                               placeholder="Search ports..." />
+                                        @if (port.SearchResults.Any())
+                                        {
+                                            <div class="search-results">
+                                                @foreach (var result in port.SearchResults)
+                                                {
+                                                    <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
+                                                        <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="cls_btn_div">
+                                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                                    </div>
                                 </div>
-                                <div class="cls_btn_div">
-                                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                </div>
-                            </div>
                             </div>
 
                         }
@@ -146,12 +163,43 @@
                         <!-- Dynamic Departure Waypoints -->
                         @foreach (var waypoint in routeModel.DepartureWaypoints)
                         {
-                            <div class="waypoint-card">
-                          
-                                <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveDepartureWaypoint(waypoint)" />
+                            <div class="cls_route_div">
+                                <div class="cls_route_div_rep">
+                                   
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label_blue">FRMRS</span>
+
+                                        <div class="cls_flex cls_flex_gap_8px">
+                                            <span class="content_div_label">Port of Departure</span>
+                                            <div class="cls_btn_minimize">
+                                                <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
+
+                                        <label class="content_div_label">Latitude:</label>
+                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Latitude" placeholder="Latitude" />
+
+                                        <label class="content_div_label">Longitude:</label>
+                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Longitude" placeholder="Longitude" />
+
+                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; height: 20px;" />
+
+                                    </div>
+                                    <div class="cls_btn_div">
+                                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                                    </div>
+                                    @*       <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveDepartureWaypoint(waypoint)" />
                                 <label>Waypoint Name:</label>
                                 <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" @bind="waypoint.Name" />
+                           *@  
+                                   </div>
                             </div>
+
                         }
 
                         <!-- Arrival Section -->
@@ -165,7 +213,14 @@
                                     <span class="content_div_label">Singapore</span>
                                 </div>
                                 @* <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
-                                <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-424-7@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" />
+                                @* <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-424-7@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" /> *@
+
+                                <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
+                                    <input type="text" class="" value="Marseille" placeholder="Enter route name" />
+                                    <img src="./path-424-7@1x.png" alt="Alternate Text" />
+
+                                </div>
+
                                 <!-- Add Port Button -->
                                 <div class="cls_btn_div">
                                     <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
@@ -178,219 +233,412 @@
                         @foreach (var port in routeModel.ArrivalPorts)
                         {
                             <div class="cls_route_div port-card">
-                                <div class="cls_sub_heading">
-                                    <span class="content_div_label">Port of Arrival</span>
-                                   @*  <button class="cls_button_light btn-small" @onclick="() => RemoveArrivalPort(port)">-</button> *@
-                                    <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveArrivalPort(port)" />
 
-                                </div>
+                                <div class="cls_route_div_rep">
+                                    <!--!--><h4 class="route_content_heading1">landing port1</h4>
 
-                                <div class="content_div">
-                                    <span class="content_div_label">@port.Port?.Unlocode</span>
-                                    <span class="content_div_label">@port.Port?.Name, @port.Port?.Country</span>
-                                </div>
+                                    <!--!--><div class="cls_sub_heading">
+                                        <span class="content_div_label_blue">FRMRS</span>
 
-                                <!-- Port Search Section -->
-                                <div class="port-search-container">
-                                    <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                           value="@port.Port?.Name"
-                                           @oninput="e => port.SearchTerm = e.Value.ToString()"
-                                           @onkeyup="() => SearchArrivalPortsForExisting(port)"
-                                           placeholder="Search ports..." />
-
-                                    @if (port.SearchResults.Any())
-                                    {
-                                        <div class="search-results">
-                                            @foreach (var result in port.SearchResults)
-                                            {
-                                                <div class="search-result-item" @onclick="() => UpdateArrivalPort(port, result)">
-                                                    <span>@result.Name, @result.Country (@result.Unlocode)</span>
-                                                </div>
-                                            }
+                                        <div class="cls_flex cls_flex_gap_8px">
+                                            <span class="content_div_label">Port of Departure</span>
+                                            <div class="cls_btn_minimize" @onclick="() => RemoveArrivalPort(port)"><div class="cls_btn_minimize_div"></div></div>
                                         </div>
-                                    }
+                                    </div>
+
+
+
+                                    <div class="content_div">
+                                        <span class="content_div_label">@port.Port?.Unlocode</span>
+                                        <span class="content_div_label">@port.Port?.Name, @port.Port?.Country</span>
+                                    </div>
+
+                                    <!-- Port Search Section -->
+                                    <div class="port-search-container">
+                                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                                               value="@port.Port?.Name"
+                                               @oninput="e => port.SearchTerm = e.Value.ToString()"
+                                               @onkeyup="() => SearchArrivalPortsForExisting(port)"
+                                               placeholder="Search ports..." />
+
+                                        @if (port.SearchResults.Any())
+                                        {
+                                            <div class="search-results">
+                                                @foreach (var result in port.SearchResults)
+                                                {
+                                                    <div class="search-result-item" @onclick="() => UpdateArrivalPort(port, result)">
+                                                        <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
+
+
                             </div>
                         }
 
                         <!-- Dynamic Arrival Waypoints -->
                         @foreach (var waypoint in routeModel.ArrivalWaypoints)
                         {
-                            <div class="waypoint-card">
-                            
+
+                            <div class="cls_route_div">
+                                <div class="cls_route_div_rep">
+                                  
+                                    
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label_blue">FRMRS</span>
+
+                                        <div class="cls_flex cls_flex_gap_8px">
+                                            <span class="content_div_label">Port of Departure</span>
+                                            <div class="cls_btn_minimize" @onclick="() => RemoveArrivalWaypoint(waypoint)">
+                                                <div class="cls_btn_minimize_div"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
+
+                                        <label class="content_div_label">Latitude:</label>
+                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Latitude" placeholder="Latitude" />
+
+                                        <label class="content_div_label">Longitude:</label>
+                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Longitude" placeholder="Longitude" />
+
+                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; height: 20px;" />
+
+                                    </div>
+
+                                    <div class="cls_btn_div">
+                                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                                    </div>
+
+
+
+                                </div>
+                            </div>
+
+                            @*     <div class="waypoint-card">
+
                                 <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveArrivalWaypoint(waypoint)" />
                                 <label>Waypoint Name:</label>
                                 <input type="text" class="content_div_input cls_margin_top_6px" @bind="waypoint.Name" />
-                            </div>
+                            </div> *@
                         }
 
-                        <div class="flex-row-2">
+                        @*     <div class="flex-row-2">
                             <div class="calculate_route_reduction_factor">
                                 <span>Calculate Route Reduction Factor</span>
                             </div>
+                        </div> *@
+
+                        <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
+                            <button class="cls_button_blue">Calculate Route Reduction Factor</button>
                         </div>
                     </div>
                 }
 
                 else if (selectedForm == 2)
                 {
-                    <!-- Limited Short Voyage Form -->
                     <button class="back-btn" @onclick="GoBack">⬅ Back</button>
-                    <div class="route_content">
-                        <div class="cls_route_div">
+
+                    <div class="cls_block">
+                        <div class="route_content">
                             <div class="cls_route_div_rep">
-                                <h3 class="route_content_heading">Limited Short Voyage Reduction Factor</h3>
-                                <div class="content_div margin_top_12px">
-                                    <p>This reduction is based on the LSV calculation criteria and the reduced Course can sailing Program.</p>
-                                    <p>The maximum value of the Short Voyage Reduction Factor is 0.25 and need to be rounded to 3 digits after the decimal point.</p>
+                                <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                                    <img src="group-92@1x.png" alt="Route Icon" class="icon">
+                                    <h3 class="route_content_heading">
+                                        Limited Short Voyage Reduction Factor
+                                    </h3>
                                 </div>
                             </div>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_padding_14px_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Vessel Name</span>
+                                    <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" />
+
+                                </div>
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <span class="content_div_label">Vessel IMO</span>
+                                    <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" />
+
+                                </div>
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <label class="content_div_label">Vessel Details</label>
+                                    <input type="text" class="content_div_input" style="flex: 1;" placeholder="100,000" />
+
+                                </div>
+                            </div>
+
                         </div>
 
                         <!-- Vessel Details Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Vessel Details</h4>
-                                <div class="content_div">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Vessel Name</span>
-                                        <span class="content_div_label">Vessel IMO</span>
-                                        <span class="content_div_label">Dwt/GT (mt)</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="100,000" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Port of Departure Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Port of Departure</h4>
-                                <div class="content_div">
+
+
+                        <div class="route_content cls_padding_14px_22px cls_flex_gap_8px">
+
+                            <h3 class="route_content_heading cls_mar_btm_8px">
+                                Port of Departure
+                            </h3>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
                                     <div class="cls_sub_heading">
-                                        <span class="content_div_label">NLRTM</span>
+                                        <span class="content_div_label_blue">NLRTM</span>
                                         <span class="content_div_label">Rotterdam, Netherlands</span>
                                     </div>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.DeparturePort" />
-                                        <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+
+
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" ">
+                                        <img src="./path-484@1x.png" class="icon">
                                     </div>
+
                                 </div>
-                                <div class="content_div margin_top_12px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <span class="content_div_label">Date of Departure</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+
+                                </div>
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <label class="content_div_label">Estimated Time of Departure</label>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <h3 class="route_content_heading ">
+                                        Port of Arrival
+                                    </h3>
                                     <div class="cls_sub_heading">
-                                        <span class="content_div_label">Date of Departure</span>
-                                        <span class="content_div_label">Estimated Time of Departure</span>
+                                        <span class="content_div_label_blue">GBDBL</span>
+                                        <span class="content_div_label">Bangor, The United Kingdom</span>
                                     </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="date" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="time" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
+
+
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" ">
+                                        <img src="./path-484@1x.png" class="icon">
                                     </div>
+
                                 </div>
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <span class="content_div_label">Date of Arrival</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+
+                                </div>
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <label class="content_div_label">Estimated time of Arrival</label>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <div class="cls_sub_heading">
+                                        <span class="content_div_label">Time Zone:</span>
+                                    </div>
+
+
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" ">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+
+                                </div>
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+
+                                    <span class="content_div_label">Duration (Hrs):</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+
+                                </div>
+
+
+
                             </div>
+
                         </div>
 
-                        <!-- Port of Arrival Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Port of Arrival</h4>
-                                <div class="content_div">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">GBLON</span>
-                                        <span class="content_div_label">London, UK</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.ArrivalPort" />
-                                        <button class="btn btn-outline-danger" style="height: 37px; font-size: 12px;">×</button>
+
+
+
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="route_content_heading ">Weather Forecast</h3>
+                            </div>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Date</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
                                     </div>
                                 </div>
-                                <div class="content_div margin_top_12px">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Date of Arrival</span>
-                                        <span class="content_div_label">Estimated time of Arrival</span>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Time:</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
                                     </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="date" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="time" class="content_div_input" style="flex: 1;" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">
+                                        Before ETD (Hrs):
+                                    </span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
                                     </div>
                                 </div>
                             </div>
+
+
+
                         </div>
 
-                        <!-- Distance Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Distance (nm)</h4>
-                                <div class="content_div">
-                                    <input type="number" class="content_div_input" @bind="voyageModel.Distance" placeholder="120" />
+
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="route_content_heading ">
+                                    Forecast Maximum Significant Wave Height
+
+                                </h3>
+                            </div>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Hswell [m]</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Hwind [m]</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Hs, max [m]</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                        <img src="./path-484@1x.png" class="icon">
+                                    </div>
                                 </div>
                             </div>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                                <label class="route_content_heading1">Source :</label>
+                                <a href="#"> www.weather.gov</a>
+                            </div>
+
                         </div>
 
-                        <!-- Weather Forecast Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Weather Forecast</h4>
-                                <div class="content_div">
-                                    <span class="content_div_label">Sea State</span>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" @bind="voyageModel.SeaState" placeholder="4" />
-                                        <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="route_content_heading ">Forecast Maximum Significant Wave Height</h3>
+                            </div>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Date</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
                                     </div>
                                 </div>
-                                <div class="content_div margin_top_12px">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Wind Speed</span>
-                                        <span class="content_div_label">Wave Height</span>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Hwind [m]:</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
                                     </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="number" class="content_div_input" style="flex: 1;" @bind="voyageModel.WindSpeed" placeholder="16" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; flex: 1;">
-                                            <input type="number" class="content_div_input" style="flex: 1;" @bind="voyageModel.WaveHeight" placeholder="2.0" />
-                                            <button class="btn btn-outline-primary" style="height: 37px; font-size: 12px;">▼</button>
-                                        </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">
+                                        Hs, max [m]
+                                    </span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
                                     </div>
                                 </div>
                             </div>
+
+
+
+                        </div>
+
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="route_content_heading ">Output</h3>
+                            </div>
+
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Date</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                    </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">Hwind [m]:</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                    </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                    <span class="content_div_label">
+                                        Hs, max [m]
+                                    </span>
+                                    <div class="cls_input_outline cls_flex_gap_8px ">
+                                        <input type="text" class=" " value="Marseille">
+                                    </div>
+                                </div>
+
+                                <div class="cls_flex cls_flex_justify_center">
+                                    <button class="cls_button_blue">Calculate Limited Short Voyage</button>
+                                </div>
+                            </div>
+
+
+
                         </div>
 
                         <!-- Forecast Maximum Significant Wave Height Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Forecast Maximum Significant Wave Height</h4>
-                                <div class="content_div">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Period (m)</span>
-                                        <span class="content_div_label">Wavelength</span>
-                                        <span class="content_div_label">Height (m)</span>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="12" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="100" />
-                                        <input type="text" class="content_div_input" style="flex: 1;" placeholder="2.4" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Button Section -->
                         <div class="content_div" style="align-items:center; margin-top: 15px;">
                             <button class="btn btn-primary">Calculate Limited Short Voyage</button>
@@ -582,9 +830,11 @@
     }
 
     public class WaypointModel
-    {
-        public string Name { get; set; } = string.Empty;
-    }
+{
+    public string Name { get; set; } = string.Empty;
+    public string Latitude { get; set; } = string.Empty;
+    public string Longitude { get; set; } = string.Empty;
+}
 
     protected async Task GetSampleports()
     {
