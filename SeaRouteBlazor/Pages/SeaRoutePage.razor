@@ -662,10 +662,11 @@
     private void GoBack() => selectedForm = 0;
     private List<PortModel> _ports;
     private VoyageModel voyageModel = new();
-
+    private DotNetObjectReference<SeaRoutePage>? objRef;
     protected async override Task OnInitializedAsync()
     {
         await Task.CompletedTask;
+        objRef = DotNetObjectReference.Create(this);
         await GetSampleports();
     }
 
@@ -680,7 +681,13 @@
             //     await JS.InvokeVoidAsync("initializeGraph");
             // }
         }
+        if (objRef == null)
+        {
+            objRef = DotNetObjectReference.Create(this);
+        }
     }
+    // await _jSRuntime.InvokeVoidAsync("calculateRoadDistance", Convert.ToDouble(SelectedStoreItemView.Latitude),
+    // Convert.ToDouble(SelectedStoreItemView.Longitude), NewLatitude, NewLongitude, objRef);
     private RouteModel routeModel = new RouteModel();
     private string departureSearchTerm = string.Empty;
     private string arrivalSearchTerm = string.Empty;
