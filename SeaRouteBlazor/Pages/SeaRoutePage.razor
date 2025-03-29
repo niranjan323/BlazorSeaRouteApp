@@ -1,7 +1,10 @@
 ﻿@page "/"
 @inject IJSRuntime JS
+@inject HttpClient Http
+@inject ILogger<SeaRoutePage> Logger
 @using System.Threading.Tasks
 @using Microsoft.AspNetCore.Components.Web
+@using System.Text.Json
 
 <div class="map-container">
     <!-- Map -->
@@ -10,6 +13,7 @@
     <!-- Floating UI -->
     <div class="overlay">
         <!-- Header with Tabs and Close Button -->
+
         <div class="header">
             <div class="tabs">
                 <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
@@ -34,14 +38,14 @@
                             Select your calculation option below:
                         </label>
                     </div>
-                
+
                     <div class="calculation-options">
                         <div class="option-card" @onclick="() => ShowForm(1)">
                             <img src="reduction-factor.png" alt="Reduction Factor">
                             <h4>Reduction Factor Calculations</h4>
                         </div>
                         <div class="option-card" @onclick="() => ShowForm(2)">
-                            <img src="limited-short.png" alt="Limited Short">
+                            <img src="group-92@1x.png" alt="Limited Short">
                             <h4>Limited Short Voyage</h4>
                         </div>
                     </div>
@@ -89,11 +93,16 @@
                                     <span class="content_div_label">Marseille, France</span>
                                 </div>
                                 @*  <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
-                                <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
-                                    <input type="text" class=" " value="Marseille" placeholder="Enter route name" />
+                               @*  <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
+                                    <input type="text" class=" " value="Marseille" placeholder="Enter name" />
                                     <img src="./path-484@1x.png" class="icon" />
                                 </div>
+ *@
 
+                                <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
+                                    <input type="text" @bind="LocationQuery" @bind:event="oninput" placeholder="Enter city or country name" @onkeypress="HandleEnterKey" />
+                                    <img src="./path-484@1x.png" class="icon" @onclick="SearchLocation" />
+                                </div>
 
                                 <!-- Add Port Button -->
                                 <div class="cls_btn_div">
@@ -165,7 +174,7 @@
                         {
                             <div class="cls_route_div">
                                 <div class="cls_route_div_rep">
-                                   
+
                                     <div class="cls_sub_heading">
                                         <span class="content_div_label_blue">FRMRS</span>
 
@@ -178,7 +187,7 @@
 
                                     </div>
 
-                                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
+                                    @*                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
 
                                         <label class="content_div_label">Latitude:</label>
                                         <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Latitude" placeholder="Latitude" />
@@ -188,7 +197,23 @@
 
                                         <img src="path-424-7@1x.png" alt="icon" style="width: 20px; height: 20px;" />
 
+                                    </div> *@
+
+                                    <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
+                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                                            <span class="content_div_label">Latitude:</span>
+                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
+                                        </div>
+
+                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                                            <span class="content_div_label">Longitude:</span>
+                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
+                                        </div>
+
+                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" />
+
                                     </div>
+
                                     <div class="cls_btn_div">
                                         <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
                                         <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
@@ -197,7 +222,7 @@
                                 <label>Waypoint Name:</label>
                                 <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" @bind="waypoint.Name" />
                            *@  
-                                   </div>
+                                               </div>
                             </div>
 
                         }
@@ -285,8 +310,8 @@
 
                             <div class="cls_route_div">
                                 <div class="cls_route_div_rep">
-                                  
-                                    
+
+
                                     <div class="cls_sub_heading">
                                         <span class="content_div_label_blue">FRMRS</span>
 
@@ -297,7 +322,7 @@
                                             </div>
                                         </div>
                                     </div>
-
+                                    @* 
                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
 
                                         <label class="content_div_label">Latitude:</label>
@@ -307,6 +332,21 @@
                                         <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Longitude" placeholder="Longitude" />
 
                                         <img src="path-424-7@1x.png" alt="icon" style="width: 20px; height: 20px;" />
+
+                                    </div> *@
+
+                                    <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
+                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                                            <span class="content_div_label">Latitude:</span>
+                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
+                                        </div>
+
+                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                                            <span class="content_div_label">Longitude:</span>
+                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
+                                        </div>
+
+                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" />
 
                                     </div>
 
@@ -345,303 +385,282 @@
                     <button class="back-btn" @onclick="GoBack">⬅ Back</button>
 
                     <div class="cls_block">
-                        <div class="route_content">
-                            <div class="cls_route_div_rep">
-                                <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                    <img src="group-92@1x.png" alt="Route Icon" class="icon">
-                                    <h3 class="route_content_heading">
-                                        Limited Short Voyage Reduction Factor
-                                    </h3>
-                                </div>
+
+                        <div class="cls_flex cls_flex_gap_2 cls_padding_14px_22px">
+                            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                <span class="content_div_label">Vessel Name</span>
+                                <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" @bind="reductionFactor.VesselName" />
                             </div>
-
-                            <div class="cls_flex cls_flex_gap_8px cls_padding_14px_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">Vessel Name</span>
-                                    <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" />
-
-                                </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-
-                                    <span class="content_div_label">Vessel IMO</span>
-                                    <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" />
-
-                                </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-
-                                    <label class="content_div_label">Vessel Details</label>
-                                    <input type="text" class="content_div_input" style="flex: 1;" placeholder="100,000" />
-
-                                </div>
+                            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                <span class="content_div_label">Vessel IMO</span>
+                                <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" @bind="reductionFactor.IMONo" />
                             </div>
-
+                            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                <label class="content_div_label">Vessel Breadth</label>
+                                <input type="number" class="content_div_input" style="flex: 1;" placeholder="100,000" @bind="reductionFactor.Breadth" />
+                            </div>
                         </div>
 
-                        <!-- Vessel Details Section -->
-
-
-
+                        <!-- Port of Departure Section -->
                         <div class="route_content cls_padding_14px_22px cls_flex_gap_8px">
-
                             <h3 class="route_content_heading cls_mar_btm_8px">
                                 Port of Departure
                             </h3>
 
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <div class="cls_sub_heading">
+                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                    <div class="cls_sub_heading cls_flex_gap_8px">
                                         <span class="content_div_label_blue">NLRTM</span>
-                                        <span class="content_div_label">Rotterdam, Netherlands</span>
+                                        <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span>
                                     </div>
-
-
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" ">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" @bind="reductionFactor.PortOfDeparture">
                                         <img src="./path-484@1x.png" class="icon">
                                     </div>
-
                                 </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
 
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Date of Departure</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="date" @bind="reductionFactor.DateOfDeparture">
+                                        <img src="./date-of-voyage@1x.png" class="icon">
                                     </div>
-
                                 </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
 
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <label class="content_div_label">Estimated Time of Departure</label>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="time" @bind="reductionFactor.ETD">
+                                        <div class="group-498">
+                                            <div class="group-497"><img class="path-4-2" src="path-358@1x.png" alt="Path 486"></div>
+                                        </div>
                                     </div>
-
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <h3 class="route_content_heading ">
+                                <!-- Port of Arrival Section -->
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                    <h3 class="route_content_heading">
                                         Port of Arrival
                                     </h3>
-                                    <div class="cls_sub_heading">
+                                    <div class="cls_sub_heading cls_flex_gap_8px">
                                         <span class="content_div_label_blue">GBDBL</span>
-                                        <span class="content_div_label">Bangor, The United Kingdom</span>
+                                        <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span>
                                     </div>
-
-
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" ">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" @bind="reductionFactor.PortOfArrival">
+                                        <img src="./path-424-7@1x.png" class="icon">
                                     </div>
-
                                 </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
 
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Date of Arrival</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="date" @bind="reductionFactor.DateOfArrival">
+                                        <img src="./date-of-voyage@1x.png" class="icon">
                                     </div>
-
                                 </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
 
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <label class="content_div_label">Estimated time of Arrival</label>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="time" @bind="reductionFactor.ETA">
+                                        <div class="group-498">
+                                            <div class="group-497"><img class="path-4-2" src="path-358@1x.png" alt="Path 486"></div>
+                                        </div>
                                     </div>
-
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <div class="cls_sub_heading">
                                         <span class="content_div_label">Time Zone:</span>
                                     </div>
-
-
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" ">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" @bind="reductionFactor.TimeZone">
                                         <img src="./path-484@1x.png" class="icon">
                                     </div>
-
                                 </div>
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
 
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Duration (Hrs):</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="number" @bind="reductionFactor.Duration">
+                                        <div class="duration_icon">
+                                            <div class="path-container">
+                                                <img class="path-522" src="path-522@1x.png" alt="Path 522">
+                                                <img class="path-523" src="path-523@1x.png" alt="Path 523">
+                                                <img class="path-524" src="path-524@1x.png" alt="Path 524">
+                                                <img class="path-525" src="path-525@1x.png" alt="Path 525">
+                                            </div>
+                                        </div>
                                     </div>
-
                                 </div>
-
-
-
                             </div>
-
                         </div>
 
-
-
-
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                        <!-- Weather Forecast Section -->
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
                             <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="route_content_heading ">Weather Forecast</h3>
+                                <img src="./forecast-icon@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="route_content_heading">Weather Forecast</h3>
                             </div>
 
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Date</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="date" @bind="reductionFactor.WeatherForecastDate">
+                                        <img src="./date-of-voyage@1x.png" class="icon">
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Time:</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="time" @bind="reductionFactor.WeatherForecasetTime">
+                                        <div class="group-498"><div class="group-497"><img class="path-4-2" src="path-358@1x.png" alt="Path 486"></div></div>
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">
-                                        Before ETD (Hrs):
-                                    </span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                    <span class="content_div_label">Before ETD (Hrs):</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="number" @bind="reductionFactor.WeatherForecastBeforeETD">
                                     </div>
                                 </div>
                             </div>
-
-
-
                         </div>
 
-
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                        <!-- Wave Height Section -->
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
                             <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="route_content_heading ">
-                                    Forecast Maximum Significant Wave Height
-
-                                </h3>
+                                <img src="./wave-height-icon@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="route_content_heading">Forecast Maximum Significant Wave Height</h3>
                             </div>
 
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Hswell [m]</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="number" step="0.1" @bind="reductionFactor.WaveHeightHswell">
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Hwind [m]</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="number" step="0.1" @bind="reductionFactor.WaveHeightHwind">
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Hs, max [m]</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                        <img src="./path-484@1x.png" class="icon">
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" @bind="reductionFactor.WaveHsmax" readonly>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
                                 <label class="route_content_heading1">Source :</label>
-                                <a href="#"> www.weather.gov</a>
+                                <input type="text" @bind="reductionFactor.WeatherForecastSource" style="border:none; outline:none; width:250px;">
                             </div>
-
                         </div>
 
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
+                        <!-- Output Section -->
+                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
                             <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="route_content_heading ">Forecast Maximum Significant Wave Height</h3>
+                                <div class="group-3253">
+                                    <img class="path-7591" src="./path-7591-1@1x.png" alt="Path 7591">
+                                    <img class="path-7593" src="./path-7593-1@1x.png" alt="Path 7593">
+                                    <img class="path-7592" src="./path-7592-1@1x.png" alt="Path 7592">
+                                </div>
+                                <h3 class="route_content_heading">Output</h3>
                             </div>
 
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">Date</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
+                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                    <span class="content_div_label">Duration OK</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" @bind="reductionFactor.DurationOk" readonly>
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">Hwind [m]:</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                    <span class="content_div_label">Forecast Before ETD OK</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" @bind="reductionFactor.WeatherForecastBeforeETDOK" readonly>
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">
-                                        Hs, max [m]
-                                    </span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                    <span class="content_div_label">Short Voyage Reduction Factor</span>
+                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                        <input type="text" value="@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? string.Empty)" readonly>
                                     </div>
                                 </div>
+
+                                <!-- Button for API call -->
+                                <div class="cls_flex cls_flex_justify_center cls_width_100">
+                                    <button class="cls_button_blue" @onclick="CalculateReductionFactor" disabled="@isLoading">
+                                        @if (isLoading)
+                                        {
+                                            <span>Calculating...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Calculate Limited Short Voyage</span>
+                                        }
+                                    </button>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(errorMessage))
+                                {
+                                    <div class="cls_flex cls_flex_justify_center cls_width_100 text-danger">
+                                        @errorMessage
+                                    </div>
+                                }
                             </div>
-
-
-
-                        </div>
-
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px ">
-                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="route_content_heading ">Output</h3>
-                            </div>
-
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">Date</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">Hwind [m]:</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_w33 cls_flex_justify_end">
-                                    <span class="content_div_label">
-                                        Hs, max [m]
-                                    </span>
-                                    <div class="cls_input_outline cls_flex_gap_8px ">
-                                        <input type="text" class=" " value="Marseille">
-                                    </div>
-                                </div>
-
-                                
-                            </div>
-
-
-
-                        </div>
-
-                        <!-- Forecast Maximum Significant Wave Height Section -->
-                        <!-- Button Section -->
-                        <div class="content_div" style="align-items:center; margin-top: 15px;">
-                            <button class="btn btn-primary">Calculate Limited Short Voyage</button>
                         </div>
                     </div>
+
+
+                    <!-- Result visualization (shown after calculation) -->
+                    @if (showResults)
+                    {
+                        <div class="results-container">
+                            <div class="result-box">
+                                <div class="result-header">
+                                    <img src="group-92@1x.png" alt="Voyage Icon" width="20" height="20" />
+                                    <h3 class="route_content_heading">Limited Short Voyage Reduction Factor</h3>
+                                    <button class="close-btn small" @onclick="CloseResults">✕</button>
+                                </div>
+
+                                <div class="result-value">
+                                    <p>Reduction Factor: <strong>0.60</strong></p>
+                                </div>
+
+                                <div class="chart-container">
+                                    <canvas id="reductionChart"></canvas>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <div class="action-btn" @onclick="AddEditVesselInfo">
+                                        <img src="path-7601-11@1x.png" alt="Edit" />
+                                        <span>Add/Edit Vessel Info</span>
+                                    </div>
+                                    <div class="action-btn" @onclick="SaveRoute">
+                                        <img src="group-758-4@1x.png" alt="Save" />
+                                        <span>Save Route</span>
+                                    </div>
+                                    <div class="action-btn" @onclick="ShowReport">
+                                        <img src="show-report@1x.png" alt="Report" />
+                                        <span>Show Report</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
                 }
             }
             else if (selectedTab == 2)
@@ -649,51 +668,389 @@
                 <p>My Routes content here...</p>
             }
         </div>
+
+       
     </div>
+
+        <!-- Right side - Report (only shown after calculation) -->
+        @if (showReport)
+        {
+            <div class="report-container">
+            <div class="header">
+                <div class="tabs">
+                    <button class="tab-btn @(selectedTab == 1 ? "active" : "")">
+                        Reports
+                    </button>
+                
+                </div>
+                <button class="close-btn" @onclick="CloseReport">×</button>
+            </div>
+
+                <div class="report-content">
+                    <div class="report-actions">
+                        <button class="download-btn" @onclick="DownloadReport">
+                        <img src="path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
+                        </button>
+                        <button class="print-btn" @onclick="PrintReport">
+                        <img src="path-1871-1@1x.png" alt="Print" width="16" height="16" /> Print Report
+                        </button>
+                    </div>
+
+                    <div class="report-details">
+                        <h4>Report 1 Reduction Factor Calculation</h4>
+
+                        <div class="report-section">
+                            <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
+                            <p>Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is 0.6501. More details can be found below.</p>
+                            <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
+                        </div>
+
+                        <div class="report-section">
+                            <h5>User Inputs</h5>
+                            <table class="report-table">
+                                <tr>
+                                    <td>Port of Departure:</td>
+                                    <td><strong>NLRTM</strong> Rotterdam</td>
+                                    <td>The Hague, Netherlands</td>
+                                </tr>
+                                <tr>
+                                    <td>Port of Arrival:</td>
+                                    <td><strong>GBDBL</strong> Belfast</td>
+                                    <td>Bangor, The United Kingdom</td>
+                                </tr>
+                                <tr>
+                                    <td>Time Zone:</td>
+                                    <td><strong>UTC</strong></td>
+                                    <td>Coordinated Universal Time</td>
+                                </tr>
+                                <tr>
+                                    <td>Date of Departure:</td>
+                                    <td>2024-07-30</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Date of Arrival:</td>
+                                    <td>2024-08-02</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Duration (Hrs):</td>
+                                    <td>72</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Estimated Time of Departure:</td>
+                                    <td>2:00</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>Estimated Time of Arrival:</td>
+                                    <td>2:00</td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="report-section">
+                            <h5>Weather Forecast</h5>
+                            <table class="report-table">
+                                <tr>
+                                    <td>Date:</td>
+                                    <td>2024-07-29</td>
+                                </tr>
+                                <tr>
+                                    <td>Time:</td>
+                                    <td>22:00</td>
+                                </tr>
+                                <tr>
+                                    <td>Before ETD (Hrs):</td>
+                                    <td>4</td>
+                                </tr>
+                                <tr>
+                                    <td>Source:</td>
+                                    <td><a href="http://www.weather.gov">www.weather.gov</a></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="report-section">
+                            <h5>Forecast Maximum Significant Wave Height</h5>
+                            <table class="report-table">
+                                <tr>
+                                    <td>Hswell [m]:</td>
+                                    <td>1.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Hwind [m]:</td>
+                                    <td>1.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Hs, max [m]:</td>
+                                    <td>1.41</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="report-section">
+                            <h5>Output</h5>
+                            <p><strong>Reduction Factor: </strong><span class="reduction-factor">0.60</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+   
 </div>
 
-@code {  
+
+@code {
     private int selectedTab = 1;
     private int selectedForm = 0;
-
+    private SeaRouteBlazor.Models.ReductionFactor reductionFactor = new SeaRouteBlazor.Models.ReductionFactor();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
     private void SelectTab(int tab) => selectedTab = tab;
     private void CloseOverlay() { /* Logic to hide overlay */ }
     private void ShowForm(int option) => selectedForm = option;
     private void GoBack() => selectedForm = 0;
     private List<PortModel> _ports;
     private VoyageModel voyageModel = new();
+    private bool showReport = false;
+    private bool showResults = false;
     private DotNetObjectReference<SeaRoutePage>? objRef;
+    private string LocationQuery { get; set; } = "";
+
+    
     protected async override Task OnInitializedAsync()
     {
         await Task.CompletedTask;
-        objRef = DotNetObjectReference.Create(this);
         await GetSampleports();
+        reductionFactor = new SeaRouteBlazor.Models.ReductionFactor()
+            {
+                PortOfDeparture = "Rotterdam",
+                PortOfArrival = "Belfast",
+                TimeZone = "UTC",
+                DateOfArrival = new DateOnly(2024, 8, 2),
+                DateOfDeparture = new DateOnly(2024, 7, 30),
+                Duration = 72,
+                VesselName = "Sample Vessel",
+                IMONo = "9012345",
+                Breadth = 50,
+                ETD = new TimeOnly(02, 00),
+                ETA = new TimeOnly(02, 00),
+                WeatherForecastDate = new DateOnly(2024, 7, 29),
+                WeatherForecasetTime = new TimeOnly(22, 00),
+                WeatherForecastSource = "www.weather.gov",
+                WeatherForecastBeforeETD = 4,
+                WaveHeightHswell = 1.00m,
+                WaveHeightHwind = 1.00m,
+                WaveHsmax = "1.41"
+            };
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("initializeMap");
+            objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initializeMap", objRef);
             // if (selectedTab == 1 && !graphInitialized) // Check tab and prevent duplicate calls
             // {
             //     graphInitialized = true;
             //     await JS.InvokeVoidAsync("initializeGraph");
             // }
         }
-        if (objRef == null)
+    }
+    private async Task SearchLocation()
+    {
+        if (!string.IsNullOrWhiteSpace(LocationQuery))
         {
-            objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("searchLocation", LocationQuery);
+
         }
     }
-    // await _jSRuntime.InvokeVoidAsync("calculateRoadDistance", Convert.ToDouble(SelectedStoreItemView.Latitude),
-    // Convert.ToDouble(SelectedStoreItemView.Longitude), NewLatitude, NewLongitude, objRef);
+    private async Task HandleEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchLocation();
+        }
+    }
+    [JSInvokable]
+    public void CaptureCoordinates(double latitude, double longitude)
+    {
+        if (routeModel.DepartureWaypoints.Count > 0)
+        {
+            var lastWaypoint = routeModel.DepartureWaypoints.Last();
+            lastWaypoint.Latitude = latitude.ToString();
+            lastWaypoint.Longitude = longitude.ToString();
+            StateHasChanged();
+        }
+    }
     private RouteModel routeModel = new RouteModel();
     private string departureSearchTerm = string.Empty;
     private string arrivalSearchTerm = string.Empty;
     private List<PortModel> departureSearchResults = new List<PortModel>();
     private List<PortModel> arrivalSearchResults = new List<PortModel>();
 
+    private async Task CalculateReductionFactor()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            // Since the API is not working, simulate API call with a delay
+            showResults = true;
+            await Task.Delay(1500);
+
+            // Mock response with static data
+            reductionFactor.ShortVoyageReductionFactor = 0.60m;
+            reductionFactor.DurationOk = "OK";
+            reductionFactor.WeatherForecastBeforeETDOK = "OK";
+            reductionFactor.WaveHsmax = "1.41";
+
+            // Generate X and Y values for the chart
+            reductionFactor.XValues = new List<decimal> { 0, 2, 4, 6, 8, 10, 12 };
+            reductionFactor.YValues = new List<decimal> { 0.6m, 0.6m, 0.6m, 0.8m, 0.9m, 1.0m, 1.0m };
+
+            // Show the results section
+            showResults = true;
+
+            // Initialize the chart after component renders
+            await Task.Delay(100);
+            await InitializeChart();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Exception: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    // if api is ready then uncomment this methode
+    // private async Task CalculateReductionFactor()
+    // {
+    //     try
+    //     {
+    //         isLoading = true;
+    //         errorMessage = string.Empty;
+
+    //         // Call the API
+    //         var response = await Http.PostAsJsonAsync("api/ReductionFactor/Calculate", reductionFactor);
+
+    //         if (response.IsSuccessStatusCode)
+    //         {
+    //             var result = await response.Content.ReadFromJsonAsync<SeaRouteBlazor.Models.ReductionFactor>();
+    //             if (result != null)
+    //             {
+    //                 reductionFactor = result;
+    //             }
+    //         }
+    //         else
+    //         {
+    //             errorMessage = $"Error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
+    //             Logger.LogError(errorMessage);
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = $"Exception: {ex.Message}";
+    //         Logger.LogError(ex, "Error calculating reduction factor");
+    //     }
+    //     finally
+    //     {
+    //         isLoading = false;
+    //     }
+    // }
+    private async Task InitializeChart()
+    {
+        var chartConfig = new
+        {
+            type = "line",
+            data = new
+            {
+                labels = new int[] { 0, 2, 4, 6, 8, 10, 12 },
+                datasets = new[]
+                {
+                new
+                {
+                    label = "Short Voyages",
+                    data = new decimal[] { 0.6m, 0.6m, 0.6m, 0.8m, 0.9m, 1.0m, 1.0m },
+                    borderColor = "#007bff",
+                    backgroundColor = "rgba(0, 123, 255, 0.1)",
+                    borderWidth = 2,
+                    tension = 0.3,
+                    fill = true
+                }
+            }
+            },
+            options = new
+            {
+                responsive = true,
+                maintainAspectRatio = false,
+                scales = new
+                {
+                    x = new
+                    {
+                        title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
+                    },
+                    y = new
+                    {
+                        min = 0,
+                        max = 1.2,
+                        title = new { display = true, text = "Reduction Factor" }
+                    }
+                }
+            }
+        };
+
+        // Serialize the object to a JSON string
+        var jsonConfig = JsonSerializer.Serialize(chartConfig);
+
+        // Pass the correctly formatted JSON string to JavaScript
+        await JS.InvokeVoidAsync("createChart", "reductionChart", jsonConfig);
+    }
+
+    private void ShowReport()
+    {
+        showReport = true;
+    }
+
+    private void CloseReport()
+    {
+        showReport = false;
+    }
+
+    private void CloseResults()
+    {
+        showResults = false;
+    }
+
+ 
+
+    private async Task DownloadReport()
+    {
+        // In a real app, this would trigger PDF generation and download
+        await JS.InvokeVoidAsync("alert", "Download report functionality would be implemented here");
+    }
+
+    private async Task PrintReport()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private async Task AddEditVesselInfo()
+    {
+        await JS.InvokeVoidAsync("alert", "Add/Edit Vessel Info functionality would be implemented here");
+    }
+
+    private async Task SaveRoute()
+    {
+        await JS.InvokeVoidAsync("alert", "Save Route functionality would be implemented here");
+    }
     private void SearchDeparturePorts()
     {
         departureSearchResults = SearchPorts(departureSearchTerm);
@@ -835,11 +1192,11 @@
     }
 
     public class WaypointModel
-{
-    public string Name { get; set; } = string.Empty;
-    public string Latitude { get; set; } = string.Empty;
-    public string Longitude { get; set; } = string.Empty;
-}
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Latitude { get; set; } = string.Empty;
+        public string Longitude { get; set; } = string.Empty;
+    }
 
     protected async Task GetSampleports()
     {
@@ -880,7 +1237,7 @@ Longitude = 103.8198
         if (string.IsNullOrWhiteSpace(searchTerm) || _ports == null)
         {
             departureSearchResults.Clear();
-            return [] ;
+            return [];
         }
         if (string.IsNullOrWhiteSpace(searchTerm))
             return new List<PortModel>();
