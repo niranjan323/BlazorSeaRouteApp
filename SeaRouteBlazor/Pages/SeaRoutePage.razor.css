@@ -941,7 +941,7 @@ cls_input_outline img {
     overflow-y: auto;
     position: absolute;
     top: 6%;
-    right: 131px;
+    right: 80px;
     width: 610px;
     background: white;
     padding: 0;
@@ -1154,4 +1154,18 @@ strong {
         width: 24px;
         height: 24px;
         margin-bottom: 5px;
+    }
+
+/* Map container styles */
+.map-container_report {
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+    .map-container_report img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }

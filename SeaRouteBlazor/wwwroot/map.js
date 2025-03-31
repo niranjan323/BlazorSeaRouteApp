@@ -74,7 +74,34 @@ window.createChart = (canvasId, config) => {
     }
 };
 
+// this for report
+let reportInstance = null;
 
+window.createReport = (canvasId, config) => {
+    console.log("Received JSON string:", config);
+
+    try {
+        const parsedConfig = typeof config === 'string' ? JSON.parse(config) : config;
+        console.log("Parsed JSON:", parsedConfig);
+
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.error(`Canvas with ID '${canvasId}' not found.`);
+            return;
+        }
+
+        // Destroy previous instance if it exists
+        if (window.reportInstance) {
+            window.reportInstance.destroy();
+        }
+
+        // Create new chart
+        window.reportInstance = new Chart(canvas, parsedConfig);
+        console.log("Chart created successfully!");
+    } catch (error) {
+        console.error("Error parsing JSON:", error);
+    }
+};
 function addMarker(lat, lon, label) {
     L.marker([lat, lon]).addTo(map).bindPopup(label).openPopup();
 }

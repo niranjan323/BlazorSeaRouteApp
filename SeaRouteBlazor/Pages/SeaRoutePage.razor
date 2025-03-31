@@ -89,16 +89,9 @@
 
                                 <!-- Static Display for First Time -->
                                 <div class="cls_sub_heading">
-                                    <span class="content_div_label_blue">FRMRS</span>
-                                    <span class="content_div_label">Marseille, France</span>
+                                   @*  <span class="content_div_label_blue">FRMRS</span>
+                                    <span class="content_div_label">Marseille, France</span> *@
                                 </div>
-                                @*  <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
-                               @*  <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
-                                    <input type="text" class=" " value="Marseille" placeholder="Enter name" />
-                                    <img src="./path-484@1x.png" class="icon" />
-                                </div>
- *@
-
                                 <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
                                     <input type="text" @bind="LocationQuery" @bind:event="oninput" placeholder="Enter city or country name" @onkeypress="HandleEnterKey" />
                                     <img src="./path-484@1x.png" class="icon" @onclick="SearchLocation" />
@@ -187,18 +180,6 @@
 
                                     </div>
 
-                                    @*                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
-
-                                        <label class="content_div_label">Latitude:</label>
-                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Latitude" placeholder="Latitude" />
-
-                                        <label class="content_div_label">Longitude:</label>
-                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Longitude" placeholder="Longitude" />
-
-                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; height: 20px;" />
-
-                                    </div> *@
-
                                     <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
                                         <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
                                             <span class="content_div_label">Latitude:</span>
@@ -218,10 +199,6 @@
                                         <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
                                         <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
                                     </div>
-                                    @*       <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveDepartureWaypoint(waypoint)" />
-                                <label>Waypoint Name:</label>
-                                <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" @bind="waypoint.Name" />
-                           *@  
                                                </div>
                             </div>
 
@@ -322,18 +299,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    @* 
-                                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
-
-                                        <label class="content_div_label">Latitude:</label>
-                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Latitude" placeholder="Latitude" />
-
-                                        <label class="content_div_label">Longitude:</label>
-                                        <input type="text" class="content_div_input" style="width: 100px;" @bind="waypoint.Longitude" placeholder="Longitude" />
-
-                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; height: 20px;" />
-
-                                    </div> *@
+                                 
 
                                     <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
                                         <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
@@ -360,19 +326,8 @@
                                 </div>
                             </div>
 
-                            @*     <div class="waypoint-card">
-
-                                <img src="path-209@1x.png" alt="Remove" class=" btn-small" @onclick="() => RemoveArrivalWaypoint(waypoint)" />
-                                <label>Waypoint Name:</label>
-                                <input type="text" class="content_div_input cls_margin_top_6px" @bind="waypoint.Name" />
-                            </div> *@
                         }
 
-                        @*     <div class="flex-row-2">
-                            <div class="calculate_route_reduction_factor">
-                                <span>Calculate Route Reduction Factor</span>
-                            </div>
-                        </div> *@
 
                         <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
                             <button class="cls_button_blue">Calculate Route Reduction Factor</button>
@@ -640,7 +595,7 @@
                                 </div>
 
                                 <div class="chart-container">
-                                    <canvas id="reductionChart"></canvas>
+                                    <canvas id="reductionChart1"></canvas>
                                 </div>
 
                                 <div class="action-buttons">
@@ -795,6 +750,37 @@
                             <h5>Output</h5>
                             <p><strong>Reduction Factor: </strong><span class="reduction-factor">0.60</span></p>
                         </div>
+
+                         <div class="report-section">
+                        <h5>Voyage Map</h5>
+                        <div class="map-container_report">
+                            <img src="group-169@1x.png" alt="Voyage Map" />
+                        </div>
+                    </div>
+
+                          <div class="report-section">
+                        <h5>Limited Short Voyage Reduction Factor</h5>
+                        <div class="result-value">
+                            <p>Reduction Factor: <strong>0.60</strong></p>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="reductionChart2"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div class="report-section notes-section">
+                        <h5>Notes</h5>
+                        <ul>
+                            <li>The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.</li>
+                            <li>The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).</li>
+                            <li>A short voyage is to have a duration of less than 72 hours from departure port to arrival port.</li>
+                            <li>The weather reports need to be received within 6 hours of departure.</li>
+                            <li>The forecasted wave height needs to cover the duration of the voyage plus 12 hours.</li>
+                        </ul>
+                    </div>
+
                     </div>
                 </div>
             </div>
@@ -832,16 +818,16 @@
                 TimeZone = "UTC",
                 DateOfArrival = new DateOnly(2024, 8, 2),
                 DateOfDeparture = new DateOnly(2024, 7, 30),
-                Duration = 72,
+                ///Duration = 72,
                 VesselName = "Sample Vessel",
                 IMONo = "9012345",
-                Breadth = 50,
+               // Breadth = 50,
                 ETD = new TimeOnly(02, 00),
                 ETA = new TimeOnly(02, 00),
                 WeatherForecastDate = new DateOnly(2024, 7, 29),
                 WeatherForecasetTime = new TimeOnly(22, 00),
                 WeatherForecastSource = "www.weather.gov",
-                WeatherForecastBeforeETD = 4,
+               // WeatherForecastBeforeETD = 4,
                 WaveHeightHswell = 1.00m,
                 WaveHeightHwind = 1.00m,
                 WaveHsmax = "1.41"
@@ -979,11 +965,17 @@
                 {
                     label = "Short Voyages",
                     data = new decimal[] { 0.6m, 0.6m, 0.6m, 0.8m, 0.9m, 1.0m, 1.0m },
-                    borderColor = "#007bff",
-                    backgroundColor = "rgba(0, 123, 255, 0.1)",
-                    borderWidth = 2,
-                    tension = 0.3,
-                    fill = true
+                    borderColor = "#26273c", // Black color for the line
+                    backgroundColor = "rgba(0, 0, 0, 0)", // Transparent background (no fill)
+                    borderWidth = 1,
+                    tension = 0, // Straight lines (no curves)
+                    fill = false, // No area fill
+                    // Show only ONE point (at position index 3 - the middle)
+                    pointBackgroundColor = new[] { null, null, null, "#ff0000", null, null, null },
+                    pointBorderColor = new[] { null, null, null, "#ff0000", null, null, null },
+                    pointRadius = new[] { 0, 0, 0, 5, 0, 0, 0 }, // Only show point at index 3
+                    pointStyle = new[] { null, null, null, "cross", null, null, null },
+                    pointHoverRadius = new[] { 0, 0, 0, 7, 0, 0, 0 }
                 }
             }
             },
@@ -1011,12 +1003,68 @@
         var jsonConfig = JsonSerializer.Serialize(chartConfig);
 
         // Pass the correctly formatted JSON string to JavaScript
-        await JS.InvokeVoidAsync("createChart", "reductionChart", jsonConfig);
+        await JS.InvokeVoidAsync("createChart", "reductionChart1", jsonConfig);
+    }
+    private async Task InitializeChartForReport()
+    {
+        var chartConfig = new
+        {
+            type = "line",
+            data = new
+            {
+                labels = new int[] { 0, 2, 4, 6, 8, 10, 12 },
+                datasets = new[]
+                {
+                new
+                {
+                    label = "Short Voyages",
+                    data = new decimal[] { 0.6m, 0.6m, 0.6m, 0.8m, 0.9m, 1.0m, 1.0m },
+                    borderColor = "#26273c", // Black color for the line
+                    backgroundColor = "rgba(0, 0, 0, 0)", // Transparent background (no fill)
+                    borderWidth = 1,
+                    tension = 0, // Straight lines (no curves)
+                    fill = false, // No area fill
+                    // Show only ONE point (at position index 3 - the middle)
+                    pointBackgroundColor = new[] { null, null, null, "#ff0000", null, null, null },
+                    pointBorderColor = new[] { null, null, null, "#ff0000", null, null, null },
+                    pointRadius = new[] { 0, 0, 0, 5, 0, 0, 0 }, // Only show point at index 3
+                    pointStyle = new[] { null, null, null, "cross", null, null, null },
+                    pointHoverRadius = new[] { 0, 0, 0, 7, 0, 0, 0 }
+                }
+            }
+            },
+            options = new
+            {
+                responsive = true,
+                maintainAspectRatio = false,
+                scales = new
+                {
+                    x = new
+                    {
+                        title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
+                    },
+                    y = new
+                    {
+                        min = 0,
+                        max = 1.2,
+                        title = new { display = true, text = "Reduction Factor" }
+                    }
+                }
+            }
+        };
+
+        // Serialize the object to a JSON string
+        var jsonConfig = JsonSerializer.Serialize(chartConfig);
+
+        // Pass the correctly formatted JSON string to JavaScript
+        await JS.InvokeVoidAsync("createReport", "reductionChart2", jsonConfig);
     }
 
-    private void ShowReport()
+    private async Task ShowReport()
     {
         showReport = true;
+        await Task.Delay(100);
+        await InitializeChartForReport();
     }
 
     private void CloseReport()
