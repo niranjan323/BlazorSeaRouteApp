@@ -215,9 +215,7 @@
                                     <span class="content_div_label_blue">SGSIN</span>
                                     <span class="content_div_label">Singapore</span>
                                 </div>
-                                @* <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500;" value="Marseille" placeholder="Enter route name" /> *@
-                                @* <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-424-7@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" /> *@
-
+                          
                                 <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
                                     <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
                                     placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
@@ -370,8 +368,9 @@
                                         <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span>
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionFactor.PortOfDeparture">
-                                        <img src="./path-484@1x.png" class="icon">
+                                        <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
+                                               placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
+                                        <img src="./path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
                                     </div>
                                 </div>
 
@@ -403,8 +402,9 @@
                                         <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span>
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionFactor.PortOfArrival">
-                                        <img src="./path-424-7@1x.png" class="icon">
+                                        <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
+                                               placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
+                                        <img src="./path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
                                     </div>
                                 </div>
 
@@ -808,7 +808,8 @@
     private string LocationQuery { get; set; } = "";
     private string departureLocationQuery { get; set; } = "";
     private string arrivalLocationQuery { get; set; } = "";
-
+    private string reductionDepartureLocationQuery = "";
+    private string reductionArrivalLocationQuery = "";
     protected async override Task OnInitializedAsync()
     {
         await Task.CompletedTask;
@@ -858,6 +859,39 @@
             Console.WriteLine("Failed to capture map");
         }
     }
+    private async Task SearchReductionDepartureLocation()
+    {
+        if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
+        {
+            await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
+        }
+    }
+
+    private async Task SearchReductionArrivalLocation()
+    {
+        if (!string.IsNullOrWhiteSpace(reductionArrivalLocationQuery))
+        {
+            await JS.InvokeVoidAsync("searchLocation", reductionArrivalLocationQuery, false);
+        }
+    }
+
+    private async Task HandleReductionDepartureEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchReductionDepartureLocation();
+        }
+    }
+
+    private async Task HandleReductionArrivalEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchReductionArrivalLocation();
+        }
+    }
+
+    // separate 
     private async Task SearchDepartureLocation()
     {
         if (!string.IsNullOrWhiteSpace(departureLocationQuery))
