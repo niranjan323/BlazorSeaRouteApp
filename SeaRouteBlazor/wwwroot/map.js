@@ -3,6 +3,7 @@ var departurePin;
 var arrivalPin;
 var routeLayer;
 
+
 function initializeMap(dotNetHelper) {
     map = L.map('map').setView([20, 60], 3);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -17,6 +18,31 @@ function initializeMap(dotNetHelper) {
     // Initialize the route layer
     routeLayer = L.layerGroup().addTo(map);
 
+    // Create coordinate tooltip
+    let coordTooltip = L.DomUtil.create('div', 'coord-tooltip');
+    coordTooltip.style.position = 'absolute';
+    coordTooltip.style.pointerEvents = 'none';
+    coordTooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+    coordTooltip.style.padding = '3px 6px';
+    coordTooltip.style.borderRadius = '3px';
+    coordTooltip.style.zIndex = '1000';
+    coordTooltip.style.display = 'none';
+    map.getContainer().appendChild(coordTooltip);
+
+    // Show coordinates on mouse move
+    map.on('mousemove', function (e) {
+        const { lat, lng } = e.latlng;
+        coordTooltip.textContent = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+        coordTooltip.style.display = 'block';
+        coordTooltip.style.left = (e.originalEvent.clientX + 10) + 'px';
+        coordTooltip.style.top = (e.originalEvent.clientY + 10) + 'px';
+    });
+
+    // Hide coordinates when mouse leaves map
+    map.getContainer().addEventListener('mouseleave', function () {
+        coordTooltip.style.display = 'none';
+    });
+
     map.on('click', function (e) {
         var latitude = e.latlng.lat;
         var longitude = e.latlng.lng;
@@ -27,6 +53,7 @@ function initializeMap(dotNetHelper) {
         dotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
     });
 }
+
 
 async function searchLocation(query, isDeparture) {
     try {
@@ -51,7 +78,10 @@ async function searchLocation(query, isDeparture) {
                 arrivalPin = L.marker([lat, lon]).addTo(map);
                 arrivalPin.bindPopup("Arrival: " + query).openPopup();
             }
+            setTimeout(() => {
 
+                map.flyTo([lat, lon], 3, { duration: 1.5 });
+            }, 2000);
             map.flyTo([lat, lon], 8, { duration: 1.5 });
 
             if (departurePin && arrivalPin) {

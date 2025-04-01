@@ -19,7 +19,7 @@ public class ReductionFactor
     public string? IMONo { get; set; }
     public string? Master { get; set; }
     [Required]
-    public int Breadth { get; set; } = 50;
+    public int Breadth { get; set; } 
     [Required]
     public TimeOnly ETD { get; set; } = new TimeOnly(02, 00);
     [Required]

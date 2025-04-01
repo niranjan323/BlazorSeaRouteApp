@@ -1162,6 +1162,7 @@ strong {
     height: 300px;
     overflow: hidden;
     margin-bottom: 15px;
+    object-fit: cover;
 }
 
     .map-container_report img {
