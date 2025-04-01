@@ -1,10 +1,21 @@
 ﻿var map;
+var departurePin;
+var arrivalPin;
+var routeLayer;
 
 function initializeMap(dotNetHelper) {
     map = L.map('map').setView([20, 60], 3);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
+
+    // Add zoom controls
+    L.control.zoom({
+        position: 'topright'
+    }).addTo(map);
+
+    // Initialize the route layer
+    routeLayer = L.layerGroup().addTo(map);
 
     map.on('click', function (e) {
         var latitude = e.latlng.lat;
@@ -17,7 +28,7 @@ function initializeMap(dotNetHelper) {
     });
 }
 
-async function searchLocation(query) {
+async function searchLocation(query, isDeparture) {
     try {
         let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
         let data = await response.json();
@@ -25,14 +36,27 @@ async function searchLocation(query) {
         if (data.length > 0) {
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
-            map.flyTo([lat + 5, lon + 5], 3, { duration: 1.5 });
 
+            // Clear previous pin
+            if (isDeparture) {
+                if (departurePin) {
+                    map.removeLayer(departurePin);
+                }
+                departurePin = L.marker([lat, lon]).addTo(map);
+                departurePin.bindPopup("Departure: " + query).openPopup();
+            } else {
+                if (arrivalPin) {
+                    map.removeLayer(arrivalPin);
+                }
+                arrivalPin = L.marker([lat, lon]).addTo(map);
+                arrivalPin.bindPopup("Arrival: " + query).openPopup();
+            }
 
-            setTimeout(() => {
-                
-                map.flyTo([lat, lon], 1, { duration: 1.5 });
-            }, 2000);
             map.flyTo([lat, lon], 8, { duration: 1.5 });
+
+            if (departurePin && arrivalPin) {
+                drawSeaRoute();
+            }
         } else {
             alert("Location not found!");
         }
@@ -41,6 +65,52 @@ async function searchLocation(query) {
     }
 }
 
+function drawSeaRoute() {
+    // Clear previous route
+    routeLayer.clearLayers();
+
+    const departureLatLng = departurePin.getLatLng();
+    const arrivalLatLng = arrivalPin.getLatLng();
+
+    // This is a simplified sea route - in a real app you'd use a proper routing API
+    const routeCoordinates = [
+        departureLatLng,
+        [departureLatLng.lat, (departureLatLng.lng + arrivalLatLng.lng) / 2],
+        [arrivalLatLng.lat, (departureLatLng.lng + arrivalLatLng.lng) / 2],
+        arrivalLatLng
+    ];
+
+    // Draw the route
+    L.polyline(routeCoordinates, {
+        color: 'blue',
+        weight: 2,
+        opacity: 1
+    }).addTo(routeLayer);
+
+    // Add distance marker
+    const distance = calculateDistance(departureLatLng, arrivalLatLng);
+    const midpoint = routeCoordinates[Math.floor(routeCoordinates.length / 2)];
+    L.marker(midpoint, {
+        icon: L.divIcon({
+            className: 'distance-marker',
+            html: `<div style="background-color: white; padding: 2px 5px; border-radius: 3px; border: 1px solid #0066ff;">${distance} km</div>`,
+            iconSize: null
+        })
+    }).addTo(routeLayer);
+}
+
+function calculateDistance(latlng1, latlng2) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (latlng2.lat - latlng1.lat) * Math.PI / 180;
+    const dLon = (latlng2.lng - latlng1.lng) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(latlng1.lat * Math.PI / 180) * Math.cos(latlng2.lat * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    return Math.round(distance);
+}
 
 
 
@@ -96,7 +166,7 @@ window.createReport = (canvasId, config) => {
         }
 
         // Create new chart
-        window.reportInstance = new Chart(canvas, parsedConfig);
+        window.chartInstance = new Chart(canvas, parsedConfig);
         console.log("Chart created successfully!");
     } catch (error) {
         console.error("Error parsing JSON:", error);

@@ -93,8 +93,9 @@
                                     <span class="content_div_label">Marseille, France</span> *@
                                 </div>
                                 <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
-                                    <input type="text" @bind="LocationQuery" @bind:event="oninput" placeholder="Enter city or country name" @onkeypress="HandleEnterKey" />
-                                    <img src="./path-484@1x.png" class="icon" @onclick="SearchLocation" />
+                                    <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
+                                           placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
+                                    <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
                                 </div>
 
                                 <!-- Add Port Button -->
@@ -218,9 +219,9 @@
                                 @* <input type="text" class="content_div_input cls_margin_top_6px" style="font-weight: 500; background: url('path-424-7@1x.png') no-repeat right 8px center; background-size: 16px 16px;" value="Marseille" placeholder="Enter route name" /> *@
 
                                 <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
-                                    <input type="text" class="" value="Marseille" placeholder="Enter route name" />
-                                    <img src="./path-424-7@1x.png" alt="Alternate Text" />
-
+                                    <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
+                                           placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
+                                    <img src="path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
                                 </div>
 
                                 <!-- Add Port Button -->
@@ -805,7 +806,8 @@
     private bool showResults = false;
     private DotNetObjectReference<SeaRoutePage>? objRef;
     private string LocationQuery { get; set; } = "";
-
+    private string departureLocationQuery { get; set; } = "";
+    private string arrivalLocationQuery { get; set; } = "";
     
     protected async override Task OnInitializedAsync()
     {
@@ -847,19 +849,35 @@
             // }
         }
     }
-    private async Task SearchLocation()
+    private async Task SearchDepartureLocation()
     {
-        if (!string.IsNullOrWhiteSpace(LocationQuery))
+        if (!string.IsNullOrWhiteSpace(departureLocationQuery))
         {
-            await JS.InvokeVoidAsync("searchLocation", LocationQuery);
-
+            await JS.InvokeVoidAsync("searchLocation", departureLocationQuery, true);
         }
     }
-    private async Task HandleEnterKey(KeyboardEventArgs e)
+
+    private async Task SearchArrivalLocation()
+    {
+        if (!string.IsNullOrWhiteSpace(arrivalLocationQuery))
+        {
+            await JS.InvokeVoidAsync("searchLocation", arrivalLocationQuery, false);
+        }
+    }
+
+    private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            await SearchLocation();
+            await SearchDepartureLocation();
+        }
+    }
+
+    private async Task HandleArrivalEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchArrivalLocation();
         }
     }
     [JSInvokable]

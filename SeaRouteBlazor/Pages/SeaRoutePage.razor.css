@@ -1169,3 +1169,35 @@ strong {
         height: 100%;
         object-fit: cover;
     }
+
+/* Additional styles for matching the image exactly */
+/* Map pins */
+.departure-pin {
+    background-color: blue;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.arrival-pin {
+    background-color: red;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* Route line */
+.leaflet-interactive {
+    stroke-dasharray: 5, 5;
+}
+
+/* Distance marker */
+.distance-marker {
+    font-size: 12px;
+    font-weight: bold;
+    color: #0066ff;
+    text-align: center;
+    white-space: nowrap;
+}
