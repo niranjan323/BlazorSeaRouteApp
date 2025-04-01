@@ -2,9 +2,12 @@
 var departurePin;
 var arrivalPin;
 var routeLayer;
-
+var isWaypointSelectionActive = false;
+var coordTooltip;
+var currentDotNetHelper;
 
 function initializeMap(dotNetHelper) {
+    currentDotNetHelper = dotNetHelper;
     map = L.map('map').setView([20, 60], 3);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
@@ -19,40 +22,117 @@ function initializeMap(dotNetHelper) {
     routeLayer = L.layerGroup().addTo(map);
 
     // Create coordinate tooltip
-    let coordTooltip = L.DomUtil.create('div', 'coord-tooltip');
+    coordTooltip = L.DomUtil.create('div', 'coord-tooltip');
     coordTooltip.style.position = 'absolute';
     coordTooltip.style.pointerEvents = 'none';
-    coordTooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-    coordTooltip.style.padding = '3px 6px';
+    coordTooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+    coordTooltip.style.padding = '5px 10px';
     coordTooltip.style.borderRadius = '3px';
     coordTooltip.style.zIndex = '1000';
     coordTooltip.style.display = 'none';
+    coordTooltip.style.fontFamily = 'Arial, sans-serif';
+    coordTooltip.style.fontSize = '12px';
+    coordTooltip.style.border = '1px solid #ccc';
     map.getContainer().appendChild(coordTooltip);
 
-    // Show coordinates on mouse move
+    // Mouse move handler
     map.on('mousemove', function (e) {
-        const { lat, lng } = e.latlng;
-        coordTooltip.textContent = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
-        coordTooltip.style.display = 'block';
-        coordTooltip.style.left = (e.originalEvent.clientX + 10) + 'px';
-        coordTooltip.style.top = (e.originalEvent.clientY + 10) + 'px';
+        if (isWaypointSelectionActive) {
+            const { lat, lng } = e.latlng;
+            coordTooltip.textContent = `Click to set waypoint\nLat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+            coordTooltip.style.display = 'block';
+            coordTooltip.style.left = (e.originalEvent.clientX + 15) + 'px';
+            coordTooltip.style.top = (e.originalEvent.clientY + 15) + 'px';
+        }
     });
 
-    // Hide coordinates when mouse leaves map
     map.getContainer().addEventListener('mouseleave', function () {
         coordTooltip.style.display = 'none';
     });
 
     map.on('click', function (e) {
-        var latitude = e.latlng.lat;
-        var longitude = e.latlng.lng;
+        if (isWaypointSelectionActive) {
+            var latitude = e.latlng.lat;
+            var longitude = e.latlng.lng;
 
-        console.log("Captured Coordinates:", latitude, longitude);
+            // Call Blazor method
+            currentDotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
 
-        // Call Blazor method
-        dotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
+            // Optionally disable selection after click
+            setWaypointSelection(false);
+        }
     });
 }
+
+function setWaypointSelection(active) {
+    isWaypointSelectionActive = active;
+    if (!active) {
+        coordTooltip.style.display = 'none';
+    }
+    else {
+        // Change cursor to crosshair when in selection mode
+        map.getContainer().style.cursor = 'crosshair';
+    }
+}
+
+// Rest of your existing functions (searchLocation, etc.) remain unchanged
+
+
+//var map;
+//var departurePin;
+//var arrivalPin;
+//var routeLayer;
+
+
+//function initializeMap(dotNetHelper) {
+//    map = L.map('map').setView([20, 60], 3);
+//    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//        attribution: '© OpenStreetMap contributors'
+//    }).addTo(map);
+
+//    // Add zoom controls
+//    L.control.zoom({
+//        position: 'topright'
+//    }).addTo(map);
+
+//    // Initialize the route layer
+//    routeLayer = L.layerGroup().addTo(map);
+
+//    // Create coordinate tooltip
+//    let coordTooltip = L.DomUtil.create('div', 'coord-tooltip');
+//    coordTooltip.style.position = 'absolute';
+//    coordTooltip.style.pointerEvents = 'none';
+//    coordTooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+//    coordTooltip.style.padding = '3px 6px';
+//    coordTooltip.style.borderRadius = '3px';
+//    coordTooltip.style.zIndex = '1000';
+//    coordTooltip.style.display = 'none';
+//    map.getContainer().appendChild(coordTooltip);
+
+//    // Show coordinates on mouse move
+//    map.on('mousemove', function (e) {
+//        const { lat, lng } = e.latlng;
+//        coordTooltip.textContent = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+//        coordTooltip.style.display = 'block';
+//        coordTooltip.style.left = (e.originalEvent.clientX + 10) + 'px';
+//        coordTooltip.style.top = (e.originalEvent.clientY + 10) + 'px';
+//    });
+
+//    // Hide coordinates when mouse leaves map
+//    map.getContainer().addEventListener('mouseleave', function () {
+//        coordTooltip.style.display = 'none';
+//    });
+
+//    map.on('click', function (e) {
+//        var latitude = e.latlng.lat;
+//        var longitude = e.latlng.lng;
+
+//        console.log("Captured Coordinates:", latitude, longitude);
+
+//        // Call Blazor method
+//        dotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
+//    });
+//}
 
 
 async function searchLocation(query, isDeparture) {
@@ -63,7 +143,7 @@ async function searchLocation(query, isDeparture) {
         if (data.length > 0) {
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
-
+            map.flyTo([lat + 5, lon + 5], 3, { duration: 1.5 });
             // Clear previous pin
             if (isDeparture) {
                 if (departurePin) {
@@ -81,9 +161,11 @@ async function searchLocation(query, isDeparture) {
             setTimeout(() => {
 
                 map.flyTo([lat, lon], 3, { duration: 1.5 });
+               
             }, 2000);
-            map.flyTo([lat, lon], 8, { duration: 1.5 });
 
+            map.flyTo([lat, lon], 8, { duration: 1.5 });
+            
             if (departurePin && arrivalPin) {
                 drawSeaRoute();
             }

@@ -215,7 +215,7 @@
                                     <span class="content_div_label_blue">SGSIN</span>
                                     <span class="content_div_label">Singapore</span>
                                 </div>
-                          
+
                                 <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
                                     <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
                                     placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
@@ -369,7 +369,7 @@
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
-                                               placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
+                                        placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
                                         <img src="./path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
                                     </div>
                                 </div>
@@ -403,7 +403,7 @@
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
-                                               placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
+                                        placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
                                         <img src="./path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
                                     </div>
                                 </div>
@@ -754,9 +754,9 @@
 
                     <div class="report-section">
                         <h5>Voyage Map</h5>
-                        <div class="map-container_report">
+                        
                             <div id="reportMapContainer" @ref="reportMapContainer"></div>
-                        </div>
+                        
                     </div>
 
                     <div class="report-section">
@@ -788,6 +788,7 @@
     }
 
 </div>
+<div id="reportMapContainer" @ref="reportMapContainer"></div>
 @code {
 
     private ElementReference reportMapContainer;
@@ -1125,12 +1126,12 @@
 
     private async Task ShowReport()
     {
-       
+
         showReport = true;
         await Task.Delay(100);
         await InitializeChartForReport();
-         await Task.Delay(100);
-       await CaptureMap();
+        await Task.Delay(100);
+        await CaptureMap();
     }
 
     private void CloseReport()
@@ -1143,7 +1144,7 @@
         showResults = false;
     }
 
- 
+
 
     private async Task DownloadReport()
     {
@@ -1243,19 +1244,30 @@
         routeModel.ArrivalPorts.Remove(port);
     }
 
-    private void AddDepartureWaypoint()
+    private async Task AddDepartureWaypoint()
     {
         routeModel.DepartureWaypoints.Add(new WaypointModel());
+        await EnableWaypointSelection();
     }
-
+    private async Task EnableWaypointSelection()
+    {
+        if (JS is not null)
+        {
+            await JS.InvokeVoidAsync("setWaypointSelection", true);
+        }
+    }
     private void AddArrivalWaypoint()
     {
         routeModel.ArrivalWaypoints.Add(new WaypointModel());
     }
 
-    private void RemoveDepartureWaypoint(WaypointModel waypoint)
+    private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
     {
         routeModel.DepartureWaypoints.Remove(waypoint);
+        if (JS is not null)
+        {
+            await JS.InvokeVoidAsync("setWaypointSelection", false);
+        }
     }
 
     private void RemoveArrivalWaypoint(WaypointModel waypoint)

@@ -1157,19 +1157,22 @@ strong {
     }
 
 /* Map container styles */
-.map-container_report {
+#reportMapContainer {
     width: 100%;
     height: 300px;
     overflow: hidden;
-    margin-bottom: 15px;
-    object-fit: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-    .map-container_report img {
+    #reportMapContainer > * {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transform: scale(1.1); /* Adjust scale if needed */
     }
+
 
 /* Additional styles for matching the image exactly */
 /* Map pins */
