@@ -833,6 +833,10 @@
     {
         selectedForm = 0;
         showReport = false;
+        reductionFactor = new SeaRouteBlazor.Models.ReductionFactor();
+        routeModel = new RouteModel();
+        departureSearchResults = new List<PortModel>();
+        arrivalSearchResults = new List<PortModel>();
         await JS.InvokeVoidAsync("resetMap");
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
