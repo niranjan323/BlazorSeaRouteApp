@@ -5,14 +5,14 @@ namespace SeaRouteBlazor.Models;
 public class ReductionFactor
 {
     [Required]
-    public string PortOfDeparture { get; set; } = "Marseille";
+    public string PortOfDeparture { get; set; } 
     [Required]
-    public string? PortOfArrival { get; set; } = "Shanghai";
-    public string? TimeZone { get; set; } = "UTC";
+    public string? PortOfArrival { get; set; } 
+    public string? TimeZone { get; set; } 
     [Required]
-    public DateOnly DateOfArrival { get; set; } = new DateOnly(2024, 8, 2);
+    public DateOnly DateOfArrival { get; set; } 
     [Required]
-    public DateOnly DateOfDeparture { get; set; } = new DateOnly(2024, 7, 30);
+    public DateOnly DateOfDeparture { get; set; } 
     public int? Duration { get; set; }
 
     public string? VesselName { get; set; }
@@ -21,22 +21,22 @@ public class ReductionFactor
     [Required]
     public int Breadth { get; set; } 
     [Required]
-    public TimeOnly ETD { get; set; } = new TimeOnly(02, 00);
+    public TimeOnly ETD { get; set; } 
     [Required]
-    public TimeOnly ETA { get; set; } = new TimeOnly(02, 00);
+    public TimeOnly ETA { get; set; }
     [Required]
-    public DateOnly WeatherForecastDate { get; set; } = new DateOnly(2024, 7, 29);
+    public DateOnly WeatherForecastDate { get; set; } 
     [Required]
-    public TimeOnly WeatherForecasetTime { get; set; } = new TimeOnly(22, 00);
+    public TimeOnly WeatherForecasetTime { get; set; } 
 
-    public string? WeatherForecastSource { get; set; } = "UTC";
+    public string? WeatherForecastSource { get; set; } 
 
     public int? WeatherForecastBeforeETD { get; set; }
     [Required]
-    public decimal WaveHeightHswell { get; set; } = 1;
+    public decimal WaveHeightHswell { get; set; } 
 
     [Required]
-    public decimal WaveHeightHwind { get; set; } = 1;
+    public decimal WaveHeightHwind { get; set; } 
     public string? WaveHsmax { get; set; }
     public decimal? ShortVoyageReductionFactor { get; set; }
 
@@ -46,9 +46,9 @@ public class ReductionFactor
     public List<decimal>? XValues { get; set; } = new List<decimal>();
     public List<decimal>? YValues { get; set; } = new List<decimal>();
 
-    public double? XIncrement { get; set; } = 2;
+    public double? XIncrement { get; set; } 
 
-    public double? YIncrement { get; set; } = 0.2;
+    public double? YIncrement { get; set; }
 
 
 

@@ -826,27 +826,7 @@
     {
         await Task.CompletedTask;
         await GetSampleports();
-        reductionFactor = new SeaRouteBlazor.Models.ReductionFactor()
-            {
-                PortOfDeparture = "Rotterdam",
-                PortOfArrival = "Belfast",
-                TimeZone = "UTC",
-                DateOfArrival = new DateOnly(2024, 8, 2),
-                DateOfDeparture = new DateOnly(2024, 7, 30),
-            ///Duration = 72,
-                VesselName = "Sample Vessel",
-                IMONo = "9012345",
-               Breadth = 50,
-                ETD = new TimeOnly(02, 00),
-                ETA = new TimeOnly(02, 00),
-                WeatherForecastDate = new DateOnly(2024, 7, 29),
-                WeatherForecasetTime = new TimeOnly(22, 00),
-                WeatherForecastSource = "www.weather.gov",
-            // WeatherForecastBeforeETD = 4,
-                WaveHeightHswell = 1.00m,
-                WaveHeightHwind = 1.00m,
-            //WaveHsmax = "1.41"
-            };
+       
     }
 
     private void GoBack()
@@ -960,6 +940,7 @@
     {
         if (e.Key == "Enter")
         {
+            this.reductionFactor.PortOfDeparture = this.reductionDepartureLocationQuery;
             await SearchReductionDepartureLocation();
         }
     }
@@ -968,6 +949,7 @@
     {
         if (e.Key == "Enter")
         {
+            this.reductionFactor.PortOfArrival = this.reductionArrivalLocationQuery;
             await SearchReductionArrivalLocation();
         }
     }
@@ -993,6 +975,7 @@
     {
         if (e.Key == "Enter")
         {
+
             await SearchDepartureLocation();
         }
     }
