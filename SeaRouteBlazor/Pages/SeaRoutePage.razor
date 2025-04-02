@@ -826,13 +826,14 @@
     {
         await Task.CompletedTask;
         await GetSampleports();
-       
+
     }
 
-    private void GoBack()
+    private async Task GoBack()
     {
         selectedForm = 0;
         showReport = false;
+        await JS.InvokeVoidAsync("resetMap");
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
