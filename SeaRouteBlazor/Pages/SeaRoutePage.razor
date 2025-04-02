@@ -116,7 +116,7 @@
                                     <h4 class="route_content_heading1">landing port1</h4>
 
                                     <div class="cls_sub_heading">
-                                        <span class="content_div_label_blue">FRMRS</span>
+                                        @* <span class="content_div_label_blue">FRMRS</span> *@
 
                                         <div class="cls_flex cls_flex_gap_8px">
                                             <span class="content_div_label">Port of Departure</span>
@@ -170,7 +170,7 @@
                                 <div class="cls_route_div_rep">
 
                                     <div class="cls_sub_heading">
-                                        <span class="content_div_label_blue">FRMRS</span>
+                                        @* <span class="content_div_label_blue">FRMRS</span> *@
 
                                         <div class="cls_flex cls_flex_gap_8px">
                                             <span class="content_div_label">Port of Departure</span>
@@ -212,8 +212,8 @@
 
                                 <!-- Static Display for First Time -->
                                 <div class="cls_sub_heading">
-                                    <span class="content_div_label_blue">SGSIN</span>
-                                    <span class="content_div_label">Singapore</span>
+                                    @* <span class="content_div_label_blue">SGSIN</span>
+                                    <span class="content_div_label">Singapore</span> *@
                                 </div>
 
                                 <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
@@ -239,7 +239,7 @@
                                     <!--!--><h4 class="route_content_heading1">landing port1</h4>
 
                                     <!--!--><div class="cls_sub_heading">
-                                        <span class="content_div_label_blue">FRMRS</span>
+                                        @*   <span class="content_div_label_blue">FRMRS</span> *@
 
                                         <div class="cls_flex cls_flex_gap_8px">
                                             <span class="content_div_label">Port of Departure</span>
@@ -289,7 +289,7 @@
 
 
                                     <div class="cls_sub_heading">
-                                        <span class="content_div_label_blue">FRMRS</span>
+                                        @*   <span class="content_div_label_blue">FRMRS</span> *@
 
                                         <div class="cls_flex cls_flex_gap_8px">
                                             <span class="content_div_label">Port of Departure</span>
@@ -364,8 +364,8 @@
                             <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
                                 <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <div class="cls_sub_heading cls_flex_gap_8px">
-                                        <span class="content_div_label_blue">NLRTM</span>
-                                        <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span>
+                                        @*  <span class="content_div_label_blue">NLRTM</span>
+                                        <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span> *@
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
@@ -398,8 +398,8 @@
                                         Port of Arrival
                                     </h3>
                                     <div class="cls_sub_heading cls_flex_gap_8px">
-                                        <span class="content_div_label_blue">GBDBL</span>
-                                        <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span>
+                                        @*    <span class="content_div_label_blue">GBDBL</span>
+                                        <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span> *@
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
@@ -637,7 +637,6 @@
                     <button class="tab-btn @(selectedTab == 1 ? "active" : "")">
                         Reports
                     </button>
-
                 </div>
                 <button class="close-btn" @onclick="CloseReport">×</button>
             </div>
@@ -657,7 +656,7 @@
 
                     <div class="report-section">
                         <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
-                        <p>Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is 0.6501. More details can be found below.</p>
+                        <p>Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is @(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"). More details can be found below.</p>
                         <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
                     </div>
 
@@ -665,43 +664,58 @@
                         <h5>User Inputs</h5>
                         <table class="report-table">
                             <tr>
+                                <td>Vessel Name:</td>
+                                <td><strong>@(reductionFactor.VesselName ?? "N/A")</strong></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Vessel IMO:</td>
+                                <td><strong>@(reductionFactor.IMONo ?? "N/A")</strong></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Vessel Breadth:</td>
+                                <td><strong>@reductionFactor.Breadth</strong></td>
+                                <td></td>
+                            </tr>
+                            <tr>
                                 <td>Port of Departure:</td>
-                                <td><strong>NLRTM</strong> Rotterdam</td>
-                                <td>The Hague, Netherlands</td>
+                                <td><strong>@(reductionFactor.PortOfDeparture ?? "N/A")</strong></td>
+                                <td></td>
                             </tr>
                             <tr>
                                 <td>Port of Arrival:</td>
-                                <td><strong>GBDBL</strong> Belfast</td>
-                                <td>Bangor, The United Kingdom</td>
+                                <td><strong>@(reductionFactor.PortOfArrival ?? "N/A")</strong></td>
+                                <td></td>
                             </tr>
                             <tr>
                                 <td>Time Zone:</td>
-                                <td><strong>UTC</strong></td>
-                                <td>Coordinated Universal Time</td>
+                                <td><strong>@(reductionFactor.TimeZone ?? "UTC")</strong></td>
+                                <td></td>
                             </tr>
                             <tr>
                                 <td>Date of Departure:</td>
-                                <td>2024-07-30</td>
+                                <td>@reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd")</td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td>Date of Arrival:</td>
-                                <td>2024-08-02</td>
+                                <td>@reductionFactor.DateOfArrival.ToString("yyyy-MM-dd")</td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td>Duration (Hrs):</td>
-                                <td>72</td>
+                                <td>@reductionFactor.Duration</td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td>Estimated Time of Departure:</td>
-                                <td>2:00</td>
+                                <td>@reductionFactor.ETD.ToString("HH:mm")</td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td>Estimated Time of Arrival:</td>
-                                <td>2:00</td>
+                                <td>@reductionFactor.ETA.ToString("HH:mm")</td>
                                 <td></td>
                             </tr>
                         </table>
@@ -712,19 +726,19 @@
                         <table class="report-table">
                             <tr>
                                 <td>Date:</td>
-                                <td>2024-07-29</td>
+                                <td>@reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd")</td>
                             </tr>
                             <tr>
                                 <td>Time:</td>
-                                <td>22:00</td>
+                                <td>@reductionFactor.WeatherForecasetTime.ToString("HH:mm")</td>
                             </tr>
                             <tr>
                                 <td>Before ETD (Hrs):</td>
-                                <td>4</td>
+                                <td>@reductionFactor.WeatherForecastBeforeETD</td>
                             </tr>
                             <tr>
                                 <td>Source:</td>
-                                <td><a href="http://www.weather.gov">www.weather.gov</a></td>
+                                <td><a href="http://www.weather.gov">@(reductionFactor.WeatherForecastSource ?? "www.weather.gov")</a></td>
                             </tr>
                         </table>
                     </div>
@@ -734,35 +748,35 @@
                         <table class="report-table">
                             <tr>
                                 <td>Hswell [m]:</td>
-                                <td>1.00</td>
+                                <td>@reductionFactor.WaveHeightHswell</td>
                             </tr>
                             <tr>
                                 <td>Hwind [m]:</td>
-                                <td>1.00</td>
+                                <td>@reductionFactor.WaveHeightHwind</td>
                             </tr>
                             <tr>
                                 <td>Hs, max [m]:</td>
-                                <td>1.41</td>
+                                <td>@reductionFactor.WaveHsmax</td>
                             </tr>
                         </table>
                     </div>
 
                     <div class="report-section">
                         <h5>Output</h5>
-                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">0.60</span></p>
+                        <p><strong>Duration OK:</strong> @reductionFactor.DurationOk</p>
+                        <p><strong>Forecast Before ETD OK:</strong> @reductionFactor.WeatherForecastBeforeETDOK</p>
+                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</span></p>
                     </div>
 
                     <div class="report-section">
                         <h5>Voyage Map</h5>
-                        
-                            <div id="reportMapContainer" @ref="reportMapContainer"></div>
-                        
+                        <div id="reportMapContainer" @ref="reportMapContainer"></div>
                     </div>
 
                     <div class="report-section">
                         <h5>Limited Short Voyage Reduction Factor</h5>
                         <div class="result-value">
-                            <p>Reduction Factor: <strong>0.60</strong></p>
+                            <p>Reduction Factor: <strong>@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</strong></p>
                         </div>
 
                         <div class="chart-container">
@@ -781,14 +795,11 @@
                             <li>The forecasted wave height needs to cover the duration of the voyage plus 12 hours.</li>
                         </ul>
                     </div>
-
                 </div>
             </div>
         </div>
     }
-
 </div>
-<div id="reportMapContainer" @ref="reportMapContainer"></div>
 @code {
 
     private ElementReference reportMapContainer;
@@ -800,7 +811,7 @@
     private void SelectTab(int tab) => selectedTab = tab;
     private void CloseOverlay() { /* Logic to hide overlay */ }
     private void ShowForm(int option) => selectedForm = option;
-    private void GoBack() => selectedForm = 0;
+
     private List<PortModel> _ports;
     private VoyageModel voyageModel = new();
     private bool showReport = false;
@@ -825,7 +836,7 @@
             ///Duration = 72,
                 VesselName = "Sample Vessel",
                 IMONo = "9012345",
-            // Breadth = 50,
+               Breadth = 50,
                 ETD = new TimeOnly(02, 00),
                 ETA = new TimeOnly(02, 00),
                 WeatherForecastDate = new DateOnly(2024, 7, 29),
@@ -838,6 +849,11 @@
             };
     }
 
+    private void GoBack()
+    {
+        selectedForm = 0;
+        showReport = false;
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -859,6 +875,70 @@
             // Handle error (optional)
             Console.WriteLine("Failed to capture map");
         }
+    }
+
+    private bool ValidateReductionFactor()
+    {
+        List<string> validationErrors = new List<string>();
+
+        // Check required vessel info
+        if (string.IsNullOrWhiteSpace(reductionFactor.VesselName))
+            validationErrors.Add("Vessel Name is required");
+
+        if (string.IsNullOrWhiteSpace(reductionFactor.IMONo))
+            validationErrors.Add("Vessel IMO Number is required");
+
+        if (reductionFactor.Breadth <= 0)
+            validationErrors.Add("Vessel Breadth must be greater than 0");
+
+        // Check port information
+        if (string.IsNullOrWhiteSpace(reductionFactor.PortOfDeparture))
+            validationErrors.Add("Port of Departure is required");
+
+        if (string.IsNullOrWhiteSpace(reductionFactor.PortOfArrival))
+            validationErrors.Add("Port of Arrival is required");
+
+        // Check dates and times
+        DateTime departureDateTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD);
+        DateTime arrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA);
+
+        if (departureDateTime >= arrivalDateTime)
+            validationErrors.Add("Arrival date/time must be after departure date/time");
+
+        // Validate weather forecast
+        DateTime forecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime);
+
+        if (forecastDateTime >= departureDateTime)
+            validationErrors.Add("Weather forecast date/time must be before departure date/time");
+
+        // Calculate time difference between forecast and departure
+        TimeSpan forecastDifference = departureDateTime - forecastDateTime;
+        if (forecastDifference.TotalHours > 6)
+            validationErrors.Add("Weather forecast must be within 6 hours of departure");
+
+        if (forecastDifference.TotalHours <= 0)
+            validationErrors.Add("Weather forecast must be before departure time");
+
+        // Validate wave height parameters
+        if (reductionFactor.WaveHeightHswell <= 0)
+            validationErrors.Add("Wave Height Hswell must be greater than 0");
+
+        if (reductionFactor.WaveHeightHwind <= 0)
+            validationErrors.Add("Wave Height Hwind must be greater than 0");
+
+        // Check voyage duration constraints
+        TimeSpan voyageDuration = arrivalDateTime - departureDateTime;
+        if (voyageDuration.TotalHours <= 0 || voyageDuration.TotalHours > 72)
+            validationErrors.Add("Voyage duration must be between 0 and 72 hours");
+
+        // If there are any validation errors, display them and return false
+        if (validationErrors.Count > 0)
+        {
+            errorMessage = $"Please correct the following errors:\n{string.Join("\n", validationErrors)}";
+            return false;
+        }
+
+        return true;
     }
     private async Task SearchReductionDepartureLocation()
     {
@@ -947,23 +1027,68 @@
         {
             isLoading = true;
             errorMessage = string.Empty;
+            if (!ValidateReductionFactor())
+            {
+                isLoading = false;
+                return;
+            }
+            // Perform the actual calculation based on the API logic
+            DateTime dateOfArrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(TimeOnly.MinValue);
+            DateTime dateOfDepartureDateTime = reductionFactor.DateOfDeparture.ToDateTime(TimeOnly.MinValue);
 
-            // Since the API is not working, simulate API call with a delay
-            showResults = true;
-            await Task.Delay(1500);
+            // Calculate duration
+            reductionFactor.Duration = Convert.ToInt32((dateOfArrivalDateTime - dateOfDepartureDateTime).TotalHours) +
+                                      Convert.ToInt32((reductionFactor.ETA - reductionFactor.ETD).TotalHours);
 
-            // Mock response with static data
-            reductionFactor.ShortVoyageReductionFactor = 0.60m;
-            reductionFactor.DurationOk = "OK";
-            reductionFactor.WeatherForecastBeforeETDOK = "OK";
-            reductionFactor.WeatherForecastBeforeETD = 4;
-            reductionFactor.WaveHsmax = "1.41";
-            reductionFactor.Breadth = 50;
-            reductionFactor.Duration = 72;
+            // Check if duration is valid (between 0 and 72 hours)
+            reductionFactor.DurationOk = reductionFactor.Duration > 0 && reductionFactor.Duration <= 72 ? "OK" : "NA";
 
-            // Generate X and Y values for the chart
-            reductionFactor.XValues = new List<decimal> { 0, 2, 4, 6, 8, 10, 12 };
-            reductionFactor.YValues = new List<decimal> { 0.6m, 0.6m, 0.6m, 0.8m, 0.9m, 1.0m, 1.0m };
+            // Calculate weather forecast timing
+            DateTime weatherForecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(TimeOnly.MinValue);
+            reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32((dateOfDepartureDateTime - weatherForecastDateTime).TotalHours) +
+                                                      Convert.ToInt32((reductionFactor.ETD.Hour - reductionFactor.WeatherForecasetTime.Hour));
+
+            // Check if weather forecast is within valid timeframe (0-6 hours before departure)
+            reductionFactor.WeatherForecastBeforeETDOK = reductionFactor.WeatherForecastBeforeETD > 0 &&
+                                                        reductionFactor.WeatherForecastBeforeETD <= 6 ? "OK" : "NA";
+
+            // Calculate maximum wave height
+            if (reductionFactor.WaveHeightHswell > 0 && reductionFactor.WaveHeightHwind > 0)
+            {
+                var value = (reductionFactor.WaveHeightHswell * reductionFactor.WaveHeightHswell) +
+                            (reductionFactor.WaveHeightHwind * reductionFactor.WaveHeightHwind);
+
+                double result = Math.Sqrt(Convert.ToDouble(value));
+                result = Math.Round(result, 2);
+                reductionFactor.WaveHsmax = result.ToString();
+            }
+            else
+            {
+                reductionFactor.WaveHsmax = "NA";
+            }
+
+            // Calculate short voyage reduction factor
+            if (reductionFactor.DurationOk == "OK" && reductionFactor.WeatherForecastBeforeETDOK == "OK" && reductionFactor.Breadth > 0)
+            {
+                double waveHeight = double.TryParse(reductionFactor.WaveHsmax, out double parsed) ? parsed : 0;
+                double result = Math.Max(Math.Min(waveHeight / (2 * Math.Sqrt(Convert.ToDouble(reductionFactor.Breadth))) + 0.4, 1), 0.6);
+                result = Math.Round(result, 2);
+                reductionFactor.ShortVoyageReductionFactor = Convert.ToDecimal(result);
+            }
+            else
+            {
+                reductionFactor.ShortVoyageReductionFactor = 1;
+            }
+
+            // Fixed values for the graph
+            reductionFactor.Xlist = new List<double> { 0.00, 2.82, 8.48, 12.00 };
+            reductionFactor.Ylist = new List<double> { 0.6, 0.6, 1.0, 1.0 };
+            reductionFactor.XValues = reductionFactor.Xlist.Select(x => (decimal)x).ToList();
+            reductionFactor.YValues = reductionFactor.Ylist.Select(x => (decimal)x).ToList();
+
+            // Set the point to highlight in the chart
+            reductionFactor.CommonX = decimal.TryParse(reductionFactor.WaveHsmax, out decimal parsedX) ? parsedX : 0;
+            reductionFactor.CommonY = reductionFactor.ShortVoyageReductionFactor;
 
             // Show the results section
             showResults = true;
@@ -971,10 +1096,14 @@
             // Initialize the chart after component renders
             await Task.Delay(100);
             await InitializeChart();
+
+            // Show the report with calculated values
+            //await ShowReport();
+            await RearranegeReport();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Exception: {ex.Message}";
+            errorMessage = $"Error calculating reduction factor: {ex.Message}";
         }
         finally
         {
@@ -1018,110 +1147,194 @@
     // }
     private async Task InitializeChart()
     {
-        var chartConfig = new
+        try
         {
-            type = "line",
-            data = new
+            // Use the same configuration as the main chart but for the report chart
+            var labels = new List<int>();
+            for (int i = 0; i <= 12; i += 2)
             {
-                labels = new int[] { 0, 2, 4, 6, 8, 10, 12 },
-                datasets = new[]
-                {
-                 new
-            {
-                label = "Short Voyages",
-                data = new decimal[] { 0.6m, 0.65m, 0.75m, 0.85m, 1.0m ,1.0m, 1.0m },
-                borderColor = "#26273c", 
-                backgroundColor = "rgba(0, 0, 0, 0)", 
-                borderWidth = 1,
-                tension = 0, 
-                fill = false, 
-                pointBackgroundColor = new[] { null, "#ff0000", null, null, null, null, null },
-                pointBorderColor = new[] { null, "#ff0000", null, null, null, null, null },
-                pointRadius = new[] { 0, 5, 0, 0, 0, 0, 0 }, 
-                pointStyle = new[] { null, "cross", null, null, null, null, null },
-                pointHoverRadius = new[] { 0, 7, 0, 0, 0, 0, 0 }
+                labels.Add(i);
             }
-            }
-            },
-            options = new
+
+            decimal pointX = reductionFactor.CommonX ?? 0;
+            decimal pointY = reductionFactor.CommonY ?? 0;
+
+            int pointIndex = -1;
+            decimal closestDistance = decimal.MaxValue;
+
+            for (int i = 0; i < labels.Count; i++)
             {
-                responsive = true,
-                maintainAspectRatio = false,
-                scales = new
+                decimal distance = Math.Abs(pointX - labels[i]);
+                if (distance < closestDistance)
                 {
-                    x = new
-                    {
-                        title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
-                    },
-                    y = new
-                    {
-                        min = 0,
-                        max = 1.2,
-                        title = new { display = true, text = "Reduction Factor" }
-                    }
+                    closestDistance = distance;
+                    pointIndex = i;
                 }
             }
-        };
 
-        // Serialize the object to a JSON string
-        var jsonConfig = JsonSerializer.Serialize(chartConfig);
+            var pointRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
+            var pointStyleArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
+            var pointBackgroundColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
+            var pointBorderColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
+            var pointHoverRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
 
-        // Pass the correctly formatted JSON string to JavaScript
-        await JS.InvokeVoidAsync("createChart", "reductionChart1", jsonConfig);
+            if (pointIndex >= 0)
+            {
+                pointRadiusArray[pointIndex] = 5;
+                pointStyleArray[pointIndex] = "cross";
+                pointBackgroundColorArray[pointIndex] = "#ff0000";
+                pointBorderColorArray[pointIndex] = "#ff0000";
+                pointHoverRadiusArray[pointIndex] = 7;
+            }
+
+            var chartConfig = new
+            {
+                type = "line",
+                data = new
+                {
+                    labels = labels.ToArray(),
+                    datasets = new[]
+                    {
+                    new
+                    {
+                        label = "Short Voyages",
+                        data = new decimal[] { 0.6m, 0.6m, 0.7m, 0.85m, 1.0m, 1.0m, 1.0m },
+                        borderColor = "#26273c",
+                        backgroundColor = "rgba(0, 0, 0, 0)",
+                        borderWidth = 1,
+                        tension = 0,
+                        fill = false,
+                        pointBackgroundColor = pointBackgroundColorArray,
+                        pointBorderColor = pointBorderColorArray,
+                        pointRadius = pointRadiusArray,
+                        pointStyle = pointStyleArray,
+                        pointHoverRadius = pointHoverRadiusArray
+                    }
+                }
+                },
+                options = new
+                {
+                    responsive = true,
+                    maintainAspectRatio = false,
+                    scales = new
+                    {
+                        x = new
+                        {
+                            title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
+                        },
+                        y = new
+                        {
+                            min = 0,
+                            max = 1.2,
+                            title = new { display = true, text = "Reduction Factor" }
+                        }
+                    }
+                }
+            };
+
+            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartConfig);
+            await JS.InvokeVoidAsync("createChart", "reductionChart1", jsonConfig);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error initializing report chart: {ex.Message}";
+        }
     }
+
     private async Task InitializeChartForReport()
     {
-        var chartConfig = new
+        try
         {
-            type = "line",
-            data = new
+            // Use the same configuration as the main chart but for the report chart
+            var labels = new List<int>();
+            for (int i = 0; i <= 12; i += 2)
             {
-                labels = new int[] { 0, 2, 4, 6, 8, 10, 12 },
-                datasets = new[]
-        {
-            new
-            {
-                label = "Short Voyages",
-                data = new decimal[] { 0.6m, 0.65m, 0.75m, 0.85m, 1.0m ,1.0m, 1.0m },
-                borderColor = "#26273c", 
-                backgroundColor = "rgba(0, 0, 0, 0)", 
-                borderWidth = 1,
-                tension = 0, 
-                fill = false, 
-                pointBackgroundColor = new[] { null, "#ff0000", null, null, null, null, null },
-                pointBorderColor = new[] { null, "#ff0000", null, null, null, null, null },
-                pointRadius = new[] { 0, 5, 0, 0, 0, 0, 0 }, 
-                pointStyle = new[] { null, "cross", null, null, null, null, null },
-                pointHoverRadius = new[] { 0, 7, 0, 0, 0, 0, 0 }
+                labels.Add(i);
             }
-        }
-            },
-            options = new
+
+            decimal pointX = reductionFactor.CommonX ?? 0;
+            decimal pointY = reductionFactor.CommonY ?? 0;
+
+            int pointIndex = -1;
+            decimal closestDistance = decimal.MaxValue;
+
+            for (int i = 0; i < labels.Count; i++)
             {
-                responsive = true,
-                maintainAspectRatio = false,
-                scales = new
+                decimal distance = Math.Abs(pointX - labels[i]);
+                if (distance < closestDistance)
                 {
-                    x = new
-                    {
-                        title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
-                    },
-                    y = new
-                    {
-                        min = 0,
-                        max = 1.2,
-                        title = new { display = true, text = "Reduction Factor" }
-                    }
+                    closestDistance = distance;
+                    pointIndex = i;
                 }
             }
-        };
 
+            var pointRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
+            var pointStyleArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
+            var pointBackgroundColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
+            var pointBorderColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
+            var pointHoverRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
 
-        // Serialize the object to a JSON string
-        var jsonConfig = JsonSerializer.Serialize(chartConfig);
+            if (pointIndex >= 0)
+            {
+                pointRadiusArray[pointIndex] = 5;
+                pointStyleArray[pointIndex] = "cross";
+                pointBackgroundColorArray[pointIndex] = "#ff0000";
+                pointBorderColorArray[pointIndex] = "#ff0000";
+                pointHoverRadiusArray[pointIndex] = 7;
+            }
 
-        // Pass the correctly formatted JSON string to JavaScript
-        await JS.InvokeVoidAsync("createReport", "reductionChart2", jsonConfig);
+            var chartConfig = new
+            {
+                type = "line",
+                data = new
+                {
+                    labels = labels.ToArray(),
+                    datasets = new[]
+                    {
+                    new
+                    {
+                        label = "Short Voyages",
+                        data = new decimal[] { 0.6m, 0.6m, 0.7m, 0.85m, 1.0m, 1.0m, 1.0m },
+                        borderColor = "#26273c",
+                        backgroundColor = "rgba(0, 0, 0, 0)",
+                        borderWidth = 1,
+                        tension = 0,
+                        fill = false,
+                        pointBackgroundColor = pointBackgroundColorArray,
+                        pointBorderColor = pointBorderColorArray,
+                        pointRadius = pointRadiusArray,
+                        pointStyle = pointStyleArray,
+                        pointHoverRadius = pointHoverRadiusArray
+                    }
+                }
+                },
+                options = new
+                {
+                    responsive = true,
+                    maintainAspectRatio = false,
+                    scales = new
+                    {
+                        x = new
+                        {
+                            title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
+                        },
+                        y = new
+                        {
+                            min = 0,
+                            max = 1.2,
+                            title = new { display = true, text = "Reduction Factor" }
+                        }
+                    }
+                }
+            };
+
+            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartConfig);
+            await JS.InvokeVoidAsync("createReport", "reductionChart2", jsonConfig);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error initializing report chart: {ex.Message}";
+        }
     }
 
     private async Task ShowReport()
@@ -1134,6 +1347,13 @@
         await CaptureMap();
     }
 
+    private async Task RearranegeReport()
+    {
+        await Task.Delay(100);
+        await InitializeChartForReport();
+        await Task.Delay(100);
+        await CaptureMap();
+    }
     private void CloseReport()
     {
         showReport = false;
