@@ -329,9 +329,45 @@
 
 
                         <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
-                            <button class="cls_button_blue">Calculate Route Reduction Factor</button>
+                            <button class="cls_button_blue" @onclick="CalculateRouteReductionFactor">Calculate Route Reduction Factor</button>
                         </div>
                     </div>
+                    <!-- Results visualization (shown after calculation) -->
+                    @if (showResultsForReductionFactor)
+                    {
+                        <div class="results-container">
+                            <div class="result-box">
+                                <div class="result-header">
+                                    <img src="group-92@1x.png" alt="Route Icon" width="20" height="20" />
+                                    <h3 class="route_content_heading">Route Reduction Factor</h3>
+                                    <button class="close-btn small" @onclick="CloseResults">✕</button>
+                                </div>
+
+                                <div class="result-value">
+                                    <p>Reduction Factor: <strong>@(routeReductionFactor?.ToString("0.00") ?? "0.82")</strong></p>
+                                </div>
+
+                                <div class="route-distance">
+                                    <p>Route Distance: <strong>@(routeDistance?.ToString() ?? "5,952") nm</strong></p>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <div class="action-btn" @onclick="AddEditVesselInfo">
+                                        <img src="path-7601-11@1x.png" alt="Edit" />
+                                        <span>Add/Edit Vessel Info</span>
+                                    </div>
+                                    <div class="action-btn" @onclick="SaveRoute">
+                                        <img src="group-758-4@1x.png" alt="Save" />
+                                        <span>Save Route</span>
+                                    </div>
+                                    <div class="action-btn" @onclick="ShowReportForReductionFactor">
+                                        <img src="show-report@1x.png" alt="Report" />
+                                        <span>Show Report</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 }
 
                 else if (selectedForm == 2)
@@ -621,7 +657,7 @@
             }
             else if (selectedTab == 2)
             {
-                <p>My Routes content here...</p>
+            <p>My Routes content here...</p>
             }
         </div>
 
@@ -799,6 +835,91 @@
             </div>
         </div>
     }
+
+    <!-- Report Panel (only shown after ShowReport is called) -->
+    @if (showReportForReductionFactor)
+    {
+        <div class="report-container">
+            <div class="header">
+                <div class="tabs">
+                    <button class="tab-btn active">
+                        Reports
+                    </button>
+                </div>
+                <button class="close-btn" @onclick="CloseReportForReductionFactor">×</button>
+            </div>
+
+            <div class="report-content">
+                <div class="report-actions">
+                    <button class="download-btn" @onclick="DownloadReport">
+                        <img src="path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
+                    </button>
+                    <button class="print-btn" @onclick="PrintReport">
+                        <img src="path-1871-1@1x.png" alt="Print" width="16" height="16" /> Print Report
+                    </button>
+                </div>
+
+                <div class="report-details">
+                    <h4>Report 1 Reduction Factor Calculation</h4>
+
+                    <div class="report-section">
+                        <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
+                        <p>
+                            Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the route from
+                            @(routeModel.DepartureLocation) to @(routeModel.ArrivalLocation) is @(routeReductionFactor?.ToString("0.00") ?? "0.82").
+                            More details can be found below.
+                        </p>
+                        <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
+                    </div>
+
+                    <div class="report-section">
+                        <h5>User Inputs</h5>
+                        <table class="report-table">
+                            <tr>
+                                <td>Route Name:</td>
+                                <td><strong>@(routeModel.RouteName ?? "Marseille - Shanghai")</strong></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Port of Departure:</td>
+                                <td><strong>@(routeModel.DepartureLocation ?? "Marseille, France")</strong></td>
+                                <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS")</td>
+                            </tr>
+                            <tr>
+                                <td>Loading Port:</td>
+                                <td><strong>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Name ?? "Singapore")</strong></td>
+                                <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN")</td>
+                            </tr>
+                            <tr>
+                                <td>Port of Arrival:</td>
+                                <td><strong>@(routeModel.ArrivalLocation ?? "Shanghai, China")</strong></td>
+                                <td>@(routeModel.ArrivalPorts.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH")</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="report-section">
+                        <h5>Output</h5>
+                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span></p>
+                    </div>
+
+                    <div class="report-section">
+                        <h5>Route Map</h5>
+                        <div id="reportMapContainer" @ref="reportMapContainer" style="height: 200px; width: 100%;"></div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div class="report-section notes-section">
+                        <h5>Notes</h5>
+                        <ul>
+                            <li>The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.</li>
+                            <li>ABS Container Securing Guide 6.2.4</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 @code {
 
@@ -811,11 +932,14 @@
     private void SelectTab(int tab) => selectedTab = tab;
     private void CloseOverlay() { /* Logic to hide overlay */ }
     private void ShowForm(int option) => selectedForm = option;
-
+    private decimal? routeReductionFactor = 0.82M;
+    private int? routeDistance = 5952;
     private List<PortModel> _ports;
     private VoyageModel voyageModel = new();
     private bool showReport = false;
     private bool showResults = false;
+    private bool showResultsForReductionFactor = false;
+    private bool showReportForReductionFactor = false;
     private DotNetObjectReference<SeaRoutePage>? objRef;
     private string LocationQuery { get; set; } = "";
     private string departureLocationQuery { get; set; } = "";
@@ -833,6 +957,8 @@
     {
         selectedForm = 0;
         showReport = false;
+        showReportForReductionFactor = false;
+        showResultsForReductionFactor = false;
         reductionFactor = new SeaRouteBlazor.Models.ReductionFactor();
         routeModel = new RouteModel();
         departureSearchResults = new List<PortModel>();
@@ -1009,130 +1135,175 @@
     private List<PortModel> departureSearchResults = new List<PortModel>();
     private List<PortModel> arrivalSearchResults = new List<PortModel>();
 
-    private async Task CalculateReductionFactor()
-    {
-        try
-        {
-            isLoading = true;
-            errorMessage = string.Empty;
-            if (!ValidateReductionFactor())
-            {
-                isLoading = false;
-                return;
-            }
-            // Perform the actual calculation based on the API logic
-            DateTime dateOfArrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(TimeOnly.MinValue);
-            DateTime dateOfDepartureDateTime = reductionFactor.DateOfDeparture.ToDateTime(TimeOnly.MinValue);
-
-            // Calculate duration
-            reductionFactor.Duration = Convert.ToInt32((dateOfArrivalDateTime - dateOfDepartureDateTime).TotalHours) +
-                                      Convert.ToInt32((reductionFactor.ETA - reductionFactor.ETD).TotalHours);
-
-            // Check if duration is valid (between 0 and 72 hours)
-            reductionFactor.DurationOk = reductionFactor.Duration > 0 && reductionFactor.Duration <= 72 ? "OK" : "NA";
-
-            // Calculate weather forecast timing
-            DateTime weatherForecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(TimeOnly.MinValue);
-            reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32((dateOfDepartureDateTime - weatherForecastDateTime).TotalHours) +
-                                                      Convert.ToInt32((reductionFactor.ETD.Hour - reductionFactor.WeatherForecasetTime.Hour));
-
-            // Check if weather forecast is within valid timeframe (0-6 hours before departure)
-            reductionFactor.WeatherForecastBeforeETDOK = reductionFactor.WeatherForecastBeforeETD > 0 &&
-                                                        reductionFactor.WeatherForecastBeforeETD <= 6 ? "OK" : "NA";
-
-            // Calculate maximum wave height
-            if (reductionFactor.WaveHeightHswell > 0 && reductionFactor.WaveHeightHwind > 0)
-            {
-                var value = (reductionFactor.WaveHeightHswell * reductionFactor.WaveHeightHswell) +
-                            (reductionFactor.WaveHeightHwind * reductionFactor.WaveHeightHwind);
-
-                double result = Math.Sqrt(Convert.ToDouble(value));
-                result = Math.Round(result, 2);
-                reductionFactor.WaveHsmax = result.ToString();
-            }
-            else
-            {
-                reductionFactor.WaveHsmax = "NA";
-            }
-
-            // Calculate short voyage reduction factor
-            if (reductionFactor.DurationOk == "OK" && reductionFactor.WeatherForecastBeforeETDOK == "OK" && reductionFactor.Breadth > 0)
-            {
-                double waveHeight = double.TryParse(reductionFactor.WaveHsmax, out double parsed) ? parsed : 0;
-                double result = Math.Max(Math.Min(waveHeight / (2 * Math.Sqrt(Convert.ToDouble(reductionFactor.Breadth))) + 0.4, 1), 0.6);
-                result = Math.Round(result, 2);
-                reductionFactor.ShortVoyageReductionFactor = Convert.ToDecimal(result);
-            }
-            else
-            {
-                reductionFactor.ShortVoyageReductionFactor = 1;
-            }
-
-            // Fixed values for the graph
-            reductionFactor.Xlist = new List<double> { 0.00, 2.82, 8.48, 12.00 };
-            reductionFactor.Ylist = new List<double> { 0.6, 0.6, 1.0, 1.0 };
-            reductionFactor.XValues = reductionFactor.Xlist.Select(x => (decimal)x).ToList();
-            reductionFactor.YValues = reductionFactor.Ylist.Select(x => (decimal)x).ToList();
-
-            // Set the point to highlight in the chart
-            reductionFactor.CommonX = decimal.TryParse(reductionFactor.WaveHsmax, out decimal parsedX) ? parsedX : 0;
-            reductionFactor.CommonY = reductionFactor.ShortVoyageReductionFactor;
-
-            // Show the results section
-            showResults = true;
-
-            // Initialize the chart after component renders
-            await Task.Delay(100);
-            await InitializeChart();
-
-            // Show the report with calculated values
-            //await ShowReport();
-            await RearranegeReport();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error calculating reduction factor: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-    // if api is ready then uncomment this methode
     // private async Task CalculateReductionFactor()
     // {
     //     try
     //     {
     //         isLoading = true;
     //         errorMessage = string.Empty;
+    //         // if (!ValidateReductionFactor())
+    //         // {
+    //         //     isLoading = false;
+    //         //     return;
+    //         // }
+    //         // Perform the actual calculation based on the API logic
+    //         DateTime dateOfArrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(TimeOnly.MinValue);
+    //         DateTime dateOfDepartureDateTime = reductionFactor.DateOfDeparture.ToDateTime(TimeOnly.MinValue);
 
-    //         // Call the API
-    //         var response = await Http.PostAsJsonAsync("api/ReductionFactor/Calculate", reductionFactor);
+    //         // Calculate duration
+    //         reductionFactor.Duration = Convert.ToInt32((dateOfArrivalDateTime - dateOfDepartureDateTime).TotalHours) +
+    //                                   Convert.ToInt32((reductionFactor.ETA - reductionFactor.ETD).TotalHours);
 
-    //         if (response.IsSuccessStatusCode)
+    //         // Check if duration is valid (between 0 and 72 hours)
+    //         reductionFactor.DurationOk = reductionFactor.Duration > 0 && reductionFactor.Duration <= 72 ? "OK" : "NA";
+
+    //         // Calculate weather forecast timing
+    //         DateTime weatherForecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(TimeOnly.MinValue);
+    //         reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32((dateOfDepartureDateTime - weatherForecastDateTime).TotalHours) +
+    //                                                   Convert.ToInt32((reductionFactor.ETD.Hour - reductionFactor.WeatherForecasetTime.Hour));
+
+    //         // Check if weather forecast is within valid timeframe (0-6 hours before departure)
+    //         reductionFactor.WeatherForecastBeforeETDOK = reductionFactor.WeatherForecastBeforeETD > 0 &&
+    //                                                     reductionFactor.WeatherForecastBeforeETD <= 6 ? "OK" : "NA";
+
+    //         // Calculate maximum wave height
+    //         if (reductionFactor.WaveHeightHswell > 0 && reductionFactor.WaveHeightHwind > 0)
     //         {
-    //             var result = await response.Content.ReadFromJsonAsync<SeaRouteBlazor.Models.ReductionFactor>();
-    //             if (result != null)
-    //             {
-    //                 reductionFactor = result;
-    //             }
+    //             var value = (reductionFactor.WaveHeightHswell * reductionFactor.WaveHeightHswell) +
+    //                         (reductionFactor.WaveHeightHwind * reductionFactor.WaveHeightHwind);
+
+    //             double result = Math.Sqrt(Convert.ToDouble(value));
+    //             result = Math.Round(result, 2);
+    //             reductionFactor.WaveHsmax = result.ToString();
     //         }
     //         else
     //         {
-    //             errorMessage = $"Error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
-    //             Logger.LogError(errorMessage);
+    //             reductionFactor.WaveHsmax = "NA";
     //         }
+
+    //         // Calculate short voyage reduction factor
+    //         if (reductionFactor.DurationOk == "OK" && reductionFactor.WeatherForecastBeforeETDOK == "OK" && reductionFactor.Breadth > 0)
+    //         {
+    //             double waveHeight = double.TryParse(reductionFactor.WaveHsmax, out double parsed) ? parsed : 0;
+    //             double result = Math.Max(Math.Min(waveHeight / (2 * Math.Sqrt(Convert.ToDouble(reductionFactor.Breadth))) + 0.4, 1), 0.6);
+    //             result = Math.Round(result, 2);
+    //             reductionFactor.ShortVoyageReductionFactor = Convert.ToDecimal(result);
+    //         }
+    //         else
+    //         {
+    //             reductionFactor.ShortVoyageReductionFactor = 1;
+    //         }
+
+    //         // Fixed values for the graph
+    //         reductionFactor.Xlist = new List<double> { 0.00, 2.82, 8.48, 12.00 };
+    //         reductionFactor.Ylist = new List<double> { 0.6, 0.6, 1.0, 1.0 };
+    //         reductionFactor.XValues = reductionFactor.Xlist.Select(x => (decimal)x).ToList();
+    //         reductionFactor.YValues = reductionFactor.Ylist.Select(x => (decimal)x).ToList();
+
+    //         // Set the point to highlight in the chart
+    //         reductionFactor.CommonX = decimal.TryParse(reductionFactor.WaveHsmax, out decimal parsedX) ? parsedX : 0;
+    //         reductionFactor.CommonY = reductionFactor.ShortVoyageReductionFactor;
+
+    //         // Show the results section
+    //         showResults = true;
+
+    //         // Initialize the chart after component renders
+    //         await Task.Delay(100);
+    //         await InitializeChart();
+
+    //         // Show the report with calculated values
+    //         //await ShowReport();
+    //         await RearranegeReport();
     //     }
     //     catch (Exception ex)
     //     {
-    //         errorMessage = $"Exception: {ex.Message}";
-    //         Logger.LogError(ex, "Error calculating reduction factor");
+    //         errorMessage = $"Error calculating reduction factor: {ex.Message}";
     //     }
     //     finally
     //     {
     //         isLoading = false;
     //     }
     // }
+
+    private async Task CalculateReductionFactor()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            SeaRouteBlazor.Models.ReductionFactor testReductionFactor = new SeaRouteBlazor.Models.ReductionFactor
+                {
+                    PortOfDeparture = "New York",
+                    PortOfArrival = "London",
+                    TimeZone = "GMT+1",
+                    DateOfArrival = new DateOnly(2025, 4, 15),
+                    DateOfDeparture = new DateOnly(2025, 4, 10),
+                    Duration = 72, // Example duration
+                    VesselName = "Ocean Explorer",
+                    IMONo = "IMO1234567",
+                    Master = "Captain Smith",
+                    Breadth = 30, // Required field
+                    ETD = new TimeOnly(14, 30), // 14:30
+                    ETA = new TimeOnly(16, 45), // 16:45
+                    WeatherForecastDate = new DateOnly(2025, 4, 9),
+                    WeatherForecasetTime = new TimeOnly(10, 00), // 10:00 AM
+                    WeatherForecastSource = "NOAA",
+                    WeatherForecastBeforeETD = 5, // Example value
+                    WaveHeightHswell = 2.5M, // Required field
+                    WaveHeightHwind = 1.8M, // Required field
+                    WaveHsmax = "3.2", // Example calculation result
+                    ShortVoyageReductionFactor = 0.85M, // Example factor
+                    DurationOk = "OK",
+                    WeatherForecastBeforeETDOK = "OK",
+                    XValues = new List<decimal> { 0.00M, 2.82M, 8.48M, 12.00M },
+                    YValues = new List<decimal> { 0.6M, 0.6M, 1.0M, 1.0M },
+                    XIncrement = 0.5,
+                    YIncrement = 0.1,
+                    Xlist = new List<double> { 0.00, 2.82, 8.48, 12.00 },
+                    Ylist = new List<double> { 0.6, 0.6, 1.0, 1.0 },
+                    CommonX = 3.2M, // Example common X value
+                    CommonY = 0.85M  // Example common Y value
+                };
+
+            // Call the API
+            var response = await Http.PostAsJsonAsync("api/searoute/short_voyage_reduction_factor", testReductionFactor);
+
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SeaRouteBlazor.Models.ReductionFactor>();
+                if (result != null)
+                {
+                    reductionFactor = result;
+                            // Show the results section
+                     showResults = true;
+
+                            // Initialize the chart after component renders
+                            await Task.Delay(100);
+                            await InitializeChart();
+
+                            // Show the report with calculated values
+                            //await ShowReport();
+                            await RearranegeReport();
+                }
+            }
+            else
+            {
+                errorMessage = $"Error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
+                Logger.LogError(errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Exception: {ex.Message}";
+            Logger.LogError(ex, "Error calculating reduction factor");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
     private async Task InitializeChart()
     {
         try
@@ -1335,6 +1506,14 @@
         await CaptureMap();
     }
 
+    private async Task ShowReportForReductionFactor()
+    {
+
+        showReportForReductionFactor = true;
+        await Task.Delay(100);
+        await CaptureMap();
+    }
+
     private async Task RearranegeReport()
     {
         await Task.Delay(100);
@@ -1342,9 +1521,14 @@
         await Task.Delay(100);
         await CaptureMap();
     }
+
     private void CloseReport()
     {
         showReport = false;
+    }
+    private void CloseReportForReductionFactor()
+    {
+        showReportForReductionFactor = false;
     }
 
     private void CloseResults()
@@ -1485,8 +1669,12 @@
 
     private void CalculateRouteReductionFactor()
     {
-        // Placeholder for route reduction factor calculation
-        Console.WriteLine("Calculating Route Reduction Factor...");
+        // For demo purposes, just showing the results
+        showResultsForReductionFactor = true;
+
+        // In a real implementation, you would calculate the reduction factor here
+        routeReductionFactor = 0.82M;
+        routeDistance = 5952;
     }
 
 

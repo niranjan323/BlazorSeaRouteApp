@@ -1,4 +1,32 @@
-﻿window.captureAndDisplayMap = async (mapElementId, displayElementId) => {
+﻿//function captureLeafletMap(mapId, displayElementId) {
+//    try {
+//        var map = window[mapId];  // Ensure the map instance exists
+//        if (!map) {
+//            console.error("Map instance not found:", mapId);
+//            return false;
+//        }
+
+//        leafletImage(map, function (err, canvas) {
+//            if (err) {
+//                console.error('Error capturing map:', err);
+//                return false;
+//            }
+//            const displayElement = document.getElementById(displayElementId);
+//            if (displayElement) {
+//                displayElement.innerHTML = '';
+//                displayElement.appendChild(canvas);
+//            }
+//        });
+//        return true;
+//    } catch (e) {
+//        console.error('Exception in captureLeafletMap:', e);
+//        return false;
+//    }
+//}
+
+
+
+window.captureAndDisplayMap = async (mapElementId, displayElementId) => {
     try {
         const mapElement = document.getElementById(mapElementId);
 
