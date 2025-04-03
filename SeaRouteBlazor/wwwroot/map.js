@@ -5,6 +5,8 @@ var routeLayer;
 var isWaypointSelectionActive = false;
 var coordTooltip;
 var currentDotNetHelper;
+let clickedPin = null;
+let newportPin = null;
 
 function initializeMap(dotNetHelper) {
     currentDotNetHelper = dotNetHelper;
@@ -58,10 +60,20 @@ function initializeMap(dotNetHelper) {
             // Call Blazor method
             currentDotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
 
+            // Remove existing pin if any
+            if (clickedPin) {
+                map.removeLayer(clickedPin);
+            }
+
+            // Add new pin at the clicked location
+            clickedPin = L.marker([latitude, longitude]).addTo(map);
+            clickedPin.bindPopup(`Waypoint: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`).openPopup();
+
             // Optionally disable selection after click
             setWaypointSelection(false);
         }
     });
+
 }
 
 function setWaypointSelection(active) {
@@ -130,8 +142,11 @@ async function zoomAndPinLocation(query, isDeparture) {
 
             setTimeout(() => {
                 // Add pin
-                let pin = L.marker([lat, lon]).addTo(map);
-                pin.bindPopup(`${isDeparture ? "new port" : "Arrival"}: ${query}`).openPopup();
+                if (newportPin) {
+                    map.removeLayer(newportPin);
+                }
+                newportPin = L.marker([lat, lon]).addTo(map);
+                newportPin.bindPopup(`${isDeparture ? "new port" : "Arrival"}: ${query}`).openPopup();
             }, 2000);
             setTimeout(() => {
 
@@ -241,7 +256,14 @@ function resetMap() {
     if (routeLayer) {
         routeLayer.clearLayers();
     }
-
+    if(clickedPin) {
+        map.removeLayer(clickedPin);
+        clickedPin = null;
+    }
+    if(newportPin) {
+        map.removeLayer(newportPin);
+        clickedPin = null;
+    }
     // Reset waypoint selection
     isWaypointSelectionActive = false;
     map.getContainer().style.cursor = '';
