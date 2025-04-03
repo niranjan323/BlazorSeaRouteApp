@@ -10,7 +10,7 @@ function initializeMap(dotNetHelper) {
     currentDotNetHelper = dotNetHelper;
     map = L.map('map').setView([20, 60], 3);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors', crossOrigin: 'anonymous' 
     }).addTo(map);
 
     // Add zoom controls
@@ -75,65 +75,6 @@ function setWaypointSelection(active) {
     }
 }
 
-// Rest of your existing functions (searchLocation, etc.) remain unchanged
-
-
-//var map;
-//var departurePin;
-//var arrivalPin;
-//var routeLayer;
-
-
-//function initializeMap(dotNetHelper) {
-//    map = L.map('map').setView([20, 60], 3);
-//    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//        attribution: '© OpenStreetMap contributors'
-//    }).addTo(map);
-
-//    // Add zoom controls
-//    L.control.zoom({
-//        position: 'topright'
-//    }).addTo(map);
-
-//    // Initialize the route layer
-//    routeLayer = L.layerGroup().addTo(map);
-
-//    // Create coordinate tooltip
-//    let coordTooltip = L.DomUtil.create('div', 'coord-tooltip');
-//    coordTooltip.style.position = 'absolute';
-//    coordTooltip.style.pointerEvents = 'none';
-//    coordTooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-//    coordTooltip.style.padding = '3px 6px';
-//    coordTooltip.style.borderRadius = '3px';
-//    coordTooltip.style.zIndex = '1000';
-//    coordTooltip.style.display = 'none';
-//    map.getContainer().appendChild(coordTooltip);
-
-//    // Show coordinates on mouse move
-//    map.on('mousemove', function (e) {
-//        const { lat, lng } = e.latlng;
-//        coordTooltip.textContent = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
-//        coordTooltip.style.display = 'block';
-//        coordTooltip.style.left = (e.originalEvent.clientX + 10) + 'px';
-//        coordTooltip.style.top = (e.originalEvent.clientY + 10) + 'px';
-//    });
-
-//    // Hide coordinates when mouse leaves map
-//    map.getContainer().addEventListener('mouseleave', function () {
-//        coordTooltip.style.display = 'none';
-//    });
-
-//    map.on('click', function (e) {
-//        var latitude = e.latlng.lat;
-//        var longitude = e.latlng.lng;
-
-//        console.log("Captured Coordinates:", latitude, longitude);
-
-//        // Call Blazor method
-//        dotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
-//    });
-//}
-
 
 async function searchLocation(query, isDeparture) {
     try {
@@ -177,6 +118,36 @@ async function searchLocation(query, isDeparture) {
     }
 }
 
+async function zoomAndPinLocation(query, isDeparture) {
+    try {
+        let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+        let data = await response.json();
+
+        if (data.length > 0) {
+            let lat = parseFloat(data[0].lat);
+            let lon = parseFloat(data[0].lon);
+
+
+            setTimeout(() => {
+                // Add pin
+                let pin = L.marker([lat, lon]).addTo(map);
+                pin.bindPopup(`${isDeparture ? "new port" : "Arrival"}: ${query}`).openPopup();
+            }, 2000);
+            setTimeout(() => {
+
+                map.flyTo([lat, lon], 3, { duration: 1.5 });
+
+            }, 2000);
+
+            map.flyTo([lat, lon], 8, { duration: 1.5 });
+        } else {
+            alert("Location not found!");
+        }
+    } catch (error) {
+        console.error("Error fetching location:", error);
+    }
+}
+
 function drawSeaRoute() {
     // Clear previous route
     routeLayer.clearLayers();
@@ -211,6 +182,8 @@ function drawSeaRoute() {
     }).addTo(routeLayer);
 }
 
+
+
 function calculateDistance(latlng1, latlng2) {
     const R = 6371; // Radius of the earth in km
     const dLat = (latlng2.lat - latlng1.lat) * Math.PI / 180;
@@ -224,37 +197,6 @@ function calculateDistance(latlng1, latlng2) {
     return Math.round(distance);
 }
 
-
-
-
-// this for chat 
-let chartInstance = null;
-
-window.createChart = (canvasId, config) => {
-    console.log("Received JSON string:", config);
-
-    try {
-        const parsedConfig = typeof config === 'string' ? JSON.parse(config) : config;
-        console.log("Parsed JSON:", parsedConfig);
-
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.error(`Canvas with ID '${canvasId}' not found.`);
-            return;
-        }
-
-        // Destroy previous instance if it exists
-        if (window.chartInstance) {
-            window.chartInstance.destroy();
-        }
-
-        // Create new chart
-        window.chartInstance = new Chart(canvas, parsedConfig);
-        console.log("Chart created successfully!");
-    } catch (error) {
-        console.error("Error parsing JSON:", error);
-    }
-};
 
 // this for report
 let reportInstance = null;
@@ -309,4 +251,250 @@ function resetMap() {
 }
 
 
+// graph-1
+window.drawChart = (canvasid, reductionFactorData) => {
+    console.log("Draw chart called for canvas:", canvasid);
+    console.log("Received data type:", typeof reductionFactorData);
+    console.log("Received data:", reductionFactorData);
 
+    // Make sure Chart is defined
+    if (typeof Chart === 'undefined') {
+        console.error("Chart.js is not loaded!");
+        return;
+    }
+
+    // Get canvas element
+    const canvas = document.getElementById(canvasid);
+    if (!canvas) {
+        console.error(`Canvas element with id '${canvasid}' not found!`);
+        return;
+    }
+
+    console.log("Canvas found:", canvas);
+
+    // Get the 2D context
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error("Could not get 2D context from canvas!");
+        return;
+    }
+
+    // Parse the reduction factor data if it's a string
+    let reductionFactor;
+    try {
+        if (typeof reductionFactorData === 'string') {
+            reductionFactor = JSON.parse(reductionFactorData);
+        } else {
+            reductionFactor = reductionFactorData;
+        }
+        console.log("Parsed data:", reductionFactor);
+    } catch (e) {
+        console.error("Error parsing reduction factor data:", e);
+        return;
+    }
+
+    // Extract values
+    const xValues = [0.00, 2.82, 8.48, 12.00];
+    const yValues = [0.6, 0.6, 1.0, 1.0];
+
+    // Extract common points
+    let commonX, commonY;
+    try {
+        commonX = parseFloat(reductionFactor.commonX);
+        commonY = parseFloat(reductionFactor.commonY);
+        console.log("Common point:", commonX, commonY);
+    } catch (e) {
+        console.error("Error extracting common point:", e);
+        commonX = 3.2;  // Use default values if parsing fails
+        commonY = 0.85;
+    }
+
+    // Create data points
+    const lineData = xValues.map((x, i) => {
+        return { x: parseFloat(x), y: parseFloat(yValues[i]) };
+    });
+
+    // Clean up any existing chart
+    if (window.myChart1) {
+        window.myChart1.destroy();
+    }
+
+    // Create new chart
+    window.myChart1 = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Short Voyage Reduction Factor',
+                    data: lineData,
+                    borderColor: 'blue',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0
+                },
+                {
+                    label: 'Hs,max (m)',
+                    data: [{ x: commonX, y: commonY }],
+                    backgroundColor: 'red',
+                    type: 'scatter',
+                    pointRadius: 8,
+                    pointHoverRadius: 10
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: 'Forecast maximum significant wave height Hs,max(m)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Short Voyage Reduction Factor'
+                    },
+                    grid: {
+                        color: '#e0e0e0'
+                    },
+                    min: 0,
+                    max: 1.2,
+                    ticks: {
+                        stepSize: 0.2
+                    }
+                }
+            }
+        }
+    });
+
+    console.log("Chart created!");
+};
+
+// graph-2
+window.drawChart2 = (canvasid, reductionFactorData) => {
+    console.log("Draw chart called for canvas:", canvasid);
+    console.log("Received data type:", typeof reductionFactorData);
+    console.log("Received data:", reductionFactorData);
+
+    // Make sure Chart is defined
+    if (typeof Chart === 'undefined') {
+        console.error("Chart.js is not loaded!");
+        return;
+    }
+
+    // Get canvas element
+    const canvas = document.getElementById(canvasid);
+    if (!canvas) {
+        console.error(`Canvas element with id '${canvasid}' not found!`);
+        return;
+    }
+
+    console.log("Canvas found:", canvas);
+
+    // Get the 2D context
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error("Could not get 2D context from canvas!");
+        return;
+    }
+
+    // Parse the reduction factor data if it's a string
+    let reductionFactor;
+    try {
+        if (typeof reductionFactorData === 'string') {
+            reductionFactor = JSON.parse(reductionFactorData);
+        } else {
+            reductionFactor = reductionFactorData;
+        }
+        console.log("Parsed data:", reductionFactor);
+    } catch (e) {
+        console.error("Error parsing reduction factor data:", e);
+        return;
+    }
+
+    // Extract values
+    const xValues = [0.00, 2.82, 8.48, 12.00];
+    const yValues = [0.6, 0.6, 1.0, 1.0];
+
+    // Extract common points
+    let commonX, commonY;
+    try {
+        commonX = parseFloat(reductionFactor.commonX);
+        commonY = parseFloat(reductionFactor.commonY);
+        console.log("Common point:", commonX, commonY);
+    } catch (e) {
+        console.error("Error extracting common point:", e);
+        commonX = 3.2;  // Use default values if parsing fails
+        commonY = 0.85;
+    }
+
+    // Create data points
+    const lineData = xValues.map((x, i) => {
+        return { x: parseFloat(x), y: parseFloat(yValues[i]) };
+    });
+
+    // Clean up any existing chart
+    if (window.myChart) {
+        window.myChart.destroy();
+    }
+
+    // Create new chart
+    window.myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Short Voyage Reduction Factor',
+                    data: lineData,
+                    borderColor: 'blue',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0
+                },
+                {
+                    label: 'Hs,max (m)',
+                    data: [{ x: commonX, y: commonY }],
+                    backgroundColor: 'red',
+                    type: 'scatter',
+                    pointRadius: 8,
+                    pointHoverRadius: 10
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: 'Forecast maximum significant wave height Hs,max(m)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Short Voyage Reduction Factor'
+                    },
+                    grid: {
+                        color: '#e0e0e0'
+                    },
+                    min: 0,
+                    max: 1.2,
+                    ticks: {
+                        stepSize: 0.2
+                    }
+                }
+            }
+        }
+    });
+
+    console.log("Chart created!");
+};

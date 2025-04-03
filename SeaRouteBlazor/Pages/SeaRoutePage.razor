@@ -137,10 +137,11 @@
                                     <!-- Port Search Section -->
                                     <div class="port-search-container">
                                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                        @bind="port.SearchTerm"
-                                        @bind:event="oninput"
-                                        @onkeyup="() => SearchDeparturePortsForExisting(port)"
-                                        placeholder="Search ports..." />
+                                               @bind="port.SearchTerm"
+                                               @bind:event="oninput"
+                                               @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
+                                               placeholder="Search ports..." />
+
                                         @if (port.SearchResults.Any())
                                         {
                                             <div class="search-results">
@@ -257,10 +258,10 @@
                                     <!-- Port Search Section -->
                                     <div class="port-search-container">
                                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                        value="@port.Port?.Name"
-                                        @oninput="e => port.SearchTerm = e.Value.ToString()"
-                                        @onkeyup="() => SearchArrivalPortsForExisting(port)"
-                                        placeholder="Search ports..." />
+                                               value="@port.Port?.Name"
+                                               @oninput="e => port.SearchTerm = e.Value.ToString()"
+                                               @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
+                                               placeholder="Search ports..." />
 
                                         @if (port.SearchResults.Any())
                                         {
@@ -657,7 +658,7 @@
             }
             else if (selectedTab == 2)
             {
-            <p>My Routes content here...</p>
+                <p>My Routes content here...</p>
             }
         </div>
 
@@ -1272,20 +1273,18 @@
 
             if (response.IsSuccessStatusCode)
             {
+                showResults = true;
+                StateHasChanged();
                 var result = await response.Content.ReadFromJsonAsync<SeaRouteBlazor.Models.ReductionFactor>();
+
                 if (result != null)
                 {
                     reductionFactor = result;
-                            // Show the results section
-                     showResults = true;
 
-                            // Initialize the chart after component renders
-                            await Task.Delay(100);
-                            await InitializeChart();
+                    await Task.Delay(300);
+                    StateHasChanged();
+                    await InitializeChart();
 
-                            // Show the report with calculated values
-                            //await ShowReport();
-                            await RearranegeReport();
                 }
             }
             else
@@ -1306,93 +1305,22 @@
     }
     private async Task InitializeChart()
     {
-        try
-        {
-            // Use the same configuration as the main chart but for the report chart
-            var labels = new List<int>();
-            for (int i = 0; i <= 12; i += 2)
+
+        try{
+
+            var chartData = new
             {
-                labels.Add(i);
-            }
-
-            decimal pointX = reductionFactor.CommonX ?? 0;
-            decimal pointY = reductionFactor.CommonY ?? 0;
-
-            int pointIndex = -1;
-            decimal closestDistance = decimal.MaxValue;
-
-            for (int i = 0; i < labels.Count; i++)
-            {
-                decimal distance = Math.Abs(pointX - labels[i]);
-                if (distance < closestDistance)
-                {
-                    closestDistance = distance;
-                    pointIndex = i;
-                }
-            }
-
-            var pointRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
-            var pointStyleArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
-            var pointBackgroundColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
-            var pointBorderColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
-            var pointHoverRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
-
-            if (pointIndex >= 0)
-            {
-                pointRadiusArray[pointIndex] = 5;
-                pointStyleArray[pointIndex] = "cross";
-                pointBackgroundColorArray[pointIndex] = "#ff0000";
-                pointBorderColorArray[pointIndex] = "#ff0000";
-                pointHoverRadiusArray[pointIndex] = 7;
-            }
-
-            var chartConfig = new
-            {
-                type = "line",
-                data = new
-                {
-                    labels = labels.ToArray(),
-                    datasets = new[]
-                    {
-                    new
-                    {
-                        label = "Short Voyages",
-                        data = new decimal[] { 0.6m, 0.6m, 0.7m, 0.85m, 1.0m, 1.0m, 1.0m },
-                        borderColor = "#26273c",
-                        backgroundColor = "rgba(0, 0, 0, 0)",
-                        borderWidth = 1,
-                        tension = 0,
-                        fill = false,
-                        pointBackgroundColor = pointBackgroundColorArray,
-                        pointBorderColor = pointBorderColorArray,
-                        pointRadius = pointRadiusArray,
-                        pointStyle = pointStyleArray,
-                        pointHoverRadius = pointHoverRadiusArray
-                    }
-                }
-                },
-                options = new
-                {
-                    responsive = true,
-                    maintainAspectRatio = false,
-                    scales = new
-                    {
-                        x = new
-                        {
-                            title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
-                        },
-                        y = new
-                        {
-                            min = 0,
-                            max = 1.2,
-                            title = new { display = true, text = "Reduction Factor" }
-                        }
-                    }
-                }
+                commonX = reductionFactor.CommonX.ToString(),
+                commonY = reductionFactor.CommonY.ToString()
             };
 
-            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartConfig);
-            await JS.InvokeVoidAsync("createChart", "reductionChart1", jsonConfig);
+            // Serialize to JSON
+            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartData);
+            Console.WriteLine($"Sending chart data: {jsonConfig}");
+
+            // Call JavaScript function
+            await JS.InvokeVoidAsync("drawChart", "reductionChart1", jsonConfig);
+
         }
         catch (Exception ex)
         {
@@ -1404,91 +1332,20 @@
     {
         try
         {
-            // Use the same configuration as the main chart but for the report chart
-            var labels = new List<int>();
-            for (int i = 0; i <= 12; i += 2)
+
+            var chartData = new
             {
-                labels.Add(i);
-            }
-
-            decimal pointX = reductionFactor.CommonX ?? 0;
-            decimal pointY = reductionFactor.CommonY ?? 0;
-
-            int pointIndex = -1;
-            decimal closestDistance = decimal.MaxValue;
-
-            for (int i = 0; i < labels.Count; i++)
-            {
-                decimal distance = Math.Abs(pointX - labels[i]);
-                if (distance < closestDistance)
-                {
-                    closestDistance = distance;
-                    pointIndex = i;
-                }
-            }
-
-            var pointRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
-            var pointStyleArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
-            var pointBackgroundColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
-            var pointBorderColorArray = Enumerable.Repeat<string>(null, labels.Count).ToArray();
-            var pointHoverRadiusArray = Enumerable.Repeat(0, labels.Count).ToArray();
-
-            if (pointIndex >= 0)
-            {
-                pointRadiusArray[pointIndex] = 5;
-                pointStyleArray[pointIndex] = "cross";
-                pointBackgroundColorArray[pointIndex] = "#ff0000";
-                pointBorderColorArray[pointIndex] = "#ff0000";
-                pointHoverRadiusArray[pointIndex] = 7;
-            }
-
-            var chartConfig = new
-            {
-                type = "line",
-                data = new
-                {
-                    labels = labels.ToArray(),
-                    datasets = new[]
-                    {
-                    new
-                    {
-                        label = "Short Voyages",
-                        data = new decimal[] { 0.6m, 0.6m, 0.7m, 0.85m, 1.0m, 1.0m, 1.0m },
-                        borderColor = "#26273c",
-                        backgroundColor = "rgba(0, 0, 0, 0)",
-                        borderWidth = 1,
-                        tension = 0,
-                        fill = false,
-                        pointBackgroundColor = pointBackgroundColorArray,
-                        pointBorderColor = pointBorderColorArray,
-                        pointRadius = pointRadiusArray,
-                        pointStyle = pointStyleArray,
-                        pointHoverRadius = pointHoverRadiusArray
-                    }
-                }
-                },
-                options = new
-                {
-                    responsive = true,
-                    maintainAspectRatio = false,
-                    scales = new
-                    {
-                        x = new
-                        {
-                            title = new { display = true, text = "Forecast Maximum Significant Wave Height (m)" }
-                        },
-                        y = new
-                        {
-                            min = 0,
-                            max = 1.2,
-                            title = new { display = true, text = "Reduction Factor" }
-                        }
-                    }
-                }
+                commonX = reductionFactor.CommonX.ToString(),
+                commonY = reductionFactor.CommonY.ToString()
             };
 
-            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartConfig);
-            await JS.InvokeVoidAsync("createReport", "reductionChart2", jsonConfig);
+            // Serialize to JSON
+            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartData);
+            Console.WriteLine($"Sending chart data: {jsonConfig}");
+
+            // Call JavaScript function
+            await JS.InvokeVoidAsync("drawChart2", "reductionChart2", jsonConfig);
+
         }
         catch (Exception ex)
         {
@@ -1584,23 +1441,52 @@
         arrivalSearchResults.Clear();
     }
 
-    private void SearchDeparturePortsForExisting(PortSelectionModel portSelection)
+    private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
     {
-        if (portSelection?.SearchTerm == null || _ports == null)
+        if (e.Key == "Enter")
         {
-            return;
+            await SearchDeparturePortsForExisting(portSelection);
         }
-        portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
     }
 
-    private void SearchArrivalPortsForExisting(PortSelectionModel portSelection)
+    private async Task HandleArrivalEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchArrivalPortsForExisting(portSelection);
+        }
+    }
+
+    private async Task SearchDeparturePortsForExisting(PortSelectionModel portSelection)
     {
         if (portSelection?.SearchTerm == null || _ports == null)
         {
             return;
         }
+
         portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+
+        if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+        {
+            await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
+        }
     }
+
+    private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
+    {
+        if (portSelection?.SearchTerm == null || _ports == null)
+        {
+            return;
+        }
+
+        portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+
+        if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+        {
+            await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
+        }
+    }
+
 
     private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
     {
