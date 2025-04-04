@@ -5,38 +5,38 @@ namespace SeaRouteBlazor.Models;
 public class ReductionFactor
 {
     [Required]
-    public string PortOfDeparture { get; set; } 
+    public string PortOfDeparture { get; set; } = "Marseille";
     [Required]
-    public string? PortOfArrival { get; set; } 
-    public string? TimeZone { get; set; } 
+    public string? PortOfArrival { get; set; } = "Shanghai";
+    public string? TimeZone { get; set; } = "UTC";
     [Required]
-    public DateOnly DateOfArrival { get; set; } 
+    public DateOnly DateOfArrival { get; set; } = new DateOnly(2024, 8, 2);
     [Required]
-    public DateOnly DateOfDeparture { get; set; } 
+    public DateOnly DateOfDeparture { get; set; } = new DateOnly(2024, 7, 30);
     public int? Duration { get; set; }
 
     public string? VesselName { get; set; }
     public string? IMONo { get; set; }
     public string? Master { get; set; }
     [Required]
-    public int Breadth { get; set; } 
+    public int Breadth { get; set; }
     [Required]
-    public TimeOnly ETD { get; set; } 
+    public TimeOnly ETD { get; set; } = new TimeOnly(02, 00);
     [Required]
-    public TimeOnly ETA { get; set; }
+    public TimeOnly ETA { get; set; } = new TimeOnly(02, 00);
     [Required]
-    public DateOnly WeatherForecastDate { get; set; } 
+    public DateOnly WeatherForecastDate { get; set; } = new DateOnly(2024, 7, 29);
     [Required]
-    public TimeOnly WeatherForecasetTime { get; set; } 
+    public TimeOnly WeatherForecasetTime { get; set; } = new TimeOnly(22, 00);
 
-    public string? WeatherForecastSource { get; set; } 
+    public string? WeatherForecastSource { get; set; } = "UTC";
 
     public int? WeatherForecastBeforeETD { get; set; }
     [Required]
-    public decimal WaveHeightHswell { get; set; } 
+    public decimal WaveHeightHswell { get; set; } = 1;
 
     [Required]
-    public decimal WaveHeightHwind { get; set; } 
+    public decimal WaveHeightHwind { get; set; } = 1;
     public string? WaveHsmax { get; set; }
     public decimal? ShortVoyageReductionFactor { get; set; }
 
@@ -46,9 +46,9 @@ public class ReductionFactor
     public List<decimal>? XValues { get; set; } = new List<decimal>();
     public List<decimal>? YValues { get; set; } = new List<decimal>();
 
-    public double? XIncrement { get; set; } 
+    public double? XIncrement { get; set; } = 2;
 
-    public double? YIncrement { get; set; }
+    public double? YIncrement { get; set; } = 0.2;
 
 
 

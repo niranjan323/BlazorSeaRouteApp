@@ -190,10 +190,10 @@
 
                                         <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
                                             <span class="content_div_label">Longitude:</span>
-                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude" @oninput="@(e => CheckAndUpdateMap(waypoint))">
+                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
                                         </div>
 
-                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" />
+                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
 
                                     </div>
 
@@ -309,10 +309,10 @@
 
                                         <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
                                             <span class="content_div_label">Longitude:</span>
-                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude"  @oninput="@(e => CheckAndUpdateMap(waypoint))">
+                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude" >
                                         </div>
 
-                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" />
+                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
 
                                     </div>
 
