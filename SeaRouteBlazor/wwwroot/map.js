@@ -520,3 +520,18 @@ window.drawChart2 = (canvasid, reductionFactorData) => {
 
     console.log("Chart created!");
 };
+
+function updateMap(name, latitude, longitude) {
+    if (!latitude || !longitude) return;
+
+    let lat = parseFloat(latitude);
+    let lon = parseFloat(longitude);
+
+    if (isNaN(lat) || isNaN(lon)) return;
+
+    let marker = L.marker([lat, lon]).addTo(map);
+    marker.bindPopup(`${name}: ${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
+
+    // Adjust map view
+    map.flyTo([lat, lon], 8, { duration: 1.5 });
+}
