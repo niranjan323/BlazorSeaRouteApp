@@ -5,7 +5,7 @@
 @using System.Threading.Tasks
 @using Microsoft.AspNetCore.Components.Web
 @using System.Text.Json
-
+@using SeaRouteBlazor.Models;
 <div class="map-container">
     <!-- Map -->
     <div id="map"></div>
@@ -456,7 +456,8 @@
                                 <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <label class="content_div_label">Estimated time of Arrival</label>
                                     <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="time" @bind="reductionFactor.ETA">
+                                        <input type="time" @bind="reductionFactor.ETA" @bind:after="CalculateVoyageDuration">
+
                                         <div class="group-498">
                                             <div class="group-497"><img class="path-4-2" src="path-358@1x.png" alt="Path 486"></div>
                                         </div>
@@ -476,7 +477,7 @@
                                 <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Duration (Hrs):</span>
                                     <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="number" @bind="reductionFactor.Duration">
+                                        <input type="number" @bind="reductionFactor.Duration" readonly>
                                         <div class="duration_icon">
                                             <div class="path-container">
                                                 <img class="path-522" src="path-522@1x.png" alt="Path 522">
@@ -487,6 +488,10 @@
                                         </div>
                                     </div>
                                 </div>
+                                @if (!string.IsNullOrEmpty(durationValidationMessage))
+                                {
+                                    <div class="validation-error">@durationValidationMessage</div>
+                                }
                             </div>
                         </div>
 
@@ -509,7 +514,7 @@
                                 <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Time:</span>
                                     <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="time" @bind="reductionFactor.WeatherForecasetTime">
+                                        <input type="time" @bind="reductionFactor.WeatherForecasetTime" @bind:after="CalculateWeatherForecast">
                                         <div class="group-498"><div class="group-497"><img class="path-4-2" src="path-358@1x.png" alt="Path 486"></div></div>
                                     </div>
                                 </div>
@@ -517,10 +522,14 @@
                                 <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Before ETD (Hrs):</span>
                                     <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="number" @bind="reductionFactor.WeatherForecastBeforeETD">
+                                        <input type="number" @bind="reductionFactor.WeatherForecastBeforeETD" readonly>
                                     </div>
                                 </div>
                             </div>
+                            @if (!string.IsNullOrEmpty(weatherValidationMessage))
+                            {
+                                <div class="validation-error">@weatherValidationMessage</div>
+                            }
                         </div>
 
                         <!-- Wave Height Section -->
@@ -947,6 +956,8 @@
     private string arrivalLocationQuery { get; set; } = "";
     private string reductionDepartureLocationQuery = "";
     private string reductionArrivalLocationQuery = "";
+    private string durationValidationMessage = "";
+    private string weatherValidationMessage = "";
     protected async override Task OnInitializedAsync()
     {
         await Task.CompletedTask;
@@ -996,6 +1007,90 @@
             {
                 await JS.InvokeVoidAsync("updateMap", waypoint.Name, lat, lng);
             }
+        }
+    }
+    // Method to calculate voyage duration
+    private void CalculateVoyageDuration()
+    {
+        durationValidationMessage = "";
+
+        // Validate required fields
+        if (reductionFactor.DateOfDeparture == default ||
+            reductionFactor.ETD == default ||
+            reductionFactor.DateOfArrival == default ||
+            reductionFactor.ETA == default)
+        {
+            durationValidationMessage = "Please fill all departure and arrival fields";
+            return;
+        }
+
+        try
+        {
+            var departureDateTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD);
+            var arrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA);
+
+            // Calculate duration
+            var timeSpan = arrivalDateTime - departureDateTime;
+            reductionFactor.Duration = Convert.ToInt32(timeSpan.TotalHours);
+
+            // Set status
+            reductionFactor.DurationOk = (reductionFactor.Duration > 0 && reductionFactor.Duration <= 72) ? "OK" : "NA";
+
+            // Validate positive duration
+            if (reductionFactor.Duration <= 0)
+            {
+                durationValidationMessage = "Arrival must be after departure";
+            }
+            if (reductionFactor.Duration > 72)
+            {
+                durationValidationMessage = "Voyage duration exceeds 72 hours. Short voyage reduction factor not applicable.";
+            }
+        }
+        catch (Exception ex)
+        {
+            durationValidationMessage = $"Error calculating duration: {ex.Message}";
+        }
+    }
+
+    // Method to calculate weather forecast
+    private void CalculateWeatherForecast()
+    {
+        weatherValidationMessage = "";
+
+        // Validate required fields
+        if (reductionFactor.WeatherForecastDate == default ||
+            reductionFactor.WeatherForecasetTime == default)
+        {
+            weatherValidationMessage = "Please fill both forecast date and time";
+            return;
+        }
+
+        try
+        {
+            var departureDateTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD);
+            var forecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime);
+
+            // Calculate forecast hours before ETD
+            var timeSpan = departureDateTime - forecastDateTime;
+            reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32(timeSpan.TotalHours);
+
+            // Set status
+            reductionFactor.WeatherForecastBeforeETDOK = (reductionFactor.WeatherForecastBeforeETD > 0 &&
+                                                         reductionFactor.WeatherForecastBeforeETD <= 6) ? "OK" : "NA";
+
+            // Validate positive forecast time
+            if (reductionFactor.WeatherForecastBeforeETD <= 0)
+            {
+                weatherValidationMessage = "Forecast must be before departure time";
+            }
+            if (reductionFactor.WeatherForecastBeforeETD > 6)
+            {
+                weatherValidationMessage = "Weather forecast must be within 6 hours of departure";
+            }
+        }
+        catch (Exception ex)
+        {
+            weatherValidationMessage = $"Error calculating forecast: {ex.Message}";
         }
     }
     private bool ValidateReductionFactor()
@@ -1058,7 +1153,11 @@
             errorMessage = $"Please correct the following errors:\n{string.Join("\n", validationErrors)}";
             return false;
         }
-
+        if (reductionFactor.DurationOk == "NA")
+        {
+            errorMessage = "Voyage duration exceeds 72 hours. Short voyage reduction factor not applicable.";
+            return false;
+        }
         return true;
     }
     private async Task SearchReductionDepartureLocation()
