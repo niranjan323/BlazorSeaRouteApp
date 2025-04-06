@@ -338,32 +338,104 @@
                     {
                         <div class="results-container">
                             <div class="result-box">
-                                <div class="result-header">
-                                    <img src="group-92@1x.png" alt="Route Icon" width="20" height="20" />
-                                    <h3 class="route_content_heading">Route Reduction Factor</h3>
-                                    <button class="close-btn small" @onclick="CloseResults">✕</button>
-                                </div>
 
-                                <div class="result-value">
-                                    <p>Reduction Factor: <strong>@(routeReductionFactor?.ToString("0.00") ?? "0.82")</strong></p>
-                                </div>
+                                <div class="route-card">
+                                    <div class="route-header">
+                                        <img src="group-92@1x.png" alt="Route" class="icon" />
+                                        <span>Route</span>
+                                    </div>
 
-                                <div class="route-distance">
-                                    <p>Route Distance: <strong>@(routeDistance?.ToString() ?? "5,952") nm</strong></p>
+                                    <!-- Route Title as a separate section -->
+                                    <div class="route-title">
+                                        <div class="title-text">Marseille - Shanghai</div>
+                                        <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
+                                    </div>
                                 </div>
+                                 
 
-                                <div class="action-buttons">
+                                    <!-- Overall Stats -->
+                                    <div class="route-stats">
+                                        <div class="stat-row">
+                                            <span class="stat-label">Reduction Factor:</span>
+                                            <span class="stat-value">0.8563</span>
+                                        </div>
+                                        <div class="stat-row">
+                                            <span class="stat-label">Route Distance:</span>
+                                            <span class="stat-value">1200 nm</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Segment 1 -->
+                                    <div class="segment-divider"></div>
+
+                                    <div class="route-segment">
+                                        <div class="segment-header">
+                                        <img src="group-92@1x.png" alt="Port" class="icon" />
+                                            <span>Port 1 to Port 2:</span>
+                                        </div>
+                                        <div class="segment-stats">
+                                            <div class="stat-row">
+                                                <span class="stat-label">Reduction Factor:</span>
+                                                <span class="stat-value">0.82</span>
+                                            </div>
+                                            <div class="stat-row">
+                                                <span class="stat-label">Route Distance:</span>
+                                                <span class="stat-value">200 nm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Segment 2 -->
+                                    <div class="segment-divider"></div>
+
+                                    <div class="route-segment">
+                                        <div class="segment-header">
+                                        <img src="group-92@1x.png" alt="Port" class="icon" />
+                                            <span>Port 2 to Port 3:</span>
+                                        </div>
+                                        <div class="segment-stats">
+                                            <div class="stat-row">
+                                                <span class="stat-label">Reduction Factor:</span>
+                                                <span class="stat-value">0.81</span>
+                                            </div>
+                                            <div class="stat-row">
+                                                <span class="stat-label">Route Distance:</span>
+                                                <span class="stat-value">1000 nm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                              
+
+
+                                @* action buttons *@
+                                @if (isRouteSaved)
+                                {
+                                    <div style="color: green; margin-bottom: 10px; text-align: center; width: 100%;">
+                                        ✔ Route Saved
+                                    </div>
+                                }
+
+                                <div class="action-buttons four-buttons">
+                                   
                                     <div class="action-btn" @onclick="AddEditVesselInfo">
                                         <img src="path-7601-11@1x.png" alt="Edit" />
                                         <span>Add/Edit Vessel Info</span>
+                                    </div>
+                                    <div class="action-btn" @onclick="ShowReportForReductionFactor">
+                                        <img src="show-report@1x.png" alt="Report" />
+                                        <span>Show Report</span>
                                     </div>
                                     <div class="action-btn" @onclick="SaveRoute">
                                         <img src="group-758-4@1x.png" alt="Save" />
                                         <span>Save Route</span>
                                     </div>
-                                    <div class="action-btn" @onclick="ShowReportForReductionFactor">
-                                        <img src="show-report@1x.png" alt="Report" />
-                                        <span>Show Report</span>
+                                    <div class="action-btn">
+                                        <img src="group-345-4@1x.png" alt="Submit" />
+                                        <span>
+                                            Submit for
+                                            ABS Record
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -476,7 +548,7 @@
 
                                 <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                                     <span class="content_div_label">Duration (Hrs):</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
+                                    <div class="cls_input_outline cls_flex_gap_8px" @onmouseover="ShowDurationSuggestions" @onmouseout="HideDurationSuggestions">
                                         <input type="number" @bind="reductionFactor.Duration" readonly>
                                         <div class="duration_icon">
                                             <div class="path-container">
@@ -486,8 +558,18 @@
                                                 <img class="path-525" src="path-525@1x.png" alt="Path 525">
                                             </div>
                                         </div>
+                                        
                                     </div>
                                 </div>
+                                @if (!string.IsNullOrEmpty(durationSuggestion))
+                                        {
+                                            <div class="suggestion-box">
+                                                @foreach (var line in durationSuggestion.Split('\n'))
+                                                {
+                                                    <div>@line</div>
+                                                }
+                                            </div>
+                                        }
                                 @if (!string.IsNullOrEmpty(durationValidationMessage))
                                 {
                                     <div class="validation-error">@durationValidationMessage</div>
@@ -519,13 +601,22 @@
                                     </div>
                                 </div>
 
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end" @onmouseover="ShowWeatherSuggestions" @onmouseout="HideWeatherSuggestions">
                                     <span class="content_div_label">Before ETD (Hrs):</span>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="number" @bind="reductionFactor.WeatherForecastBeforeETD" readonly>
                                     </div>
                                 </div>
                             </div>
+                            @if (!string.IsNullOrEmpty(weatherSuggestion))
+                            {
+                                <div class="suggestion-box">
+                                    @foreach (var line in weatherSuggestion.Split('\n'))
+                                    {
+                                        <div>@line</div>
+                                    }
+                                </div>
+                            }
                             @if (!string.IsNullOrEmpty(weatherValidationMessage))
                             {
                                 <div class="validation-error">@weatherValidationMessage</div>
@@ -958,6 +1049,9 @@
     private string reductionArrivalLocationQuery = "";
     private string durationValidationMessage = "";
     private string weatherValidationMessage = "";
+    private string durationSuggestion = "";
+    private string weatherSuggestion = "";
+    private bool isRouteSaved = false;
     protected async override Task OnInitializedAsync()
     {
         await Task.CompletedTask;
@@ -1051,7 +1145,27 @@
             durationValidationMessage = $"Error calculating duration: {ex.Message}";
         }
     }
+    private void ShowDurationSuggestions()
+    {
+        durationSuggestion = "• Voyage duration is calculated from departure to arrival\n" +
+                           "• Short voyages must be ≤72 hours\n" +
+                           "• Arrival must be after departure time";
+    }
+    private void HideDurationSuggestions()
+    {
+        durationSuggestion = "";
+    }
+    private void ShowWeatherSuggestions()
+    {
+        weatherSuggestion = "• Forecast must be before departure time\n" +
+                          "• Valid forecast window: 1-6 hours before ETD\n" +
+                          "• Enter both date and time for accurate calculation";
+    }
 
+    private void HideWeatherSuggestions()
+    {
+        weatherSuggestion = "";
+    }
     // Method to calculate weather forecast
     private void CalculateWeatherForecast()
     {
@@ -1494,7 +1608,13 @@
 
     private async Task SaveRoute()
     {
-        await JS.InvokeVoidAsync("alert", "Save Route functionality would be implemented here");
+        isRouteSaved = true; // Show the message
+        StateHasChanged();   // Update the UI
+
+        await Task.Delay(3000); // Wait for 3 seconds
+
+        isRouteSaved = false; // Hide the message
+        StateHasChanged();
     }
     private void SearchDeparturePorts()
     {

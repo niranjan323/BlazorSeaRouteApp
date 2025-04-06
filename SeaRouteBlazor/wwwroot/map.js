@@ -7,6 +7,7 @@ var coordTooltip;
 var currentDotNetHelper;
 let clickedPin = null;
 let newportPin = null;
+let waypoint = null;
 
 function initializeMap(dotNetHelper) {
     currentDotNetHelper = dotNetHelper;
@@ -263,6 +264,10 @@ function resetMap() {
     if(newportPin) {
         map.removeLayer(newportPin);
         clickedPin = null;
+    }
+    if (waypoint) {
+        map.removeLayer(waypoint);
+        waypoint = null;
     }
     // Reset waypoint selection
     isWaypointSelectionActive = false;
@@ -529,8 +534,8 @@ function updateMap(name, latitude, longitude) {
 
     if (isNaN(lat) || isNaN(lon)) return;
 
-    let marker = L.marker([lat, lon]).addTo(map);
-    marker.bindPopup(`${name}: ${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
+     waypoint = L.marker([lat, lon]).addTo(map);
+    waypoint.bindPopup(`${name}: ${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
 
     // Adjust map view
     map.flyTo([lat, lon], 8, { duration: 1.5 });

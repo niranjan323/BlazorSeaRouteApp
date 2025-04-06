@@ -23,11 +23,11 @@ public class ReductionFactor
     [Required]
     public TimeOnly ETD { get; set; } = new TimeOnly(02, 00);
     [Required]
-    public TimeOnly ETA { get; set; } = new TimeOnly(02, 00);
+    public TimeOnly ETA { get; set; } /*= new TimeOnly(02, 00);*/
     [Required]
     public DateOnly WeatherForecastDate { get; set; } = new DateOnly(2024, 7, 29);
     [Required]
-    public TimeOnly WeatherForecasetTime { get; set; } = new TimeOnly(22, 00);
+    public TimeOnly WeatherForecasetTime { get; set; } /*= new TimeOnly(22, 00);*/
 
     public string? WeatherForecastSource { get; set; } = "UTC";
 

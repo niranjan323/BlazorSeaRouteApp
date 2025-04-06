@@ -1114,18 +1114,18 @@ strong {
 .result-header {
     display: flex;
     align-items: center;
-    padding: 12px 15px;
+    padding: 2px 5px;
     background-color: #f8f9fa;
     border-bottom: 1px solid #ddd;
 }
 
     .result-header h3 {
-        margin: 0 0 0 10px;
+        margin: 0 0 0 1px;
         flex: 1;
     }
 
 .result-value {
-    padding: 15px;
+    padding: 5px;
     text-align: center;
     font-size: 1.2em;
 }
@@ -1133,6 +1133,99 @@ strong {
 .chart-container {
     height: 300px;
     padding: 15px;
+}
+
+.route-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* Route Header */
+.route-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.route-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+.route-title {
+    padding: 10px;
+    background-color: #ffffff;
+}
+
+.title-text {
+    font-weight: bold;
+    font-size: 15px;
+    margin-bottom: 5px;
+}
+
+.route-details {
+    font-size: 12px;
+    color: #666666;
+}
+
+/* Stats Styling */
+.route-stats {
+    padding: 5px 10px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    font-size: 13px;
+}
+
+.stat-label {
+    color: #333333;
+}
+
+.stat-value {
+    color: #006699;
+    font-weight: bold;
+}
+
+/* Segment Divider */
+.segment-divider {
+    height: 1px;
+    background-color: #000000;
+    margin: 0;
+}
+
+/* Segment Section */
+.route-segment {
+    padding: 10px;
+}
+
+.segment-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.segment-stats {
+    padding-left: 24px;
 }
 
 .action-buttons {
@@ -1154,6 +1247,18 @@ strong {
         width: 24px;
         height: 24px;
         margin-bottom: 5px;
+    }
+
+/* Only apply this layout if there are 4 buttons */
+.action-buttons.four-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+    .action-buttons.four-buttons .action-btn {
+        flex: 1 0 45%;
+        max-width: 45%;
     }
 
 /*  test*/
@@ -1218,3 +1323,12 @@ strong {
     font-size: 0.875rem;
     margin-top: 5px;
 }
+.suggestion-box {
+    color:forestgreen
+}
+
+
+.is-invalid {
+    border-color: #e74c3c !important;
+}
+
