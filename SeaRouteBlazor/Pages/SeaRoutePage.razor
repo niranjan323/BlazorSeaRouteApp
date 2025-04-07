@@ -408,7 +408,7 @@
                               
 
 
-                                @* action buttons *@
+                               
                                 @if (isRouteSaved)
                                 {
                                     <div style="color: green; margin-bottom: 10px; text-align: center; width: 100%;">
@@ -416,21 +416,21 @@
                                     </div>
                                 }
 
-                                <div class="action-buttons four-buttons">
+                                <div class="cls_action-buttons cls_four-buttons">
                                    
-                                    <div class="action-btn" @onclick="AddEditVesselInfo">
+                                    <div class="cls_action-btn" @onclick="AddEditVesselInfo">
                                         <img src="path-7601-11@1x.png" alt="Edit" />
                                         <span>Add/Edit Vessel Info</span>
                                     </div>
-                                    <div class="action-btn" @onclick="ShowReportForReductionFactor">
+                                    <div class="cls_action-btn" @onclick="ShowReportForReductionFactor">
                                         <img src="show-report@1x.png" alt="Report" />
                                         <span>Show Report</span>
                                     </div>
-                                    <div class="action-btn" @onclick="SaveRoute">
+                                    <div class="cls_action-btn" @onclick="SaveRoute">
                                         <img src="group-758-4@1x.png" alt="Save" />
                                         <span>Save Route</span>
                                     </div>
-                                    <div class="action-btn">
+                                    <div class="cls_action-btn">
                                         <img src="group-345-4@1x.png" alt="Submit" />
                                         <span>
                                             Submit for
@@ -736,7 +736,12 @@
                                 <div class="chart-container">
                                     <canvas id="reductionChart1"></canvas>
                                 </div>
-
+                                @if (isRouteSaved)
+                                {
+                                    <div style="color: green; margin-bottom: 10px; text-align: center; width: 100%;">
+                                        ✔ Route Saved
+                                    </div>
+                                }
                                 <div class="action-buttons">
                                     <div class="action-btn" @onclick="AddEditVesselInfo">
                                         <img src="path-7601-11@1x.png" alt="Edit" />
