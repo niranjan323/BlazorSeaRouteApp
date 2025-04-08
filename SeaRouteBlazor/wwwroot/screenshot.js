@@ -203,7 +203,10 @@ window.captureMapWithRoutes = async (mapElementId, displayElementId) => {
             imgWindow.document.write(htmlContent);
         });
 
-
+        // 👉 Re-add the route layer after capture
+        if (window.routeLayer && !mapInstance.hasLayer(window.routeLayer)) {
+            mapInstance.addLayer(window.routeLayer);
+        }
         return true;
 
     } catch (error) {
