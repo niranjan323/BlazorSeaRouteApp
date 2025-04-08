@@ -97,7 +97,10 @@ async function searchLocation(query, isDeparture) {
         if (data.length > 0) {
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
+
+            // Initial zoom out
             map.flyTo([lat + 5, lon + 5], 3, { duration: 1.5 });
+
             // Clear previous pin
             if (isDeparture) {
                 if (departurePin) {
@@ -112,14 +115,23 @@ async function searchLocation(query, isDeparture) {
                 arrivalPin = L.marker([lat, lon]).addTo(map);
                 arrivalPin.bindPopup("Arrival: " + query).openPopup();
             }
-            setTimeout(() => {
+            if (isDeparture) {
+                setTimeout(() => {
+                    map.flyTo([lat, lon], 3, {
+                        duration: 1.5,
+                        paddingTopLeft: [window.innerWidth * 0.45, 20]
+                    });
 
-                map.flyTo([lat, lon], 3, { duration: 1.5 });
-               
-            }, 2000);
+                }, 2000);
+            }
+           
 
-            map.flyTo([lat, lon], 8, { duration: 1.5 });
-            
+            // Final zoom in with right shift
+            map.flyTo([lat, lon], 8, {
+                duration: 1.5,
+                paddingTopLeft: [window.innerWidth * 0.45, 20]
+            });
+
             if (departurePin && arrivalPin) {
                 drawSeaRoute();
             }
@@ -171,7 +183,7 @@ function drawSeaRoute() {
     const departureLatLng = departurePin.getLatLng();
     const arrivalLatLng = arrivalPin.getLatLng();
 
-    // This is a simplified sea route - in a real app you'd use a proper routing API
+    // Create route coordinates
     const routeCoordinates = [
         departureLatLng,
         [departureLatLng.lat, (departureLatLng.lng + arrivalLatLng.lng) / 2],
@@ -196,8 +208,20 @@ function drawSeaRoute() {
             iconSize: null
         })
     }).addTo(routeLayer);
-}
 
+    // Calculate bounds with right padding to account for 40% overlay
+    const routeBounds = L.latLngBounds(routeCoordinates);
+
+    // Calculate pixel padding - approximately 40% of map width to the left
+    // (since your overlay is 40% width and starts at 25% from left)
+    const paddingLeft = window.innerWidth * 0.45; // Slightly more than overlay width
+
+    map.flyToBounds(routeBounds, {
+        paddingTopLeft: [paddingLeft, 20],    // Left padding to shift right
+        paddingBottomRight: [20, 20],         // Regular padding on other sides
+        duration: 1
+    });
+}
 
 
 function calculateDistance(latlng1, latlng2) {

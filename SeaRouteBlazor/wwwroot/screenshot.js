@@ -67,6 +67,14 @@ window.captureMapWithRoutes = async (mapElementId, displayElementId) => {
             return false;
         }
 
+        // 👉 Temporarily remove route layer from the map
+        if (window.routeLayer && mapInstance.hasLayer(window.routeLayer)) {
+            mapInstance.removeLayer(window.routeLayer);
+        }
+
+        // Delay to ensure layer is removed visually before capture
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // First, create a base screenshot using html2canvas
         const baseCanvas = await html2canvas(mapElement, {
             useCORS: true,
@@ -84,19 +92,13 @@ window.captureMapWithRoutes = async (mapElementId, displayElementId) => {
         // Draw the base map
         ctx.drawImage(baseCanvas, 0, 0);
 
-        // Save original map bounds and zoom level to calculate coordinates correctly
         const bounds = mapInstance.getBounds();
         const nw = mapInstance.latLngToLayerPoint(bounds.getNorthWest());
-        const se = mapInstance.latLngToLayerPoint(bounds.getSouthEast());
 
-        // Helper function to convert lat/lng to pixel coordinates on our canvas
         function latLngToCanvasPoint(latLng) {
             const layerPoint = mapInstance.latLngToLayerPoint(latLng);
-
-            // Calculate the position on our canvas using the bounds
             const x = layerPoint.x - nw.x;
             const y = layerPoint.y - nw.y;
-
             return { x, y };
         }
 
@@ -109,77 +111,101 @@ window.captureMapWithRoutes = async (mapElementId, displayElementId) => {
                     ctx.lineWidth = layer.options.weight || 2;
 
                     const points = layer.getLatLngs();
-                    for (let i = 0; i < points.length; i++) {
-                        // If points is a nested array (multipolyline), handle it accordingly
-                        if (Array.isArray(points[0])) {
-                            for (let j = 0; j < points.length; j++) {
-                                const segment = points[j];
-                                for (let k = 0; k < segment.length; k++) {
-                                    const point = latLngToCanvasPoint(segment[k]);
-                                    if (k === 0) {
-                                        ctx.moveTo(point.x, point.y);
-                                    } else {
-                                        ctx.lineTo(point.x, point.y);
-                                    }
-                                }
-                            }
-                        } else {
-                            const point = latLngToCanvasPoint(points[i]);
-                            if (i === 0) {
-                                ctx.moveTo(point.x, point.y);
-                            } else {
-                                ctx.lineTo(point.x, point.y);
-                            }
-                        }
+                    if (Array.isArray(points[0])) {
+                        points.forEach(segment => {
+                            segment.forEach((pt, idx) => {
+                                const point = latLngToCanvasPoint(pt);
+                                if (idx === 0) ctx.moveTo(point.x, point.y);
+                                else ctx.lineTo(point.x, point.y);
+                            });
+                        });
+                    } else {
+                        points.forEach((pt, idx) => {
+                            const point = latLngToCanvasPoint(pt);
+                            if (idx === 0) ctx.moveTo(point.x, point.y);
+                            else ctx.lineTo(point.x, point.y);
+                        });
                     }
+
                     ctx.stroke();
                 }
             });
         }
 
-        // Draw markers
         function drawMarker(pin, color) {
             if (pin) {
                 const point = latLngToCanvasPoint(pin.getLatLng());
-
-                // Draw pin marker
                 ctx.beginPath();
                 ctx.fillStyle = color;
-                // Draw a map pin shape
                 ctx.arc(point.x, point.y, 6, 0, 2 * Math.PI);
                 ctx.fill();
-
-                // Add a border
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
             }
         }
 
-        // Draw departure and arrival pins
-        if (window.departurePin) {
-            drawMarker(window.departurePin, 'blue');
-        }
+        if (window.departurePin) drawMarker(window.departurePin, 'blue');
+        if (window.arrivalPin) drawMarker(window.arrivalPin, 'red');
 
-        if (window.arrivalPin) {
-            drawMarker(window.arrivalPin, 'red');
-        }
+        // Convert final canvas to image
+        const finalImageUrl = canvas.toDataURL();
+        window.latestMapImageUrl = finalImageUrl;
 
-        // Display the result
         const displayElement = document.getElementById(displayElementId);
         displayElement.innerHTML = '';
-        displayElement.appendChild(canvas);
 
-        // Add download button
-        const downloadLink = document.createElement('a');
-        downloadLink.href = canvas.toDataURL('image/png');
-        downloadLink.download = 'map-with-route.png';
-        downloadLink.textContent = 'Download Map';
-        downloadLink.className = 'btn btn-primary mt-2';
-        displayElement.appendChild(document.createElement('br'));
-        displayElement.appendChild(downloadLink);
+        const previewImage = document.createElement('img');
+        previewImage.src = finalImageUrl;
+        previewImage.style.cursor = 'pointer';
+        previewImage.style.maxWidth = '100%';
+        previewImage.style.height = 'auto';
+
+        displayElement.appendChild(previewImage);
+
+        // Optional: show full image on click (e.g. in modal)
+        previewImage.addEventListener('click', () => {
+            const imgWindow = window.open("", "_blank", "width=800,height=600");
+
+            const htmlContent = `
+        <html>
+        <head>
+            <title>Map Preview</title>
+            <style>
+                body { margin: 0; padding: 0; text-align: center; background: #f5f5f5; }
+                .close-btn {
+                    position: fixed;
+                    top: 10px;
+                    right: 15px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    background: #fff;
+                    padding: 5px 10px;
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    z-index: 1000;
+                }
+                img {
+                    margin-top: 40px;
+                    max-width: 90%;
+                    max-height: 90vh;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="close-btn" onclick="window.close()">❌ Close</div>
+            <img src="${finalImageUrl}" alt="Map Preview" />
+        </body>
+        </html>
+    `;
+
+            imgWindow.document.write(htmlContent);
+        });
+
 
         return true;
+
     } catch (error) {
         console.error('Screenshot error:', error);
         console.error(error.stack);

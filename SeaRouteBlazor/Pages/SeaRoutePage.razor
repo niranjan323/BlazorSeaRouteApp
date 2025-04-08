@@ -464,7 +464,7 @@
                                         <span>Save Route</span>
                                     </div>
                                     <div class="cls_action-btn">
-                                        <img src="group-345-4@1x.png" alt="Submit" />
+                                        <img src="group-3725-2@1x.png" alt="Submit" />
                                         <span>
                                             Submit for
                                             ABS Record
@@ -763,7 +763,15 @@
                                 <div class="chart-container">
                                     <canvas id="reductionChart1"></canvas>
                                 </div>
-
+                                <div class="cls_alert_div">
+                                    @* action buttons *@
+                                    @if (isRouteSaved)
+                                    {
+                                        <div style="color: green;  text-align: center; width: 100%;">
+                                            ✔ Route Saved
+                                        </div>
+                                    }
+                                </div>
                                 <div class="cls_action-buttons">
                                     <div class="cls_action-btn" @onclick="AddEditVesselInfo">
                                         <img src="path-7601-11@1x.png" alt="Edit" />
@@ -937,7 +945,10 @@
                         <h5>Voyage Map</h5>
                         <div id="reportMapContainer" @ref="reportMapContainer"></div>
                     </div>
-
+                    <!-- Modal -->
+                    <div id="canvasModal" class="canvas-modal" onclick="hideFullCanvas()">
+                        <img id="fullCanvasImage" />
+                    </div>
                     <div class="report-section">
                         <h5>Limited Short Voyage Reduction Factor</h5>
                         <div class="result-value">
