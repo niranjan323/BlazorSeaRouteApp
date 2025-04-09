@@ -17,9 +17,9 @@ function initializeMap(dotNetHelper) {
     }).addTo(map);
 
     // Add zoom controls
-    L.control.zoom({
-        position: 'topright'
-    }).addTo(map);
+    //L.control.zoom({
+    //    position: 'topright'
+    //}).addTo(map);
 
     // Initialize the route layer
     routeLayer = L.layerGroup().addTo(map);

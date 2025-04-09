@@ -94,7 +94,7 @@
                                 </div>
                                 <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
                                     <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
-                                           placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
+                                    placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
                                     <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
                                 </div>
 
@@ -137,10 +137,10 @@
                                     <!-- Port Search Section -->
                                     <div class="port-search-container">
                                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                               @bind="port.SearchTerm"
-                                               @bind:event="oninput"
-                                               @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
-                                               placeholder="Search ports..." />
+                                        @bind="port.SearchTerm"
+                                        @bind:event="oninput"
+                                        @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
+                                        placeholder="Search ports..." />
 
                                         @if (port.SearchResults.Any())
                                         {
@@ -219,7 +219,7 @@
 
                                 <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
                                     <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
-                                           placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
+                                    placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
                                     <img src="path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
                                 </div>
 
@@ -256,10 +256,10 @@
                                     <!-- Port Search Section -->
                                     <div class="port-search-container">
                                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                               value="@port.Port?.Name"
-                                               @oninput="e => port.SearchTerm = e.Value.ToString()"
-                                               @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
-                                               placeholder="Search ports..." />
+                                        value="@port.Port?.Name"
+                                        @oninput="e => port.SearchTerm = e.Value.ToString()"
+                                        @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
+                                        placeholder="Search ports..." />
 
                                         @if (port.SearchResults.Any())
                                         {
@@ -514,7 +514,7 @@
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
-                                               placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
+                                        placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
                                         <img src="./path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
                                     </div>
                                 </div>
@@ -545,7 +545,7 @@
                                     </div>
                                     <div class="cls_input_outline cls_flex_gap_8px">
                                         <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
-                                               placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
+                                        placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
                                         <img src="./path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
                                     </div>
                                 </div>
@@ -1060,7 +1060,102 @@
             </div>
         </div>
     }
+
+    @if (AddEditVessalReport)
+    {
+        <div class="report-container">
+            <div class="header">
+                <div class="tabs">
+                    <button class="tab-btn active">
+                        Vessel Info
+                    </button>
+                </div>
+                <button class="close-btn" @onclick="CloseVesselInfo">×</button>
+            </div>
+
+            <div class="report-content">
+                <a href="#" class="close-link" @onclick="CloseVesselInfo">
+                    <span style="color: #0066cc;">←</span> Close
+                </a>
+
+                <div class="vessel-info-header" style="display: flex; align-items: center; margin: 10px 0;">
+                    <span style="color: #f9a825; margin-right: 5px;">📋</span>
+                    <span style="color: #f9a825; font-weight: 500;">Add/Edit Vessel Information</span>
+                </div>
+
+                <div class="report-section">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Vessel Name</label>
+                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">IMO Number</label>
+                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Flag</label>
+                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Report Date</label>
+                            <div style="position: relative;">
+                                <input type="text" placeholder="MM/DD/YYYY" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📅</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Vessel Name</label>
+                            <input type="text" value="Onasis Royal" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">ABS Number</label>
+                            <input type="text" value="987654" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Owner Name</label>
+                            <input type="text" value="FRAMIX" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Build Date</label>
+                            <div style="position: relative;">
+                                <input type="text" value="06/23/2022" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📅</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Owner Name</label>
+                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Contact</label>
+                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Phone</label>
+                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Email</label>
+                            <div style="position: relative;">
+                                <input type="email" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
+                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📬</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="download-btn" style="background-color: #2196f3; width: 100px;">Save</button>
+                </div>
+            </div>
+        </div>
+    }
+
+
+
 </div>
+
 @code {
 
     private ElementReference reportMapContainer;
@@ -1091,13 +1186,17 @@
     private string durationSuggestion = "";
     private string weatherSuggestion = "";
     private bool isRouteSaved = false;
+    private bool AddEditVessalReport = false;
     protected async override Task OnInitializedAsync()
     {
         await Task.CompletedTask;
         await GetSampleports();
 
     }
-
+    private void CloseVesselInfo()
+    {
+        AddEditVessalReport = false;
+    }
     private async Task GoBack()
     {
         selectedForm = 0;
@@ -1251,14 +1350,14 @@
         List<string> validationErrors = new List<string>();
 
         // Check required vessel info
-        if (string.IsNullOrWhiteSpace(reductionFactor.VesselName))
-            validationErrors.Add("Vessel Name is required");
+        // if (string.IsNullOrWhiteSpace(reductionFactor.VesselName))
+        //     validationErrors.Add("Vessel Name is required");
 
-        if (string.IsNullOrWhiteSpace(reductionFactor.IMONo))
-            validationErrors.Add("Vessel IMO Number is required");
+        // if (string.IsNullOrWhiteSpace(reductionFactor.IMONo))
+        //     validationErrors.Add("Vessel IMO Number is required");
 
-        if (reductionFactor.Breadth <= 0)
-            validationErrors.Add("Vessel Breadth must be greater than 0");
+        // if (reductionFactor.Breadth <= 0)
+        //     validationErrors.Add("Vessel Breadth must be greater than 0");
 
         // Check port information
         if (string.IsNullOrWhiteSpace(reductionFactor.PortOfDeparture))
@@ -1642,7 +1741,7 @@
 
     private async Task AddEditVesselInfo()
     {
-        await JS.InvokeVoidAsync("alert", "Add/Edit Vessel Info functionality would be implemented here");
+        AddEditVessalReport = true;
     }
 
     private async Task SaveRoute()

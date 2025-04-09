@@ -19,7 +19,7 @@ body {
     top: 6%;
     left: 25% !important;
     transform: translateX(-50%);
-    width: 40% !important;
+    width: 38% !important;
     background: white;
     /*  padding: 15px;*/
     border-radius: 8px;
@@ -1435,3 +1435,5 @@ strong {
     display: block;
     padding-top: 34px;
 }
+
+/*add-edit-vessel*/
