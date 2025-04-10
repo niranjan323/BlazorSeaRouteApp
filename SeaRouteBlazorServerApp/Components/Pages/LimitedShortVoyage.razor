@@ -1,0 +1,316 @@
+﻿@page "/LimitedShortVoyage"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject ILogger<LimitedShortVoyage> Logger
+<button class="back-btn" @onclick="GoBack">⬅ Back</button>
+
+<div class="cls_block">
+
+    <div class="cls_flex cls_flex_gap_2 cls_padding_14px_22px">
+        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+            <span class="content_div_label">Vessel Name</span>
+            <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" @bind="reductionFactor.VesselName" />
+        </div>
+        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+            <span class="content_div_label">Vessel IMO</span>
+            <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" @bind="reductionFactor.IMONo" />
+        </div>
+        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+            <label class="content_div_label">Vessel Breadth</label>
+            <input type="number" class="content_div_input" style="flex: 1;" placeholder="100,000" @bind="reductionFactor.Breadth" />
+        </div>
+    </div>
+
+    <!-- Port of Departure Section -->
+    <div class="route_content cls_padding_14px_22px cls_flex_gap_8px">
+        <h3 class="route_content_heading2 cls_mar_btm_8px">
+            Port of Departure
+        </h3>
+
+        <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <div class="cls_sub_heading cls_flex_gap_8px">
+                    @* later make it dynamic *@
+                    @*  <span class="content_div_label_blue">NLRTM</span>
+                                        <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span> *@
+                </div>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
+                           placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
+                    <img src="Images/path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Date of Departure</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="date" @bind="reductionFactor.DateOfDeparture">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <label class="content_div_label">Estimated Time of Departure</label>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="time" @bind="reductionFactor.ETD">
+
+                </div>
+            </div>
+
+            <!-- Port of Arrival Section -->
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <h3 class="route_content_heading2">
+                    Port of Arrival
+                </h3>
+                <div class="cls_sub_heading cls_flex_gap_8px">
+                    @*    <span class="content_div_label_blue">GBDBL</span>
+                                        <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span> *@
+                </div>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
+                           placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
+                    <img src="Images/path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Date of Arrival</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="date" @bind="reductionFactor.DateOfArrival">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <label class="content_div_label">Estimated time of Arrival</label>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="time" @bind="reductionFactor.ETA" @bind:after="CalculateVoyageDuration">
+
+
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <div class="cls_sub_heading">
+                    <span class="content_div_label">Time Zone:</span>
+                </div>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" @bind="reductionFactor.TimeZone">
+                    <img src="Images/path-484@1x.png" class="icon">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Duration (Hrs):</span>
+                <div class="cls_input_outline cls_flex_gap_8px" @onmouseover="ShowDurationSuggestions" @onmouseout="HideDurationSuggestions">
+                    <input type="number" @bind="reductionFactor.Duration" readonly>
+                    <div class="duration_icon">
+                        <div class="path-container">
+                            <img class="path-522" src="path-522@1x.png" alt="Path 522">
+                            <img class="path-523" src="path-523@1x.png" alt="Path 523">
+                            <img class="path-524" src="path-524@1x.png" alt="Path 524">
+                            <img class="path-525" src="path-525@1x.png" alt="Path 525">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(durationSuggestion))
+            {
+                <div class="suggestion-box">
+                    @foreach (var line in durationSuggestion.Split('\n'))
+                    {
+                        <div>@line</div>
+                    }
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(durationValidationMessage))
+            {
+                <div class="validation-error">@durationValidationMessage</div>
+            }
+        </div>
+    </div>
+
+    <!-- Weather Forecast Section -->
+    <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
+        <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+            <img src="Images/forecast-icon@1x.png" alt="Route Icon" class="icon">
+            <h3 class="route_content_heading">Weather Forecast</h3>
+        </div>
+
+        <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Date</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="date" @bind="reductionFactor.WeatherForecastDate">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Time:</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="time" @bind="reductionFactor.WeatherForecasetTime" @bind:after="CalculateWeatherForecast">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end" @onmouseover="ShowWeatherSuggestions" @onmouseout="HideWeatherSuggestions">
+                <span class="content_div_label">Before ETD (Hrs):</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="number" @bind="reductionFactor.WeatherForecastBeforeETD" readonly>
+                </div>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(weatherSuggestion))
+        {
+            <div class="suggestion-box">
+                @foreach (var line in weatherSuggestion.Split('\n'))
+                {
+                    <div>@line</div>
+                }
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(weatherValidationMessage))
+        {
+            <div class="validation-error">@weatherValidationMessage</div>
+        }
+    </div>
+
+    <!-- Wave Height Section -->
+    <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
+        <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+            <img src="Images/wave-height-icon@1x.png" alt="Route Icon" class="icon">
+            <h3 class="route_content_heading">Forecast Maximum Significant Wave Height</h3>
+        </div>
+
+        <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Hswell [m]</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="number" step="0.1" @bind="reductionFactor.WaveHeightHswell">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Hwind [m]</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="number" step="0.1" @bind="reductionFactor.WaveHeightHwind">
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Hs, max [m]</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" @bind="reductionFactor.WaveHsmax" readonly>
+                </div>
+            </div>
+        </div>
+
+        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+            <label class="route_content_heading1">Source :</label>
+            <input type="text" @bind="reductionFactor.WeatherForecastSource" style="border:none; outline:none; width:250px;">
+        </div>
+    </div>
+
+    <!-- Output Section -->
+    <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
+        <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
+            <div class="Images/group-3253">
+                <img class="path-7591" src="Images/path-7591-1@1x.png" alt="Path 7591">
+                <img class="path-7593" src="Images/path-7593-1@1x.png" alt="Path 7593">
+                <img class="path-7592" src="Images/path-7592-1@1x.png" alt="Path 7592">
+            </div>
+            <h3 class="route_content_heading">Output</h3>
+        </div>
+
+        <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Duration OK</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" @bind="reductionFactor.DurationOk" readonly>
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Forecast Before ETD OK</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" @bind="reductionFactor.WeatherForecastBeforeETDOK" readonly>
+                </div>
+            </div>
+
+            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
+                <span class="content_div_label">Short Voyage Reduction Factor</span>
+                <div class="cls_input_outline cls_flex_gap_8px">
+                    <input type="text" value="@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? string.Empty)" readonly>
+                </div>
+            </div>
+
+            <!-- Button for API call -->
+            <div class="cls_flex cls_flex_justify_center cls_width_100">
+                <button class="cls_button_blue" @onclick="CalculateReductionFactor" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span>Calculating...</span>
+                    }
+                    else
+                    {
+                        <span>Calculate Limited Short Voyage</span>
+                    }
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="cls_flex cls_flex_justify_center cls_width_100 text-danger">
+                    @errorMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+
+<!-- Result visualization (shown after calculation) -->
+@if (showResults)
+{
+    <div class="results-container">
+        <div class="result-box">
+            <div class="result-header">
+                <img src="Images/group-92@1x.png" alt="Voyage Icon" width="20" height="20" />
+                <h3 class="route_content_heading">Limited Short Voyage Reduction Factor</h3>
+                <button class="close-btn small" @onclick="CloseResults">✕</button>
+            </div>
+
+            <div class="result-value">
+                <p>Reduction Factor: <strong>0.60</strong></p>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="reductionChart1"></canvas>
+            </div>
+            <div class="cls_alert_div">
+                @* action buttons *@
+                @if (isRouteSaved)
+                {
+                    <div style="color: green;  text-align: center; width: 100%;">
+                        ✔ Route Saved
+                    </div>
+                }
+            </div>
+            <div class="cls_action-buttons">
+                <div class="cls_action-btn" @onclick="AddEditVesselInfo">
+                    <img src="path-7601-11@1x.png" alt="Edit" />
+                    <span>Add/Edit Vessel Info</span>
+                </div>
+                <div class="cls_action-btn" @onclick="SaveRoute">
+                    <img src="Images/group-758-4@1x.png" alt="Save" />
+                    <span>Save Route</span>
+                </div>
+                <div class="cls_action-btn" @onclick="ShowReport">
+                    <img src="Images/show-report@1x.png" alt="Report" />
+                    <span>Show Report</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+

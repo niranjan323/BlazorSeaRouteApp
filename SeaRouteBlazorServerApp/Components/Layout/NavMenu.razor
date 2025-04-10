@@ -1,0 +1,29 @@
+﻿@inject NavigationManager NavigationManager
+
+<div class="nav-menu">
+    <div class="nav-items">
+        <!-- Home -->
+        <div class="nav-item active">
+            <button class="nav-button" @onclick='() => NavigationManager.NavigateTo("/")'>
+                <img src="Images/home-selected@1x.png" alt="Home" class="nav-icon" />
+            </button>
+            <span class="nav-label">Home</span>
+        </div>
+
+        <!-- Routes -->
+        <div class="nav-item">
+            <button class="nav-button" @onclick='() => NavigationManager.NavigateTo("/counterddd")'>
+                <img src="Images/my-routes-selected-1@1x.png" alt="Routes" class="nav-icon" />
+            </button>
+            <span class="nav-label">My Routes</span>
+        </div>
+
+        <!-- Location -->
+        <div class="nav-item">
+            <button class="nav-button" @onclick='() => NavigationManager.NavigateTo("/weather")'>
+                <img src="Images/path-7508-1@1x.png" alt="Location" class="nav-icon" />
+            </button>
+            <span class="nav-label">Reports</span>
+        </div>
+    </div>
+</div>

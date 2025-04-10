@@ -1,0 +1,429 @@
+﻿@page "/reductionfactorcal"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject ILogger<ReductionFactorCal> Logger
+<!-- Back Button -->
+@* <button class="back-btn" @onclick="GoBack">⬅ Back</button> *@
+
+<button class="back-btn" @onclick="GoBack">⬅ Back</button>
+
+<div class="route_content">
+    <!-- Route Name Section -->
+
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                <img src="Images/group-92@1x.png" alt="Route Icon" class="icon" />
+                <h3 class="heading_Customize">
+                    Customize Route
+                </h3>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Route Name</label>
+                <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Departure Section -->
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+            <h4 class="route_content_heading1">Port of Departure</h4>
+
+            <!-- Static Display for First Time -->
+            <div class="cls_sub_heading">
+                @*  <span class="content_div_label_blue">FRMRS</span>
+                                    <span class="content_div_label">Marseille, France</span> *@
+            </div>
+            <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
+                <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
+                       placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
+                <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
+            </div>
+
+            <!-- Add Port Button -->
+            <div class="cls_btn_div">
+                <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Dynamic Departure Ports Section -->
+    @foreach (var port in routeModel.DeparturePorts)
+    {
+        <div class="cls_route_div port-card">
+
+            <div class="cls_route_div_rep">
+                <h4 class="route_content_heading1">loading port2</h4>
+
+                <div class="cls_sub_heading">
+                    @* <span class="content_div_label_blue">FRMRS</span> *@
+
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                        <span class="content_div_label">Port of Departure</span>
+                        @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
+                        @* <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveDeparturePort(port)" /> *@
+                        <div class="cls_btn_minimize" @onclick="() => RemoveDeparturePort(port)">
+                            <div class="cls_btn_minimize_div"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="cls_sub_heading">
+                    <span class="content_div_label">@port.Port?.Unlocode</span>
+                    <span class="content_div_label_blue">@port.Port?.Name  @port.Port?.Country</span>
+                </div>
+
+                <!-- Port Search Section -->
+                <div class="port-search-container">
+                    <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                           @bind="port.SearchTerm"
+                           @bind:event="oninput"
+                           @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
+                           placeholder="Search ports..." />
+
+                    @if (port.SearchResults.Any())
+                    {
+                        <div class="search-results">
+                            @foreach (var result in port.SearchResults)
+                            {
+                                <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
+                                    <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="cls_btn_div">
+                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                </div>
+            </div>
+        </div>
+
+    }
+
+
+    <!-- Dynamic Departure Waypoints -->
+    @foreach (var waypoint in routeModel.DepartureWaypoints)
+    {
+        <div class="cls_route_div">
+            <div class="cls_route_div_rep">
+
+                <div class="cls_sub_heading">
+                    @* <span class="content_div_label_blue">FRMRS</span> *@
+
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                        <span class="content_div_label">Port of Departure</span>
+                        <div class="cls_btn_minimize">
+                            <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
+                    <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                        <span class="content_div_label">Latitude:</span>
+                        <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
+                    </div>
+
+                    <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                        <span class="content_div_label">Longitude:</span>
+                        <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
+                    </div>
+
+                    <img src="Images/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
+
+                </div>
+
+                <div class="cls_btn_div">
+                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                </div>
+            </div>
+        </div>
+
+    }
+
+    <!-- Arrival Section -->
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+            <h4 class="route_content_heading1">Port of Arrival</h4>
+
+            <!-- Static Display for First Time -->
+            <div class="cls_sub_heading">
+                @* <span class="content_div_label_blue">SGSIN</span>
+                                    <span class="content_div_label">Singapore</span> *@
+            </div>
+
+            <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
+                <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
+                       placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
+                <img src="Images/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
+            </div>
+
+            <!-- Add Port Button -->
+            <div class="cls_btn_div">
+                <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dynamic Arrival Ports Section -->
+    @foreach (var port in routeModel.ArrivalPorts)
+    {
+        <div class="cls_route_div port-card">
+
+            <div class="cls_route_div_rep">
+                <!--!--><h4 class="route_content_heading1">loading port1</h4>
+
+                <!--!--><div class="cls_sub_heading">
+                    @*   <span class="content_div_label_blue">FRMRS</span> *@
+
+                    <span class="content_div_label">Port of Departure</span>
+                    <div class="cls_btn_minimize" @onclick="() => RemoveArrivalPort(port)"><div class="cls_btn_minimize_div"></div></div>
+                </div>
+
+
+
+                <div class="content_div">
+                    <span class="content_div_label">@port.Port?.Unlocode</span>
+                    <span class="content_div_label">@port.Port?.Name, @port.Port?.Country</span>
+                </div>
+
+                <!-- Port Search Section -->
+                <div class="port-search-container">
+                    <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                           value="@port.Port?.Name"
+                           @oninput="e => port.SearchTerm = e.Value.ToString()"
+                           @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
+                           placeholder="Search ports..." />
+
+                    @if (port.SearchResults.Any())
+                    {
+                        <div class="search-results">
+                            @foreach (var result in port.SearchResults)
+                            {
+                                <div class="search-result-item" @onclick="() => UpdateArrivalPort(port, result)">
+                                    <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+
+        </div>
+    }
+
+    <!-- Dynamic Arrival Waypoints -->
+    @foreach (var waypoint in routeModel.ArrivalWaypoints)
+    {
+
+        <div class="cls_route_div">
+            <div class="cls_route_div_rep">
+
+
+                <div class="cls_sub_heading">
+                    @*   <span class="content_div_label_blue">FRMRS</span> *@
+
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                        <span class="content_div_label">Port of Departure</span>
+                        <div class="cls_btn_minimize" @onclick="() => RemoveArrivalWaypoint(waypoint)">
+                            <div class="cls_btn_minimize_div"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
+                    <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                        <span class="content_div_label">Latitude:</span>
+                        <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
+                    </div>
+
+                    <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                        <span class="content_div_label">Longitude:</span>
+                        <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
+                    </div>
+
+                    <img src="Images/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
+
+                </div>
+
+                <div class="cls_btn_div">
+                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                </div>
+
+
+
+            </div>
+        </div>
+
+    }
+
+
+    <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
+        <button class="cls_button_blue" @onclick="CalculateRouteReductionFactor">Calculate Route Reduction Factor</button>
+    </div>
+</div>
+<!-- Results visualization (shown after calculation) -->
+@if (showResultsForReductionFactor)
+{
+    <div class="cls_block">
+
+        <div class="route_content">
+            <div class="cls_route_div">
+                <div class="cls_route_div_rep">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="Images/group-92@1x.png" alt="Route Icon" class="icon">
+                        <h3 class="heading_Customize">
+                            Route
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="cls_route_div">
+                <div class="cls_route_div_rep">
+                    <div class="content_div">
+                        <div class="title-text">Marseille - Shanghai</div>
+                        <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        @*        <div class="route_content">
+                                    <div class="route-header">
+                                        <img src="Images/group-92@1x.png" alt="Route" class="icon" />
+                                        <span>Route</span>
+                                    </div>
+
+                                    <!-- Route Title as a separate section -->
+                                    <div class="route-title">
+                                        <div class="title-text">Marseille - Shanghai</div>
+                                        <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
+                                    </div>
+                                </div> *@
+
+        <div class="route_content">
+
+            <!-- Overall Stats -->
+            <div class="route-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Reduction Factor:</span>
+                    <span class="stat-value">0.8563</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Route Distance:</span>
+                    <span class="stat-value">1200 nm</span>
+                </div>
+            </div>
+
+            <!-- Segment 1 -->
+
+            <div class="route-segment">
+                <div class="segment-header">
+                    @* <img src="Images/group-92@1x.png" alt="Port" class="icon" /> *@
+                    <span>Port 1 to Port 2:</span>
+                </div>
+                <div class="segment-stats">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="Images/group-92@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Reduction Factor:</span>
+                            <span class="stat-value">0.82</span>
+                        </div>
+                    </div>
+
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="Images/group-3728-11@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Route Distance:</span>
+                            <span class="stat-value">200 nm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Segment 2 -->
+
+            <div class="route-segment">
+                <div class="segment-header">
+                    <span>Port 2 to Port 3:</span>
+                </div>
+                <div class="segment-stats">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="Images/group-92@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Reduction Factor:</span>
+                            <span class="stat-value">0.81</span>
+                        </div>
+                    </div>
+
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="Images/group-3728-11@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Route Distance:</span>
+                            <span class="stat-value">1000 nm</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+
+            <div class="cls_alert_div">
+                @* action buttons *@
+                @if (isRouteSaved)
+                {
+                    <div style="color: green;  text-align: center; width: 100%;">
+                        ✔ Route Saved
+                    </div>
+                }
+            </div>
+
+            <div class="cls_action-buttons cls_four-buttons">
+
+                <div class="cls_action-btn" @onclick="AddEditVesselInfo">
+                    <img src="Images/path-7601-11@1x.png" alt="Edit" />
+                    <span>Add/Edit Vessel Info</span>
+                </div>
+                <div class="cls_action-btn" @onclick="ShowReportForReductionFactor">
+                    <img src="Images/show-report@1x.png" alt="Report" />
+                    <span>Show Report</span>
+                </div>
+                <div class="cls_action-btn" @onclick="SaveRoute">
+                    <img src="Images/group-758-4@1x.png" alt="Save" />
+                    <span>Save Route</span>
+                </div>
+                <div class="cls_action-btn">
+                    <img src="Images/group-3725-2@1x.png" alt="Submit" />
+                    <span>
+                        Submit for
+                        ABS Record
+                    </span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+}

@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteWebApis", "SeaRoute
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteModel", "SeaRouteModel\SeaRouteModel.csproj", "{44443C92-D912-40F4-B7D1-D763F81DCA18}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteBlazorServerApp", "SeaRouteBlazorServerApp\SeaRouteBlazorServerApp.csproj", "{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{44443C92-D912-40F4-B7D1-D763F81DCA18}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{44443C92-D912-40F4-B7D1-D763F81DCA18}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{44443C92-D912-40F4-B7D1-D763F81DCA18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
