@@ -766,6 +766,10 @@ body {
     justify-content: center;
 }
 
+.cls_flex_justify_end {
+    justify-content: flex-end;
+}
+
 .cls_flex_align_center {
     align-items: center;
 }
@@ -958,7 +962,6 @@ cls_input_outline img {
 
 .report-container {
     flex: 1;
-    min-width: 600px;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -968,7 +971,7 @@ cls_input_outline img {
     position: absolute;
     top: 6%;
     right: 80px;
-    width: 610px;
+    width: 544px;
     background: white;
     padding: 0;
     z-index: 1000;
@@ -1437,3 +1440,74 @@ strong {
 }
 
 /*add-edit-vessel*/
+.cls_vessel_outline {
+    display: flex;
+    flex-direction: column;
+}
+
+.cls_vessel_container {
+    display: flex;
+    column-gap: 4%;
+    row-gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 11%;
+}
+
+.cls_vessel_div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 48%;
+}
+
+.cls_vessel_div_label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.cls_vessel_container_con {
+    display: block;
+    border: 1px solid #000;
+}
+
+.cls_vessel_div_btm {
+    padding: 0px 4% 16px 11%;
+    display: flex;
+    column-gap: 4%;
+    align-items: flex-end;
+}
+
+/*plus button icon*/
+.cls_btn_plus {
+    align-items: center;
+    background-color: #1473e6;
+    border-radius: 5px;
+    display: flex;
+    height: 16px;
+    justify-content: center;
+    min-width: 16px;
+    padding: 7.3px 3.1px;
+    position: relative;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+    .cls_btn_plus .horizontal,
+    .cls_btn_plus .vertical {
+        background-color: #FFF;
+        position: absolute;
+        border-radius: 0.72px;
+    }
+
+    .cls_btn_plus .horizontal {
+        height: 1px;
+        width: 10px;
+    }
+
+    .cls_btn_plus .vertical {
+        width: 1px;
+        height: 10px;
+    }
+
+
+/*plus button icon ends*/

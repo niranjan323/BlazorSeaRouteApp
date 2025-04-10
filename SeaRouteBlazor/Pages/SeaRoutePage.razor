@@ -173,7 +173,7 @@
                                     <div class="cls_sub_heading">
                                         @* <span class="content_div_label_blue">FRMRS</span> *@
 
-                                        <div class="cls_flex cls_flex_gap_8px">
+                                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
                                             <span class="content_div_label">Port of Departure</span>
                                             <div class="cls_btn_minimize">
                                                 <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
@@ -290,7 +290,7 @@
                                     <div class="cls_sub_heading">
                                         @*   <span class="content_div_label_blue">FRMRS</span> *@
 
-                                        <div class="cls_flex cls_flex_gap_8px">
+                                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
                                             <span class="content_div_label">Port of Departure</span>
                                             <div class="cls_btn_minimize" @onclick="() => RemoveArrivalWaypoint(waypoint)">
                                                 <div class="cls_btn_minimize_div"></div>
@@ -1073,81 +1073,130 @@
                 <button class="close-btn" @onclick="CloseVesselInfo">×</button>
             </div>
 
-            <div class="report-content">
-                <a href="#" class="close-link" @onclick="CloseVesselInfo">
+            <div class="form-container">
+                @*    <a href="#" class="close-link" @onclick="CloseVesselInfo">
                     <span style="color: #0066cc;">←</span> Close
-                </a>
+                </a> *@
+                <button class="back-btn" @onclick="CloseVesselInfo">
+                    ⬅ Back
+                </button>
 
-                <div class="vessel-info-header" style="display: flex; align-items: center; margin: 10px 0;">
-                    <span style="color: #f9a825; margin-right: 5px;">📋</span>
-                    <span style="color: #f9a825; font-weight: 500;">Add/Edit Vessel Information</span>
-                </div>
-
-                <div class="report-section">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Vessel Name</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">IMO Number</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Flag</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Report Date</label>
-                            <div style="position: relative;">
-                                <input type="text" placeholder="MM/DD/YYYY" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📅</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Vessel Name</label>
-                            <input type="text" value="Onasis Royal" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">ABS Number</label>
-                            <input type="text" value="987654" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Owner Name</label>
-                            <input type="text" value="FRAMIX" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Build Date</label>
-                            <div style="position: relative;">
-                                <input type="text" value="06/23/2022" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📅</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Owner Name</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Contact</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Phone</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Email</label>
-                            <div style="position: relative;">
-                                <input type="email" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📬</span>
+                <div class="route_content">
+                    <div class="cls_route_div">
+                        <div class="cls_route_div_rep">
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                                <img src="group-92@1x.png" alt="Route Icon" class="icon">
+                                <h3 class="heading_Customize">
+                                    Add/Edit Vessel Information
+                                </h3>
                             </div>
                         </div>
                     </div>
+
+                                        <div class="cls_vessel_outline">
+
+                        <div class="cls_vessel_container_con">
+                        <div class="cls_vessel_container">
+                         
+                            <div class="cls_vessel_div">
+                                <label class="cls_vessel_div_label">Vessel Name</label>
+                                <input type="type" name="name" value="" class="content_div_input" />
+                            </div>
+                            <div class="cls_vessel_div">
+                                <label class="cls_vessel_div_label">IMO Number</label>
+                                <input type="type" name="name" value="" class="content_div_input" />
+                            </div>
+                            
+                        </div>
+                        <div class="cls_vessel_div_btm">
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Flag</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Report Date</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_btn_plus">
+                                    <div class="horizontal"></div>
+                                    <div class="vertical"></div>
+                                </div>
+
+                        </div>
+                        </div>
+
+
+                        <div class="cls_vessel_container_con">
+                            <div class="cls_vessel_container">
+
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Vessel Name</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">IMO Number</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+
+                            </div>
+                            <div class="cls_vessel_div_btm">
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Flag</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Report Date</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_btn_minimize">
+                                    <!--!-->
+                                    <div class="cls_btn_minimize_div"></div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="cls_vessel_container_con">
+                            <div class="cls_vessel_container">
+
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Vessel Name</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">IMO Number</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+
+                            </div>
+                            <div class="cls_vessel_div_btm">
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Flag</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_vessel_div">
+                                    <label class="cls_vessel_div_label">Report Date</label>
+                                    <input type="type" name="name" value="" class="content_div_input" />
+                                </div>
+                                <div class="cls_btn_plus">
+                                    <div class="horizontal"></div>
+                                    <div class="vertical"></div>
+                                </div>
+
+                            </div>
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
+                        <button class="cls_button_blue">Save</button>
+                    </div>
+
                 </div>
 
-                <div style="text-align: center; margin-top: 20px;">
-                    <button class="download-btn" style="background-color: #2196f3; width: 100px;">Save</button>
-                </div>
+
             </div>
         </div>
     }
@@ -1200,6 +1249,7 @@
     private async Task GoBack()
     {
         selectedForm = 0;
+        AddEditVessalReport = false;
         showReport = false;
         showReportForReductionFactor = false;
         showResultsForReductionFactor = false;
