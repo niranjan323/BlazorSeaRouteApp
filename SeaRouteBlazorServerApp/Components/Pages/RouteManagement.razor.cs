@@ -13,7 +13,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private ElementReference reportMapContainer;
         private int selectedTab = 1;
         private int selectedForm = 0;
-
+        private ReductionFactorCal? reductionFactorCalRef;
         private ReductionFactor reductionFactor = new ReductionFactor();
         private DotNetObjectReference<RouteManagement>? objRef;
         private void SelectTab(int tab) => selectedTab = tab;
@@ -30,6 +30,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private bool showReport = false;
         private bool showReportForReductionFactor = false;
         private bool AddEditVessalReport = false;
+
+
+
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;
@@ -53,14 +56,36 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 StateHasChanged();
             }
         }
+        [JSInvokable]
+        public void CaptureCoordinates(double latitude, double longitude)
+        {
 
+            if (reductionFactorCalRef != null)
+            {
+                // Forward coordinates to child component
+                reductionFactorCalRef.CaptureCoordinates(latitude, longitude);
+            }
+            //if (routeModel.DepartureWaypoints.Count > 0)
+            //{
+            //    var lastWaypoint = routeModel.DepartureWaypoints.Last();
+            //    lastWaypoint.Latitude = latitude.ToString();
+            //    lastWaypoint.Longitude = longitude.ToString();
+            //    StateHasChanged();
+            //}
+        }
+        private async Task HandleReportData(ReductionFactor reportData)
+        {
+            reductionFactor = reportData;
+
+            StateHasChanged();
+        }
         private async Task SaveVesselInfo()
         {
             // Here you can implement the save logic
             // For example, sending the vessel information to an API
             Console.WriteLine($"Saving {vesselInfos.Count} vessel information records");
 
-         
+
         }
         private void CloseVesselInfo()
         {
@@ -85,6 +110,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             AddEditVessalReport = false;
             showReport = false;
             showReportForReductionFactor = false;
+            ShowABSReport = false;
         }
         private async Task AddEditVesselInfo()
         {
@@ -147,5 +173,35 @@ Longitude = 103.8198
             await JS.InvokeVoidAsync("window.print");
         }
 
+        // report for ShowABSReport later move to separate component
+        private bool ShowABSReport { get; set; } = false;
+        private List<ShowABSReportForm> vesselImos = new List<ShowABSReportForm>()
+    {
+        new ShowABSReportForm { ImoNumber = "" },
+    };
+        public class ShowABSReportForm
+        {
+            public string ImoNumber { get; set; } = string.Empty;
+        }
+        private void CloseABSReportForm()
+        {
+            ShowABSReport = false;
+        }
+
+        private void AddNewImo()
+        {
+            vesselImos.Add(new ShowABSReportForm { ImoNumber = "" });
+            StateHasChanged();
+        }
+
+        private void SubmitABSReport()
+        {
+            // Logic to submit the ABS report
+            // You can add validation and submission logic here
+        }
+        private async Task ShowAbsReport()
+        {
+            ShowABSReport = true;
+        }
     }
 }

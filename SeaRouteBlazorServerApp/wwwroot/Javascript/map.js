@@ -629,7 +629,7 @@ function initializeMap(dotNetHelper) {
             clickedPins.push(newPin);
 
             // Optionally disable selection after click
-            // setWaypointSelection(false);
+             setWaypointSelection(false);
             // ^ Comment this line if you want to keep adding waypoints without clicking the button again
         }
     });

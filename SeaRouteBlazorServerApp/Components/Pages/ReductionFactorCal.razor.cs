@@ -13,8 +13,12 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         public EventCallback OnBack { get; set; }
         [Parameter]
         public EventCallback OnAddEditVessel { get; set; }
-        [Parameter] 
+        [Parameter]
+        public EventCallback OnShowAbsReport { get; set; }
+        [Parameter]
         public EventCallback OnShowReportForReductionFactor { get; set; }
+        [Parameter]
+        public EventCallback<(double, double)> OnCoordinatesCaptured { get; set; }
         private ReductionFactor reductionFactor = new ReductionFactor();
         private bool isLoading = false;
         private string errorMessage = string.Empty;
@@ -43,6 +47,16 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private void CloseVesselInfo()
         {
             AddEditVessalReport = false;
+        }
+        public void CaptureCoordinates(double latitude, double longitude)
+        {
+            if (routeModel.DepartureWaypoints.Count > 0)
+            {
+                var lastWaypoint = routeModel.DepartureWaypoints.Last();
+                lastWaypoint.Latitude = latitude.ToString();
+                lastWaypoint.Longitude = longitude.ToString();
+                StateHasChanged();
+            }
         }
         private async Task GoBack()
         {
@@ -99,6 +113,13 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             if (OnAddEditVessel.HasDelegate)
             {
                 await OnAddEditVessel.InvokeAsync();
+            }
+        }
+        private async Task ShowAbsReport()
+        {
+            if (OnShowAbsReport.HasDelegate)
+            {
+                await OnShowAbsReport.InvokeAsync();
             }
         }
         private async Task SearchReductionDepartureLocation()
@@ -168,17 +189,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await SearchArrivalLocation();
             }
         }
-        [JSInvokable]
-        public void CaptureCoordinates(double latitude, double longitude)
-        {
-            if (routeModel.DepartureWaypoints.Count > 0)
-            {
-                var lastWaypoint = routeModel.DepartureWaypoints.Last();
-                lastWaypoint.Latitude = latitude.ToString();
-                lastWaypoint.Longitude = longitude.ToString();
-                StateHasChanged();
-            }
-        }
+       
         private RouteModel routeModel = new RouteModel();
         private string departureSearchTerm = string.Empty;
         private string arrivalSearchTerm = string.Empty;

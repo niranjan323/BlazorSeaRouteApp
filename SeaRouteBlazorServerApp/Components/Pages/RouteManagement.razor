@@ -1,4 +1,4 @@
-﻿@page "/RouteManagement"
+﻿@page "/"
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject HttpClient Http
@@ -53,14 +53,16 @@
                 }
                 @if (selectedForm == 1)
                 {
-                    <ReductionFactorCal OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo" OnShowReportForReductionFactor="ShowReportForReductionFactor" />
+                    <ReductionFactorCal OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
+                                        OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef" 
+                                        OnShowAbsReport="ShowAbsReport"/>
                    
                 }
 
                 else if (selectedForm == 2)
                 {
 
-                    <LimitedShortVoyage OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" />
+                    <LimitedShortVoyage OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" OnReportDataReady="HandleReportData" />
                 }
             }
             else if (selectedTab == 2)
@@ -424,6 +426,88 @@
         </div>
     }
 
+
+
+    @if (ShowABSReport)
+    {
+        <div class="report-container">
+            <div class="header">
+                <div class="tabs">
+                    <button class="tab-btn active">
+                        ABS Records
+                    </button>
+                </div>
+                <button class="close-btn" @onclick="CloseABSReportForm">×</button>
+            </div>
+
+            <div class="form-container">
+                <button class="back-btn" @onclick="CloseABSReportForm">
+                    ⬅ Back
+                </button>
+
+                <div class="route_content">
+                    <div class="cls_route_div">
+                        <div class="cls_route_div_rep">
+                            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                                <h3 class="heading_Abs">
+                                    Submit Report for ABS Records
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="abs-logo-container">
+                        <img src="Images/group-345-4@1x.png" alt="ABS Logo" class="abs-logo">
+                    </div>
+
+                    <div class="cls_vessel_outline">
+                        <div class="notation-selection">
+                            <div class="notation-label">
+                                *Subject vessel has the CLP-V or CLP-V(PARR) notation?
+                            </div>
+                            <div class="radio-options">
+                                <label class="radio-option">
+                                    <input type="radio" name="notation" value="CLP-V">
+                                    <span>CLP-V</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="notation" value="CLP-V(PARR)">
+                                    <span>CLP-V(PARR)</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="notation" value="Neither">
+                                    <span>Neither</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="imo-section">
+                            <div class="imo-label">
+                                (Optional) Vessel IMOs associated with this route
+                            </div>
+
+                            @for (int i = 0; i < vesselImos.Count; i++)
+                            {
+                                <div class="imo-input-row">
+                                    <span>IMO @(i + 1)</span>
+                                    <input type="text" @bind="vesselImos[i].ImoNumber" class="content_div_input w-25" placeholder="12345678" />
+                                    @if (i == vesselImos.Count - 1)
+                                    {
+                                        <button class="add-imo-btn" @onclick="AddNewImo">+</button>
+                                    }
+                                </div>
+                            }
+
+                        </div>
+                    </div>
+
+                    <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
+                        <button class="btn btn-light" @onclick="SubmitABSReport">Submit for ABS Records</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
 </div>
 

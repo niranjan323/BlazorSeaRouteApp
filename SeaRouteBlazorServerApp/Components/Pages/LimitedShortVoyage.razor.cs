@@ -16,7 +16,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         [Parameter] 
         public EventCallback OnAddEditVessel { get; set; }
 
-
+        [Parameter]
+        public EventCallback<ReductionFactor> OnReportDataReady { get; set; }
         private int selectedTab = 1;
         private ElementReference reportMapContainer;
         private ReductionFactor reductionFactor = new ReductionFactor();
@@ -432,7 +433,10 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             {
                 await OnShowReport.InvokeAsync();
             }
-          
+           if(OnReportDataReady.HasDelegate)
+            {
+                await OnReportDataReady.InvokeAsync(reductionFactor);
+            }
             await Task.Delay(200);
             await InitializeChartForReport();
             await Task.Delay(100);
