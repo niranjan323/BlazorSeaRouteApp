@@ -1564,6 +1564,56 @@ strong {
 
 /*plus button icon ends*/
 
+.cls_abs_logo_image{
+    display:flex;
+    justify-content:center;
+    margin:20px 0px;
+}
+
+.cls_abs_logo {
+    height: 35px;
+    max-width: 100%;
+}
+.cls_margin_top_btm_20px {
+    margin: 20px 0;
+}
+.cls_abs_main_label{
+    font-size:13px;
+    font-weight:600;
+
+}
+.cls_astrix{
+    color:orangered;
+}
+.cls_abs_radio_outline{
+    display:flex;
+    column-gap:6%;
+}
+.cls_abs_radio_div{
+    display:flex;
+    column-gap:5px;
+    align-items:center;
+}
+.cls_radio_text{
+    font-size:14px;
+    font-weight:500;
+    white-space:nowrap;
+}
+.cls_imo_outline{
+    display:flex;
+    flex-direction:column;
+    row-gap:8px;
+}
+    .cls_imo_div{
+        display:flex;
+        flex-direction:column;
+        row-gap:4px;
+    }
+.cls_imo_label{
+    font-size:12px;
+    font-weight:500;
+}
+
 .heading_Abs {
     font-size: 18px !important;
     font-weight: 700;

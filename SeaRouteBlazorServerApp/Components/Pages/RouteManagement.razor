@@ -449,18 +449,65 @@
                     <div class="cls_route_div">
                         <div class="cls_route_div_rep">
                             <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                <h3 class="heading_Abs">
+                                <img src="Images/group-345-4@1x.png" alt="ABS Logo" class="icon">
+                                <h3 class="heading_Customize">
                                     Submit Report for ABS Records
                                 </h3>
                             </div>
                         </div>
                     </div>
 
-                    <div class="abs-logo-container">
-                        <img src="Images/group-345-4@1x.png" alt="ABS Logo" class="abs-logo">
+                    <div class="cls_abs_logo_image ">
+                        <img src="Images/group-345-4@1x.png" alt="ABS Logo" class="cls_abs_logo">
                     </div>
 
-                    <div class="cls_vessel_outline">
+                    <div class="cls_route_div_rep">
+                        <label class="cls_abs_main_label"> <span class="cls_astrix">*</span> Subject vessel has the CLP-V or CLP-V(PARR) notation?</label>
+
+                        <div class="cls_abs_radio_outline">
+                            <div class="cls_abs_radio_div">
+                                <input type="checkbox" name="name" value="CLP-V" />
+                                <label class="cls_radio_text">CLP-V</label>
+                            </div>
+                            <div class="cls_abs_radio_div">
+                                <input type="checkbox" name="name" value="CLP-V(PARR)" />
+                                <label class="cls_radio_text">CLP-V(PARR)</label>
+                            </div>
+                            <div class="cls_abs_radio_div">
+                                <input type="checkbox" name="name" value="Neither" />
+                                <label class="cls_radio_text">Neither</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cls_route_div_rep" style="margin-top:34px;">
+                        <label class="cls_abs_main_label"> <span class="cls_astrix">*</span> Subject vessel has the CLP-V or CLP-V(PARR) notation?</label>
+                        <div class="cls_imo_outline">
+
+                            @for (int i = 0; i < vesselImos.Count; i++)
+                            {
+                                <div class="cls_imo_div">
+                                    <label class="cls_imo_label">IMO @(i + 1)</label>
+                                    <div class="cls_flex cls_flex_gap_8px">
+                                        <input type="text" @bind="vesselImos[i].ImoNumber" class="content_div_input" placeholder="12345678" />
+                                        @if (i == vesselImos.Count - 1)
+                                        {
+                                            @* <button class="add-imo-btn" @onclick="AddNewImo">+</button> *@
+                                            <div class="cls_btn_plus" @onclick="AddNewImo" style="margin-bottom:0px;">
+                                                <!--!--><div class="horizontal"></div>
+                                                <div class="vertical"></div>
+                                            </div>
+                                        }
+                                    </div>
+                                  
+                                </div>
+                            }
+
+                           
+                        </div>
+                    </div>
+
+@*                     <div class="cls_vessel_outline">
                         <div class="notation-selection">
                             <div class="notation-label">
                                 *Subject vessel has the CLP-V or CLP-V(PARR) notation?
@@ -500,9 +547,9 @@
 
                         </div>
                     </div>
-
+ *@
                     <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
-                        <button class="btn btn-light" @onclick="SubmitABSReport">Submit for ABS Records</button>
+                        <button class="cls_button_light" @onclick="SubmitABSReport">Submit for ABS Records</button>
                     </div>
                 </div>
             </div>
