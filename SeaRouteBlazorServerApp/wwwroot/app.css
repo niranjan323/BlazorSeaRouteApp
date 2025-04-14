@@ -1596,7 +1596,7 @@ strong {
 }
 .cls_radio_text{
     font-size:14px;
-    font-weight:500;
+    font-weight:400;
     white-space:nowrap;
 }
 .cls_imo_outline{
@@ -1611,87 +1611,14 @@ strong {
     }
 .cls_imo_label{
     font-size:12px;
-    font-weight:500;
+    font-weight:400;
 }
-
-.heading_Abs {
-    font-size: 18px !important;
-    font-weight: 700;
-    margin: 0px;
-    color: var(--storm-dust);
-    font-family: var(--font-family-segoeui-semibold);
-    font-size: var(--font-size-s);
-    font-style: normal;
+.cls_width43{
+    width:43%;
 }
-.abs-logo-container {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.abs-logo {
-    height: 60px;
-    max-width: 100%;
-}
-
-.notation-selection {
-    margin: 20px 0;
-}
-
-.notation-label {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.radio-options {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 15px;
-}
-
-.radio-option {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-
-    .radio-option span {
-        margin-left: 5px;
-        font-size: 14px;
-    }
-
-.imo-section {
-    margin: 25px 0;
-}
-
-.imo-label {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.imo-input-row {
-    display: flex;
-    flex-direction :row;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.add-imo-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: #0056b3;
-    color: white;
-    border: none;
-    font-size: 16px;
-    margin-left: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
+.cls_abs_icon {
+    width: 50px;
+    /* height: 16px; */
+    margin-right: 8px;
+    object-fit: contain;
 }
