@@ -1,3 +1,7 @@
+using SeaRouteWebApis.Context;
+using SeaRouteWebApis.Interfaces;
+using SeaRouteWebApis.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -18,6 +22,10 @@ builder.Services.AddCors(options =>
                   .AllowAnyHeader();
         });
 });
+builder.Services.AddScoped<DbRecordInserter>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+
+
 var app = builder.Build();
 app.UseCors("AllowAllOrigins");
 // Configure the HTTP request pipeline.

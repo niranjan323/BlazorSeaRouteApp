@@ -511,47 +511,7 @@
                         </div>
                     </div>
 
-@*                     <div class="cls_vessel_outline">
-                        <div class="notation-selection">
-                            <div class="notation-label">
-                                *Subject vessel has the CLP-V or CLP-V(PARR) notation?
-                            </div>
-                            <div class="radio-options">
-                                <label class="radio-option">
-                                    <input type="radio" name="notation" value="CLP-V">
-                                    <span>CLP-V</span>
-                                </label>
-                                <label class="radio-option">
-                                    <input type="radio" name="notation" value="CLP-V(PARR)">
-                                    <span>CLP-V(PARR)</span>
-                                </label>
-                                <label class="radio-option">
-                                    <input type="radio" name="notation" value="Neither">
-                                    <span>Neither</span>
-                                </label>
-                            </div>
-                        </div>
 
-                        <div class="imo-section">
-                            <div class="imo-label">
-                                (Optional) Vessel IMOs associated with this route
-                            </div>
-
-                            @for (int i = 0; i < vesselImos.Count; i++)
-                            {
-                                <div class="imo-input-row">
-                                    <span>IMO @(i + 1)</span>
-                                    <input type="text" @bind="vesselImos[i].ImoNumber" class="content_div_input w-25" placeholder="12345678" />
-                                    @if (i == vesselImos.Count - 1)
-                                    {
-                                        <button class="add-imo-btn" @onclick="AddNewImo">+</button>
-                                    }
-                                </div>
-                            }
-
-                        </div>
-                    </div>
- *@
                     <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
                         <button class="cls_button_light" @onclick="SubmitABSReport">Submit for ABS Records</button>
                     </div>

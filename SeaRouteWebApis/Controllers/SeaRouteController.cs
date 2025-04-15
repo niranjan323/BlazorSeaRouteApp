@@ -1,25 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SeaRouteModel.Models;
+using SeaRouteWebApis.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace SeaRouteWebApis.Controllers
 {
-    [Route("api/searoute")]
+    [Route("api/v1/short_voyage/")]
     [ApiController]
-    public class SeaRouteController : ControllerBase
+    public class ShortVoyageRecordsController : SeaRouteBaseController<ShortVoyageRecord>
     {
-        private readonly ILogger<SeaRouteController> _logger;
-
-        public SeaRouteController(ILogger<SeaRouteController> logger)
+        public ShortVoyageRecordsController(ILoggerFactory loggerFactory, IRepository<ShortVoyageRecord> repository) : base(loggerFactory, repository)
         {
-            _logger = logger;
         }
 
         [HttpPost("short_voyage_reduction_factor")]
-        public ActionResult ShortVoyageReductionFactor([FromBody] ReductionFactor reductionFactor)
+        public ActionResult ShortVoyageReductionFactor(ReductionFactor reductionFactor)
         {
             try
             {
@@ -31,30 +29,41 @@ namespace SeaRouteWebApis.Controllers
                 DateTime dateOfArrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(TimeOnly.MinValue);
                 DateTime dateOfDepartureDateTime = reductionFactor.DateOfDeparture.ToDateTime(TimeOnly.MinValue);
 
-                reductionFactor.Duration = Convert.ToInt32((dateOfArrivalDateTime - dateOfDepartureDateTime).TotalHours) +
-                                           Convert.ToInt32((reductionFactor.ETA - reductionFactor.ETD).TotalHours);
+                reductionFactor.Duration = Convert.ToInt32((dateOfArrivalDateTime - dateOfDepartureDateTime).TotalHours) + Convert.ToInt32((reductionFactor.ETA - reductionFactor.ETD).TotalHours);
                 reductionFactor.DurationOk = reductionFactor.Duration > 0 && reductionFactor.Duration <= 72 ? "OK" : "NA";
-
                 DateTime weatherForecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(TimeOnly.MinValue);
 
                 reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32((dateOfDepartureDateTime - weatherForecastDateTime).TotalHours) +
-                                                           Convert.ToInt32((reductionFactor.ETD.Hour - reductionFactor.WeatherForecasetTime.Hour));
+                Convert.ToInt32((reductionFactor.ETD.Hour - reductionFactor.WeatherForecasetTime.Hour));
                 reductionFactor.WeatherForecastBeforeETDOK = reductionFactor.WeatherForecastBeforeETD > 0 && reductionFactor.WeatherForecastBeforeETD <= 6 ? "OK" : "NA";
+
 
                 if (reductionFactor.WaveHeightHswell > 0 && reductionFactor.WaveHeightHwind > 0)
                 {
-                    double value = Math.Pow((double)reductionFactor.WaveHeightHswell, 2) + Math.Pow((double)reductionFactor.WaveHeightHwind, 2);
-                    reductionFactor.WaveHsmax = Math.Round(Math.Sqrt(value), 2).ToString();
+                    var value = (reductionFactor.WaveHeightHswell * reductionFactor.WaveHeightHswell) + (reductionFactor.WaveHeightHwind * reductionFactor.WaveHeightHwind);
+
+
+                    double result = Math.Sqrt(Convert.ToDouble(value));
+
+
+                    result = Math.Round(result, 2);
+
+
+                    reductionFactor.WaveHsmax = result.ToString();
                 }
                 else
                 {
                     reductionFactor.WaveHsmax = "NA";
                 }
 
+                var x = 2 * Math.Sqrt(reductionFactor.Breadth);
+
                 if (reductionFactor.DurationOk == "OK" && reductionFactor.WeatherForecastBeforeETDOK == "OK" && reductionFactor.Breadth > 0)
                 {
-                    double result = Math.Max(Math.Min(Convert.ToDouble(reductionFactor.WaveHsmax) / (2 * Math.Sqrt(reductionFactor.Breadth)) + 0.4, 1), 0.6);
-                    reductionFactor.ShortVoyageReductionFactor = Convert.ToDecimal(Math.Round(result, 2));
+
+                    double result = Math.Max(Math.Min(Convert.ToDouble(reductionFactor.WaveHsmax) / (2 * Math.Sqrt(Convert.ToDouble(reductionFactor.Breadth))) + 0.4, 1), 0.6);
+                    result = Math.Round(result, 2);
+                    reductionFactor.ShortVoyageReductionFactor = Convert.ToDecimal(result);
                 }
                 else
                 {
@@ -66,15 +75,16 @@ namespace SeaRouteWebApis.Controllers
                 reductionFactor.XValues = reductionFactor.Xlist.Select(x => (decimal)x).ToList();
                 reductionFactor.YValues = reductionFactor.Ylist.Select(x => (decimal)x).ToList();
 
-                reductionFactor.CommonX = Convert.ToDecimal(reductionFactor.WaveHsmax);
-                reductionFactor.CommonY = reductionFactor.ShortVoyageReductionFactor;
+                // Common point to highlight
+                reductionFactor.CommonX = Convert.ToDecimal(reductionFactor.WaveHsmax); ;// 1.49m;
+                reductionFactor.CommonY = Convert.ToDecimal(reductionFactor.ShortVoyageReductionFactor); //0.60m;
 
                 return Ok(reductionFactor);
+
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while processing ShortVoyageReductionFactor");
-                return BadRequest("Error occurred: " + ex.Message);
+                return BadRequest("Error occured :" + ex.Message);
             }
         }
     }

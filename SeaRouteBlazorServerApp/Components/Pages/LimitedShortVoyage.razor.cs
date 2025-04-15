@@ -255,6 +255,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
             {
+
                 await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
             }
         }
@@ -325,7 +326,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private List<PortModel> departureSearchResults = new List<PortModel>();
         private List<PortModel> arrivalSearchResults = new List<PortModel>();
 
-      
+
         private async Task CalculateReductionFactor()
         {
             try
@@ -340,7 +341,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 }
 
                 // Call the API
-                var response = await Http.PostAsJsonAsync("api/searoute/short_voyage_reduction_factor", reductionFactor);
+                var response = await Http.PostAsJsonAsync("api/v1/short_voyage/short_voyage_reduction_factor", reductionFactor);
 
 
                 if (response.IsSuccessStatusCode)
@@ -352,7 +353,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                     if (result != null)
                     {
                         reductionFactor = result;
-
+                        await SaveShortVoyage(reductionFactor);
                         await Task.Delay(500);
                         StateHasChanged();
                         await InitializeChart();
@@ -373,6 +374,34 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             finally
             {
                 isLoading = false;
+            }
+        }
+        protected async Task SaveShortVoyage(ReductionFactor reductionFactor)
+        {
+
+            ShortVoyageRecord shortVoyage = new ShortVoyageRecord()
+            {
+                UserId = "1",
+                RecordId = "1",
+                DepartureTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD),
+                ArrivalTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA),
+                ForecastTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime),
+                ForecastHswell = (double?)reductionFactor.WaveHeightHswell,
+                ForecastHwind = (double?)reductionFactor.WaveHeightHwind,
+                ReductionFactor = (double?)reductionFactor.ShortVoyageReductionFactor,
+                ModifiedBy = "System",
+                ModifiedDate = new DateTime()
+
+            };
+            // Call the API
+           // using var httpClient = new HttpClient();
+            // httpClient.BaseAddress = new Uri("https://api-ngea-rf-dev-001.azurewebsites.net/");
+           // httpClient.BaseAddress = new Uri("https://localhost:7155/");
+
+            var response = await Http.PostAsJsonAsync("api/v1/short_voyage", shortVoyage);
+            if (response.IsSuccessStatusCode)
+            {
+
             }
         }
         private async Task InitializeChart()
