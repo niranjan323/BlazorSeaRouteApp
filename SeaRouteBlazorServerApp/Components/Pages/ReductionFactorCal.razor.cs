@@ -19,6 +19,11 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         public EventCallback OnShowReportForReductionFactor { get; set; }
         [Parameter]
         public EventCallback<(double, double)> OnCoordinatesCaptured { get; set; }
+        private List<string> seasonalOptions = new() { "Annual", "Spring", "Summer", "Fall", "Winter" };
+        private List<string> WaytypeOptions = new () { "ABS", "BMT" };
+        private bool showDropdown = false;
+        private bool showDropdownforwaypoint = false;
+        private bool isValidExceedanceProbability = true;
         private ReductionFactor reductionFactor = new ReductionFactor();
         private bool isLoading = false;
         private string errorMessage = string.Empty;
@@ -43,6 +48,55 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             await Task.CompletedTask;
             await GetSampleports();
 
+        }
+        private void OnFocus()
+        {
+            showDropdown = true;
+        }
+        private void OnFocuswaypoint()
+        {
+            showDropdownforwaypoint = true;
+        }
+        private void OnBlur()
+        {
+            // Add a small delay to allow the click event to process first
+            Task.Delay(150).ContinueWith(_ =>
+            {
+                showDropdown = false;
+                StateHasChanged();
+            });
+        }
+        private void OnBlurwaypoint()
+        {
+            // Add a small delay to allow the click event to process first
+            Task.Delay(150).ContinueWith(_ =>
+            {
+                showDropdownforwaypoint = false;
+                StateHasChanged();
+            });
+        }
+
+        private void SelectOption(string option)
+        {
+            routeModel.SeasonalCorrection = option;
+            showDropdown = false;
+        }
+        private void SelectOptionForWayType(string option)
+        {
+            routeModel.WayType = option;
+            showDropdownforwaypoint = false;
+        }
+        private void ValidateExceedanceProbability(ChangeEventArgs e)
+        {
+            if (double.TryParse(e.Value?.ToString(), out double value))
+            {
+                isValidExceedanceProbability = value > 0 && value < 1;
+                routeModel.ExceedanceProbability = value;
+            }
+            else
+            {
+                isValidExceedanceProbability = false;
+            }
         }
         private void CloseVesselInfo()
         {

@@ -36,21 +36,28 @@
             <div class="content_div">
                 <label class="content_div_label1">Seasonal Correction</label>
                 <div class="cls_block">
-                    <input type="text" class="content_div_input " @bind="routeModel.RouteName" placeholder="Enter route name" />
-                    <div class="cls_dropdown_outline">
-                        <div class="cls_dropdown_div">
-                            <label class="cls_dropdown_label">Annual</label>
-                            <label class="cls_dropdown_label">Spring</label>
-                            <label class="cls_dropdown_label">Summer</label>
-                            <label class="cls_dropdown_label">Fall</label>
-                            <label class="cls_dropdown_label">Winter</label>
-
-
-
+                    <input type="text"
+                           class="content_div_input"
+                           placeholder="Select Seasonal Correction"
+                           @bind="routeModel.SeasonalCorrection"
+                           @onfocus="OnFocus"
+                           @onblur="OnBlur" />
+                    @if (showDropdown)
+                    {
+                        <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
+                            <div class="cls_dropdown_div">
+                                @foreach (var option in seasonalOptions)
+                                {
+                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
+                                        @option
+                                    </label>
+                                }
+                            </div>
                         </div>
-                    </div>
+                    }
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -70,18 +77,6 @@
                        placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
                 <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
             </div>
-           @*  <div class="cls_dropdown_outline">
-                    <div class="cls_dropdown_div">
-                        <label class="cls_dropdown_label">Annual</label>
-                        <label class="cls_dropdown_label">Spring</label>
-                        <label class="cls_dropdown_label">Summer</label>
-                        <label class="cls_dropdown_label">Fall</label>
-                        <label class="cls_dropdown_label">Winter</label>
-
-
-
-                    </div>
-            </div> *@
             </div>
 
             <!-- Add Port Button -->
@@ -317,28 +312,42 @@
 
             <div class="content_div">
                 <label class="content_div_label1">Exceedance Probability</label>
-                <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
+                <input type="number"
+                       step="any"
+                       class="content_div_input"
+                       placeholder="Exceedance Probability"
+                       @bind="routeModel.ExceedanceProbability"
+                       @oninput="ValidateExceedanceProbability" />
+                @if (!isValidExceedanceProbability)
+                {
+                    <div style="color: red; font-size: 0.8rem;">Value must be > 0 and &lt; 1</div>
+                }
             </div>
         </div>
         <div class="cls_route_div_rep">
 
             <div class="content_div">
-                <label class="content_div_label1">Wave Type</label>
+                <label class="content_div_label1">Way type</label>
                 <div class="cls_block">
-                    <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
-                    <div class="cls_dropdown_outline" style="width:38%;">
-                        <div class="cls_dropdown_div">
-                            <label class="cls_dropdown_label">Annual</label>
-                            <label class="cls_dropdown_label">Spring</label>
-                            <label class="cls_dropdown_label">Summer</label>
-                            <label class="cls_dropdown_label">Fall</label>
-                            <label class="cls_dropdown_label">Winter</label>
-
-
-
+                    <input type="text"
+                           class="content_div_input"
+                           placeholder="Select Way type"
+                           @bind="routeModel.WayType"
+                           @onfocus="OnFocuswaypoint"
+                           @onblur="OnBlurwaypoint" />
+                    @if (showDropdownforwaypoint)
+                    {
+                        <div class="cls_dropdown_outline_waypont cls_block" @onclick:stopPropagation>
+                            <div class="cls_dropdown_div">
+                                @foreach (var option in WaytypeOptions)
+                                {
+                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOptionForWayType(option)">
+                                        @option
+                                    </label>
+                                }
+                            </div>
                         </div>
-                </div>
-               
+                    }
                 </div>
             </div>
         </div>

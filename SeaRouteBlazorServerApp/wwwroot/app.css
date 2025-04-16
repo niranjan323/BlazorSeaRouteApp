@@ -1642,6 +1642,23 @@ strong {
     max-height: 186px;
     overflow-y: auto;
 }
+.cls_dropdown_outline_waypont {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 2%;
+    row-gap: 18px;
+    position: absolute;
+    right: 0;
+    background-color: #FFF;
+    box-shadow: 0 1px 4px 0 rgb(0 0 0 / 10%);
+    width: 48%;
+    border: 1px solid #ddd;
+    z-index: 10;
+    margin: 0px 7%;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
 .cls_dropdown_div {
     display: flex;
     flex-direction: column;

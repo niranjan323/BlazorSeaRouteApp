@@ -9,6 +9,9 @@ namespace SeaRouteModel.Models
     public class RouteModel
     {
         public string RouteName { get; set; } = string.Empty;
+        public string SeasonalCorrection { get; set; } = string.Empty;
+        public string WayType { get; set; } = string.Empty;
+        public double? ExceedanceProbability { get; set; } 
         public string DepartureLocation { get; set; } = string.Empty;
         public string ArrivalLocation { get; set; } = string.Empty;
         public List<PortSelectionModel> DeparturePorts { get; set; } = new List<PortSelectionModel>();
