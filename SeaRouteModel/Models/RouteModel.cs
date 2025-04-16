@@ -12,6 +12,7 @@ namespace SeaRouteModel.Models
         public string SeasonalType { get; set; } = string.Empty;
         public string WayType { get; set; } = string.Empty;
         public double? ExceedanceProbability { get; set; } 
+
         public string DepartureLocation { get; set; } = string.Empty;
         public string ArrivalLocation { get; set; } = string.Empty;
         public List<PortSelectionModel> DeparturePorts { get; set; } = new List<PortSelectionModel>();
