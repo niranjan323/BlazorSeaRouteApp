@@ -78,7 +78,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
         private void SelectOption(string option)
         {
-            routeModel.SeasonalCorrection = option;
+            routeModel.SeasonalType = option;
             showDropdown = false;
         }
         private void SelectOptionForWayType(string option)
