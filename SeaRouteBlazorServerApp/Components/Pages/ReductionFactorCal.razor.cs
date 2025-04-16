@@ -43,6 +43,12 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private string reductionArrivalLocationQuery = "";
         private bool isRouteSaved = false;
         private bool AddEditVessalReport = false;
+
+        private RouteModel routeModel = new RouteModel();
+        private string departureSearchTerm = string.Empty;
+        private string arrivalSearchTerm = string.Empty;
+        private List<PortModel> departureSearchResults = new List<PortModel>();
+        private List<PortModel> arrivalSearchResults = new List<PortModel>();
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;
@@ -57,19 +63,20 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             showDropdownforwaypoint = true;
         }
-        private void OnBlur()
+        private async void OnBlur()
         {
-            // Add a small delay to allow the click event to process first
-            Task.Delay(150).ContinueWith(_ =>
+            await Task.Delay(150);
+            await InvokeAsync(() =>
             {
                 showDropdown = false;
                 StateHasChanged();
             });
+
         }
-        private void OnBlurwaypoint()
+        private async void OnBlurwaypoint()
         {
-            // Add a small delay to allow the click event to process first
-            Task.Delay(150).ContinueWith(_ =>
+            await Task.Delay(150);
+            await InvokeAsync(() =>
             {
                 showDropdownforwaypoint = false;
                 StateHasChanged();
@@ -243,18 +250,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await SearchArrivalLocation();
             }
         }
-       
-        private RouteModel routeModel = new RouteModel();
-        private string departureSearchTerm = string.Empty;
-        private string arrivalSearchTerm = string.Empty;
-        private List<PortModel> departureSearchResults = new List<PortModel>();
-        private List<PortModel> arrivalSearchResults = new List<PortModel>();
 
 
-
-       
-       
-       
         private void CloseReport()
         {
             showReport = false;

@@ -746,7 +746,8 @@ function drawSeaRoute() {
     L.polyline(routeCoordinates, {
         color: 'blue',
         weight: 2,
-        opacity: 1
+        opacity: 1, dashArray: null,
+        lineCap: 'round'
     }).addTo(routeLayer);
 
     // Add distance marker

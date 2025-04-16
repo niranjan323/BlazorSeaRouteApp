@@ -46,8 +46,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;
-            await GetSampleports();
-
+          
         }
  
         private async Task GoBack()
@@ -531,9 +530,6 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             arrivalSearchResults = SearchPorts(arrivalSearchTerm);
         }
 
-
-
-
         private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
         {
             if (e.Key == "Enter")
@@ -579,14 +575,6 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
             }
         }
-
-
-
-
-
-
-
-  
         private async Task EnableWaypointSelection()
         {
             if (JS is not null)
@@ -605,36 +593,6 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             routeDistance = 5952;
         }
 
-        protected async Task GetSampleports()
-        {
-            _ports = new List<PortModel>
-{
-new PortModel
-{
-Legacy_Place_Id = 5000,
-Port_Id = "POR-03000",
-Name = "Marseille",
-Country = "France",
-Country_Code = "FRA",
-Unlocode = "FRMRS",
-Latitude = 43.2965,
-Longitude = 5.3698
-},
-new PortModel
-{
-Legacy_Place_Id = 5001,
-Port_Id = "POR-03001",
-Name = "Singapore",
-Country = "Singapore",
-Country_Code = "SGP",
-Unlocode = "SGSIN",
-Latitude = 1.3521,
-Longitude = 103.8198
-},
-// Add more sample ports as needed
-};
-
-        }
 
 
         public List<PortModel> SearchPorts(string searchTerm)

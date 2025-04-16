@@ -109,7 +109,8 @@ window.captureMapWithRoutes = async (mapElementId, displayElementId) => {
                     ctx.beginPath();
                     ctx.strokeStyle = layer.options.color || 'blue';
                     ctx.lineWidth = layer.options.weight || 2;
-
+                    ctx.setLineDash([]);
+                    ctx.lineJoin = 'round';
                     const points = layer.getLatLngs();
                     if (Array.isArray(points[0])) {
                         points.forEach(segment => {
