@@ -1622,3 +1622,35 @@ strong {
     margin-right: 8px;
     object-fit: contain;
 }
+
+
+/*Dropdown Styles*/
+
+.cls_dropdown_outline {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 2%;
+    row-gap: 18px;
+    position: absolute;
+    right: 0;
+    background-color: #FFF;
+    box-shadow: 0 1px 4px 0 rgb(0 0 0 / 10%);
+    width: 86%;
+    border: 1px solid #ddd;
+    z-index: 10;
+    margin: 0px 7%;
+    max-height: 186px;
+    overflow-y: auto;
+}
+.cls_dropdown_div {
+    display: flex;
+    flex-direction: column;
+    row-gap: 6px;
+    width: 100%;
+}
+.cls_dropdown_label{
+    font-size:14px;
+    font-weight:500;
+}
+
+/*Dropdown Styles ends*/

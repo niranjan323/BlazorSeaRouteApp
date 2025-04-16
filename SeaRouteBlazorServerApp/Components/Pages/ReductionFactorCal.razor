@@ -31,6 +31,27 @@
                 <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
             </div>
         </div>
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Seasonal Correction</label>
+                <div class="cls_block">
+                    <input type="text" class="content_div_input " @bind="routeModel.RouteName" placeholder="Enter route name" />
+                    <div class="cls_dropdown_outline">
+                        <div class="cls_dropdown_div">
+                            <label class="cls_dropdown_label">Annual</label>
+                            <label class="cls_dropdown_label">Spring</label>
+                            <label class="cls_dropdown_label">Summer</label>
+                            <label class="cls_dropdown_label">Fall</label>
+                            <label class="cls_dropdown_label">Winter</label>
+
+
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Departure Section -->
@@ -43,10 +64,24 @@
                 @*  <span class="content_div_label_blue">FRMRS</span>
                                     <span class="content_div_label">Marseille, France</span> *@
             </div>
+            <div class="cls_block">
             <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
                 <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
                        placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
                 <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
+            </div>
+           @*  <div class="cls_dropdown_outline">
+                    <div class="cls_dropdown_div">
+                        <label class="cls_dropdown_label">Annual</label>
+                        <label class="cls_dropdown_label">Spring</label>
+                        <label class="cls_dropdown_label">Summer</label>
+                        <label class="cls_dropdown_label">Fall</label>
+                        <label class="cls_dropdown_label">Winter</label>
+
+
+
+                    </div>
+            </div> *@
             </div>
 
             <!-- Add Port Button -->
@@ -276,6 +311,39 @@
         </div>
 
     }
+
+        <div class="cls_flex">
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Exceedance Probability</label>
+                <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
+            </div>
+        </div>
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Wave Type</label>
+                <div class="cls_block">
+                    <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
+                    <div class="cls_dropdown_outline" style="width:38%;">
+                        <div class="cls_dropdown_div">
+                            <label class="cls_dropdown_label">Annual</label>
+                            <label class="cls_dropdown_label">Spring</label>
+                            <label class="cls_dropdown_label">Summer</label>
+                            <label class="cls_dropdown_label">Fall</label>
+                            <label class="cls_dropdown_label">Winter</label>
+
+
+
+                        </div>
+                </div>
+               
+                </div>
+            </div>
+        </div>
+        </div>
+        
 
 
     <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
