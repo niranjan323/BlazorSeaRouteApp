@@ -3,13 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteBlazor", "SeaRouteBlazor\SeaRouteBlazor.csproj", "{338F7C89-7C2D-4A97-9D7C-BB14EB2A7D43}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SeaRouteWebApis", "SeaRouteWebApis\SeaRouteWebApis.csproj", "{3E5E1985-2C41-438C-9A1A-6A44EC13CBF5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteWebApis", "SeaRouteWebApis\SeaRouteWebApis.csproj", "{3E5E1985-2C41-438C-9A1A-6A44EC13CBF5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SeaRouteModel", "SeaRouteModel\SeaRouteModel.csproj", "{44443C92-D912-40F4-B7D1-D763F81DCA18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteModel", "SeaRouteModel\SeaRouteModel.csproj", "{44443C92-D912-40F4-B7D1-D763F81DCA18}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaRouteBlazorServerApp", "SeaRouteBlazorServerApp\SeaRouteBlazorServerApp.csproj", "{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SeaRouteBlazorServerApp", "SeaRouteBlazorServerApp\SeaRouteBlazorServerApp.csproj", "{1DE4EFD8-2AF1-4D7A-8E37-1D1E5802867F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +15,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{338F7C89-7C2D-4A97-9D7C-BB14EB2A7D43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{338F7C89-7C2D-4A97-9D7C-BB14EB2A7D43}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{338F7C89-7C2D-4A97-9D7C-BB14EB2A7D43}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{338F7C89-7C2D-4A97-9D7C-BB14EB2A7D43}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3E5E1985-2C41-438C-9A1A-6A44EC13CBF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3E5E1985-2C41-438C-9A1A-6A44EC13CBF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E5E1985-2C41-438C-9A1A-6A44EC13CBF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
