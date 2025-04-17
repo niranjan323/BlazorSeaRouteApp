@@ -65,21 +65,35 @@
     <div class="cls_route_div">
         <div class="cls_route_div_rep">
             <h4 class="route_content_heading1">Port of Departure</h4>
-
-            <!-- Static Display for First Time -->
-            <div class="cls_sub_heading">
-                @*  <span class="content_div_label_blue">FRMRS</span>
-                                    <span class="content_div_label">Marseille, France</span> *@
-            </div>
+            <!-- Static Display for Selected Port -->
+            @if (routeModel.MainDeparturePortSelection?.Port != null)
+            {
+                <div class="cls_sub_heading">
+                    <span class="content_div_label_blue">@routeModel.MainDeparturePortSelection.Port.Unlocode</span>
+                    <span class="content_div_label">@routeModel.MainDeparturePortSelection.Port.Name, @routeModel.MainDeparturePortSelection.Port.Country</span>
+                </div>
+            }
+            <!-- Search Input -->
             <div class="cls_block">
-            <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
-                <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
-                       placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
-                <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
+                <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
+                    <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
+                           placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
+                    <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
+                </div>
+                <!-- Search Results Dropdown for Main Departure -->
+                @if (routeModel.MainDeparturePortSelection?.SearchResults?.Any() == true)
+                {
+                    <div class="search-results">
+                        @foreach (var result in routeModel.MainDeparturePortSelection.SearchResults)
+                        {
+                            <div class="search-result-item" @onclick="() => UpdateDeparturePort(routeModel.MainDeparturePortSelection, result)">
+                                <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
-            </div>
-
-            <!-- Add Port Button -->
+            <!-- Add Port/Waypoint Buttons -->
             <div class="cls_btn_div">
                 <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
                 <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
@@ -87,34 +101,28 @@
         </div>
     </div>
 
-
     <!-- Dynamic Departure Ports Section -->
     @foreach (var port in routeModel.DeparturePorts)
     {
         <div class="cls_route_div port-card">
-
             <div class="cls_route_div_rep">
-                <h4 class="route_content_heading1">loading port2</h4>
-
+                <h4 class="route_content_heading1">Additional Loading Port</h4>
                 <div class="cls_sub_heading">
-                    @* <span class="content_div_label_blue">FRMRS</span> *@
-
                     <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
                         <span class="content_div_label">Port of Departure</span>
-                        @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
-                        @* <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveDeparturePort(port)" /> *@
                         <div class="cls_btn_minimize" @onclick="() => RemoveDeparturePort(port)">
                             <div class="cls_btn_minimize_div"></div>
                         </div>
                     </div>
-
                 </div>
-
-                <div class="cls_sub_heading">
-                    <span class="content_div_label">@port.Port?.Unlocode</span>
-                    <span class="content_div_label_blue">@port.Port?.Name  @port.Port?.Country</span>
-                </div>
-
+                <!-- Display Selected Port Info -->
+                @if (port.Port != null)
+                {
+                    <div class="cls_sub_heading">
+                        <span class="content_div_label">@port.Port.Unlocode</span>
+                        <span class="content_div_label_blue">@port.Port.Name, @port.Port.Country</span>
+                    </div>
+                }
                 <!-- Port Search Section -->
                 <div class="port-search-container">
                     <input type="text" class="content_div_input w-100 cls_margin_top_6px"
@@ -122,7 +130,6 @@
                            @bind:event="oninput"
                            @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
                            placeholder="Search ports..." />
-
                     @if (port.SearchResults.Any())
                     {
                         <div class="search-results">
@@ -135,16 +142,14 @@
                         </div>
                     }
                 </div>
+                <!-- Add Port/Waypoint Buttons -->
                 <div class="cls_btn_div">
                     <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
                     <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
                 </div>
             </div>
         </div>
-
     }
-
-
     <!-- Dynamic Departure Waypoints -->
     @foreach (var waypoint in routeModel.DepartureWaypoints)
     {
@@ -191,20 +196,33 @@
     <div class="cls_route_div">
         <div class="cls_route_div_rep">
             <h4 class="route_content_heading1">Port of Arrival</h4>
-
-            <!-- Static Display for First Time -->
-            <div class="cls_sub_heading">
-                @* <span class="content_div_label_blue">SGSIN</span>
-                                    <span class="content_div_label">Singapore</span> *@
-            </div>
-
+            <!-- Static Display for Selected Port -->
+            @if (routeModel.MainArrivalPortSelection?.Port != null)
+            {
+                <div class="cls_sub_heading">
+                    <span class="content_div_label_blue">@routeModel.MainArrivalPortSelection.Port.Unlocode</span>
+                    <span class="content_div_label">@routeModel.MainArrivalPortSelection.Port.Name, @routeModel.MainArrivalPortSelection.Port.Country</span>
+                </div>
+            }
+            <!-- Search Input -->
             <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
                 <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
                        placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
                 <img src="Images/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
             </div>
-
-            <!-- Add Port Button -->
+            <!-- Search Results Dropdown for Main Arrival -->
+            @if (routeModel.MainArrivalPortSelection?.SearchResults?.Any() == true)
+            {
+                <div class="search-results">
+                    @foreach (var result in routeModel.MainArrivalPortSelection.SearchResults)
+                    {
+                        <div class="search-result-item" @onclick="() => UpdateArrivalPort(routeModel.MainArrivalPortSelection, result)">
+                            <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                        </div>
+                    }
+                </div>
+            }
+            <!-- Add Port/Waypoint Buttons -->
             <div class="cls_btn_div">
                 <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
                 <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
@@ -216,32 +234,31 @@
     @foreach (var port in routeModel.ArrivalPorts)
     {
         <div class="cls_route_div port-card">
-
             <div class="cls_route_div_rep">
-                <!--!--><h4 class="route_content_heading1">loading port1</h4>
-
-                <!--!--><div class="cls_sub_heading">
-                    @*   <span class="content_div_label_blue">FRMRS</span> *@
-
-                    <span class="content_div_label">Port of Departure</span>
-                    <div class="cls_btn_minimize" @onclick="() => RemoveArrivalPort(port)"><div class="cls_btn_minimize_div"></div></div>
+                <h4 class="route_content_heading1">Additional Arrival Port</h4>
+                <div class="cls_sub_heading">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                        <span class="content_div_label">Port of Arrival</span>
+                        <div class="cls_btn_minimize" @onclick="() => RemoveArrivalPort(port)">
+                            <div class="cls_btn_minimize_div"></div>
+                        </div>
+                    </div>
                 </div>
-
-
-
-                <div class="content_div">
-                    <span class="content_div_label">@port.Port?.Unlocode</span>
-                    <span class="content_div_label">@port.Port?.Name, @port.Port?.Country</span>
-                </div>
-
+                <!-- Display Selected Port Info -->
+                @if (port.Port != null)
+                {
+                    <div class="cls_sub_heading">
+                        <span class="content_div_label">@port.Port.Unlocode</span>
+                        <span class="content_div_label_blue">@port.Port.Name, @port.Port.Country</span>
+                    </div>
+                }
                 <!-- Port Search Section -->
                 <div class="port-search-container">
                     <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                           value="@port.Port?.Name"
-                           @oninput="e => port.SearchTerm = e.Value.ToString()"
+                           @bind="port.SearchTerm"
+                           @bind:event="oninput"
                            @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
                            placeholder="Search ports..." />
-
                     @if (port.SearchResults.Any())
                     {
                         <div class="search-results">
@@ -254,12 +271,14 @@
                         </div>
                     }
                 </div>
+                <!-- Add Port/Waypoint Buttons -->
+                <div class="cls_btn_div">
+                    <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                    <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+                </div>
             </div>
-
-
         </div>
     }
-
     <!-- Dynamic Arrival Waypoints -->
     @foreach (var waypoint in routeModel.ArrivalWaypoints)
     {

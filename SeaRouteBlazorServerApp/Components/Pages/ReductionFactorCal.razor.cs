@@ -152,39 +152,52 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
 
         //  ------------------------  ports  --------------------
+        #region Departure Port Methods
         private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
         {
             if (e.Key == "Enter")
             {
-
                 await SearchDepartureLocation();
             }
         }
+
         private async Task SearchDepartureLocation()
         {
             if (!string.IsNullOrWhiteSpace(departureLocationQuery))
             {
+                // Search ports from API and store in a temporary variable
+                var searchResults = await SearchPortsAsync(departureLocationQuery);
+
+                // Create a temporary PortSelectionModel to hold search results
+                var tempPortSelection = new PortSelectionModel
+                {
+                    SearchTerm = departureLocationQuery,
+                    SearchResults = searchResults
+                };
+
+                // If we have results, show them in a dropdown
+                if (searchResults.Any())
+                {
+                    routeModel.DepartureLocation = departureLocationQuery;
+                    // Store results for display
+                    routeModel.MainDeparturePortSelection = tempPortSelection;
+                }
+
+                // Call the JavaScript visualization after API search
                 await JS.InvokeVoidAsync("searchLocation", departureLocationQuery, true);
             }
         }
+
         private void AddDeparturePort()
         {
             routeModel.DeparturePorts.Add(new PortSelectionModel());
-        }
-
-        private void AddArrivalPort()
-        {
-            routeModel.ArrivalPorts.Add(new PortSelectionModel());
+            StateHasChanged();
         }
 
         private void RemoveDeparturePort(PortSelectionModel port)
         {
             routeModel.DeparturePorts.Remove(port);
-        }
-
-        private void RemoveArrivalPort(PortSelectionModel port)
-        {
-            routeModel.ArrivalPorts.Remove(port);
+            StateHasChanged();
         }
 
         private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
@@ -197,25 +210,33 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
         private async Task SearchDeparturePortsForExisting(PortSelectionModel portSelection)
         {
-            if (portSelection?.SearchTerm == null || _ports == null)
+            if (string.IsNullOrWhiteSpace(portSelection?.SearchTerm))
             {
                 return;
             }
 
-            portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+            // Call API to get search results
+            portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
 
+            // Call JS visualization after getting API results
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
                 await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
             }
+
+            StateHasChanged();
         }
+
         private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
         {
             portSelection.Port = newPort;
             portSelection.SearchTerm = newPort.Name;
             portSelection.SearchResults.Clear();
+            StateHasChanged();
         }
+        #endregion
 
+        #region Arrival Port Methods
         private async Task HandleArrivalEnterKey(KeyboardEventArgs e)
         {
             if (e.Key == "Enter")
@@ -223,13 +244,46 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await SearchArrivalLocation();
             }
         }
+
         private async Task SearchArrivalLocation()
         {
             if (!string.IsNullOrWhiteSpace(arrivalLocationQuery))
             {
+                // Search ports from API and store in a temporary variable
+                var searchResults = await SearchPortsAsync(arrivalLocationQuery);
+
+                // Create a temporary PortSelectionModel to hold search results
+                var tempPortSelection = new PortSelectionModel
+                {
+                    SearchTerm = arrivalLocationQuery,
+                    SearchResults = searchResults
+                };
+
+                // If we have results, show them in a dropdown
+                if (searchResults.Any())
+                {
+                    routeModel.ArrivalLocation = arrivalLocationQuery;
+                    // Store results for display
+                    routeModel.MainArrivalPortSelection = tempPortSelection;
+                }
+
+                // Call the JavaScript visualization after API search
                 await JS.InvokeVoidAsync("searchLocation", arrivalLocationQuery, false);
             }
         }
+
+        private void AddArrivalPort()
+        {
+            routeModel.ArrivalPorts.Add(new PortSelectionModel());
+            StateHasChanged();
+        }
+
+        private void RemoveArrivalPort(PortSelectionModel port)
+        {
+            routeModel.ArrivalPorts.Remove(port);
+            StateHasChanged();
+        }
+
         private async Task HandleArrivalEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
         {
             if (e.Key == "Enter")
@@ -237,27 +291,36 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await SearchArrivalPortsForExisting(portSelection);
             }
         }
+
+        private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
+        {
+            if (string.IsNullOrWhiteSpace(portSelection?.SearchTerm))
+            {
+                return;
+            }
+
+            // Call API to get search results
+            portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
+
+            // Call JS visualization after getting API results
+            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+            {
+                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
+            }
+
+            StateHasChanged();
+        }
+
         private void UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
         {
             portSelection.Port = newPort;
             portSelection.SearchTerm = newPort.Name;
             portSelection.SearchResults.Clear();
+            StateHasChanged();
         }
+        #endregion
 
-        private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
-        {
-            if (portSelection?.SearchTerm == null || _ports == null)
-            {
-                return;
-            }
-
-            portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
-
-            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
-            {
-                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
-            }
-        }
+        // Common port search method that calls the API
         public async Task<List<PortModel>> SearchPortsAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
@@ -271,17 +334,84 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return await response.Content.ReadFromJsonAsync<List<PortModel>>() ?? new List<PortModel>();
+                    var cPortResults = await response.Content.ReadFromJsonAsync<List<CPorts>>() ?? new List<CPorts>();
+                    var results = MapToPortModels(cPortResults);
+                    // Update the local cache of ports for filtering
+                    foreach (var port in results)
+                    {
+                        if (!_ports.Any(p => p.Unlocode == port.Unlocode))
+                        {
+                            _ports.Add(port);
+                        }
+                    }
+
+                    return results;
                 }
 
-                //_logger.LogWarning($"Failed to search ports: {response.StatusCode}");
                 return new List<PortModel>();
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Error searching ports");
+                Console.WriteLine($"Error searching ports: {ex.Message}");
                 return new List<PortModel>();
             }
+        }
+
+        // for mapping
+        public static List<PortModel> MapToPortModels(List<CPorts> cPortsList)
+        {
+            return cPortsList?.Select(cport => PortExtensions.ToPortModel(cport)).ToList() ?? new List<PortModel>();
+        }
+
+        // nested static class to hold the method
+        private static class PortExtensions
+        {
+            public static PortModel ToPortModel(CPorts cPort)
+            {
+                return new PortModel
+                {
+                    Port_Id = cPort.PointId.ToString(),
+                    Name = cPort.PortName,
+                    Country_Code = cPort.CountryCode,
+                    Country = GetCountryName(cPort.CountryCode),
+                    Unlocode = cPort.Unlocode,
+                    Port_Authority = cPort.PortAuthority,
+                    Latitude = 0,
+                    Longitude = 0,
+                    Last_Updated = cPort.CreatedDate
+                };
+            }
+        }
+
+        private static string GetCountryName(string countryCode)
+        {
+            return countryCode switch
+            {
+                "SG" => "Singapore",
+                "NL" => "Netherlands",
+                "CN" => "China",
+                "US" => "United States",
+                "DE" => "Germany",
+                "KR" => "South Korea",
+                "FR" => "France",
+                "AU" => "Australia",
+                "IN" => "India",
+                "AE" => "United Arab Emirates",
+                _ => countryCode
+            };
+        }
+
+        // Adding waypoint methods for completeness
+        private void AddDepartureWaypoint()
+        {
+            routeModel.DepartureWaypoints.Add(new WaypointModel());
+            StateHasChanged();
+        }
+
+        private void AddArrivalWaypoint()
+        {
+            routeModel.ArrivalWaypoints.Add(new WaypointModel());
+            StateHasChanged();
         }
         //  ------------------------  end  --------------------
 
@@ -420,11 +550,11 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
 
        
-        private async Task AddDepartureWaypoint()
-        {
-            routeModel.DepartureWaypoints.Add(new WaypointModel());
-            await EnableWaypointSelection();
-        }
+        //private async Task AddDepartureWaypoint()
+        //{
+        //    routeModel.DepartureWaypoints.Add(new WaypointModel());
+        //    await EnableWaypointSelection();
+        //}
         private async Task EnableWaypointSelection()
         {
             if (JS is not null)
@@ -432,11 +562,11 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await JS.InvokeVoidAsync("setWaypointSelection", true);
             }
         }
-        private async Task AddArrivalWaypoint()
-        {
-            routeModel.ArrivalWaypoints.Add(new WaypointModel());
-            await EnableWaypointSelection();
-        }
+        //private async Task AddArrivalWaypoint()
+        //{
+        //    routeModel.ArrivalWaypoints.Add(new WaypointModel());
+        //    await EnableWaypointSelection();
+        //}
 
         private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
         {

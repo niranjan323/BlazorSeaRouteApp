@@ -6,15 +6,20 @@ using System.Threading.Tasks;
 
 namespace SeaRouteModel.Models
 {
+
     public class RouteModel
     {
         public string RouteName { get; set; } = string.Empty;
         public string SeasonalType { get; set; } = string.Empty;
         public string WayType { get; set; } = string.Empty;
-        public double? ExceedanceProbability { get; set; } 
-
+        public double? ExceedanceProbability { get; set; }
         public string DepartureLocation { get; set; } = string.Empty;
         public string ArrivalLocation { get; set; } = string.Empty;
+
+        // For main departure and arrival port selections
+        public PortSelectionModel MainDeparturePortSelection { get; set; } = new PortSelectionModel();
+        public PortSelectionModel MainArrivalPortSelection { get; set; } = new PortSelectionModel();
+
         public List<PortSelectionModel> DeparturePorts { get; set; } = new List<PortSelectionModel>();
         public List<PortSelectionModel> ArrivalPorts { get; set; } = new List<PortSelectionModel>();
         public List<WaypointModel> DepartureWaypoints { get; set; } = new List<WaypointModel>();
