@@ -1,5 +1,6 @@
 using SeaRouteWebApis.Context;
 using SeaRouteWebApis.Interfaces;
+using SeaRouteWebApis.PythonApiServices;
 using SeaRouteWebApis.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,7 +25,8 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddScoped<DbRecordInserter>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-
+//builder.Services.AddScoped<IPythonApiService, PythonApiService>();
+builder.Services.AddHttpClient<IPythonApiService, PythonApiService>();
 
 var app = builder.Build();
 app.UseCors("AllowAllOrigins");

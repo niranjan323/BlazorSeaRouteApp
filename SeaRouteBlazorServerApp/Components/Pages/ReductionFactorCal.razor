@@ -358,6 +358,12 @@
     <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
         <button class="cls_button_blue" @onclick="CalculateRouteReductionFactor">Calculate Route Reduction Factor</button>
     </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="cls_flex cls_flex_justify_center cls_width_100 text-danger">
+            @errorMessage
+        </div>
+    }
 </div>
 <!-- Results visualization (shown after calculation) -->
 @if (showResultsForReductionFactor)

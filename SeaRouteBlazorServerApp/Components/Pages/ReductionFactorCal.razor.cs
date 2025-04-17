@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using SeaRouteModel.Models;
 using static System.Net.WebRequestMethods;
+using System.Net.Http;
 
 namespace SeaRouteBlazorServerApp.Components.Pages
 {
@@ -148,6 +149,143 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 Console.WriteLine("Failed to capture map");
             }
         }
+
+
+        //  ------------------------  ports  --------------------
+        private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter")
+            {
+
+                await SearchDepartureLocation();
+            }
+        }
+        private async Task SearchDepartureLocation()
+        {
+            if (!string.IsNullOrWhiteSpace(departureLocationQuery))
+            {
+                await JS.InvokeVoidAsync("searchLocation", departureLocationQuery, true);
+            }
+        }
+        private void AddDeparturePort()
+        {
+            routeModel.DeparturePorts.Add(new PortSelectionModel());
+        }
+
+        private void AddArrivalPort()
+        {
+            routeModel.ArrivalPorts.Add(new PortSelectionModel());
+        }
+
+        private void RemoveDeparturePort(PortSelectionModel port)
+        {
+            routeModel.DeparturePorts.Remove(port);
+        }
+
+        private void RemoveArrivalPort(PortSelectionModel port)
+        {
+            routeModel.ArrivalPorts.Remove(port);
+        }
+
+        private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
+        {
+            if (e.Key == "Enter")
+            {
+                await SearchDeparturePortsForExisting(portSelection);
+            }
+        }
+
+        private async Task SearchDeparturePortsForExisting(PortSelectionModel portSelection)
+        {
+            if (portSelection?.SearchTerm == null || _ports == null)
+            {
+                return;
+            }
+
+            portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+
+            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+            {
+                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
+            }
+        }
+        private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
+            portSelection.SearchResults.Clear();
+        }
+
+        private async Task HandleArrivalEnterKey(KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter")
+            {
+                await SearchArrivalLocation();
+            }
+        }
+        private async Task SearchArrivalLocation()
+        {
+            if (!string.IsNullOrWhiteSpace(arrivalLocationQuery))
+            {
+                await JS.InvokeVoidAsync("searchLocation", arrivalLocationQuery, false);
+            }
+        }
+        private async Task HandleArrivalEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
+        {
+            if (e.Key == "Enter")
+            {
+                await SearchArrivalPortsForExisting(portSelection);
+            }
+        }
+        private void UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
+            portSelection.SearchResults.Clear();
+        }
+
+        private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
+        {
+            if (portSelection?.SearchTerm == null || _ports == null)
+            {
+                return;
+            }
+
+            portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
+
+            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+            {
+                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
+            }
+        }
+        public async Task<List<PortModel>> SearchPortsAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+            {
+                return new List<PortModel>();
+            }
+
+            try
+            {
+                var response = await Http.GetAsync($"api/v1/portsapi/search?searchTerm={Uri.EscapeDataString(searchTerm)}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<List<PortModel>>() ?? new List<PortModel>();
+                }
+
+                //_logger.LogWarning($"Failed to search ports: {response.StatusCode}");
+                return new List<PortModel>();
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Error searching ports");
+                return new List<PortModel>();
+            }
+        }
+        //  ------------------------  end  --------------------
+
+
         private async Task CheckAndUpdateMap(WaypointModel waypoint)
         {
             if (!string.IsNullOrEmpty(waypoint.Latitude) && !string.IsNullOrEmpty(waypoint.Longitude))
@@ -217,40 +355,6 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             }
         }
 
-        // separate
-        private async Task SearchDepartureLocation()
-        {
-            if (!string.IsNullOrWhiteSpace(departureLocationQuery))
-            {
-                await JS.InvokeVoidAsync("searchLocation", departureLocationQuery, true);
-            }
-        }
-
-        private async Task SearchArrivalLocation()
-        {
-            if (!string.IsNullOrWhiteSpace(arrivalLocationQuery))
-            {
-                await JS.InvokeVoidAsync("searchLocation", arrivalLocationQuery, false);
-            }
-        }
-
-        private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
-        {
-            if (e.Key == "Enter")
-            {
-
-                await SearchDepartureLocation();
-            }
-        }
-
-        private async Task HandleArrivalEnterKey(KeyboardEventArgs e)
-        {
-            if (e.Key == "Enter")
-            {
-                await SearchArrivalLocation();
-            }
-        }
-
 
         private void CloseReport()
         {
@@ -315,87 +419,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             arrivalSearchResults.Clear();
         }
 
-        private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
-        {
-            if (e.Key == "Enter")
-            {
-                await SearchDeparturePortsForExisting(portSelection);
-            }
-        }
-
-        private async Task HandleArrivalEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
-        {
-            if (e.Key == "Enter")
-            {
-                await SearchArrivalPortsForExisting(portSelection);
-            }
-        }
-
-        private async Task SearchDeparturePortsForExisting(PortSelectionModel portSelection)
-        {
-            if (portSelection?.SearchTerm == null || _ports == null)
-            {
-                return;
-            }
-
-            portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
-
-            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
-            {
-                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
-            }
-        }
-
-        private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
-        {
-            if (portSelection?.SearchTerm == null || _ports == null)
-            {
-                return;
-            }
-
-            portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
-
-            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
-            {
-                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
-            }
-        }
-
-
-        private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
-        {
-            portSelection.Port = newPort;
-            portSelection.SearchTerm = newPort.Name;
-            portSelection.SearchResults.Clear();
-        }
-
-        private void UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
-        {
-            portSelection.Port = newPort;
-            portSelection.SearchTerm = newPort.Name;
-            portSelection.SearchResults.Clear();
-        }
-
-        private void AddDeparturePort()
-        {
-            routeModel.DeparturePorts.Add(new PortSelectionModel());
-        }
-
-        private void AddArrivalPort()
-        {
-            routeModel.ArrivalPorts.Add(new PortSelectionModel());
-        }
-
-        private void RemoveDeparturePort(PortSelectionModel port)
-        {
-            routeModel.DeparturePorts.Remove(port);
-        }
-
-        private void RemoveArrivalPort(PortSelectionModel port)
-        {
-            routeModel.ArrivalPorts.Remove(port);
-        }
-
+       
         private async Task AddDepartureWaypoint()
         {
             routeModel.DepartureWaypoints.Add(new WaypointModel());
@@ -428,15 +452,209 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             routeModel.ArrivalWaypoints.Remove(waypoint);
         }
 
-        private void CalculateRouteReductionFactor()
-        {
-            // For demo purposes, just showing the results
-            showResultsForReductionFactor = true;
+        //private void CalculateRouteReductionFactor()
+        //{
+        //    // For demo purposes, just showing the results
+        //    showResultsForReductionFactor = true;
 
-            // In a real implementation, you would calculate the reduction factor here
-            routeReductionFactor = 0.82M;
-            routeDistance = 5952;
+        //    // In a real implementation, you would calculate the reduction factor here
+        //    routeReductionFactor = 0.82M;
+        //    routeDistance = 5952;
+        //}
+
+        private bool ValidateRouteData()
+        {
+            if (string.IsNullOrWhiteSpace(routeModel.RouteName))
+            {
+                errorMessage = "Please enter a route name.";
+                return false;
+            }
+            if (!(routeModel.DeparturePorts.Any(p => p.Port != null) ||
+                  routeModel.DepartureWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
+            {
+                errorMessage = "Please provide at least one valid departure port or waypoint.";
+                return false;
+            }
+            
+            if (!(routeModel.ArrivalPorts.Any(p => p.Port != null) ||
+                  routeModel.ArrivalWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
+            {
+                errorMessage = "Please provide at least one valid arrival port or waypoint.";
+                return false;
+            }
+            //if (!routeModel.DeparturePorts.Any() || routeModel.DeparturePorts.All(p => p.Port == null))
+            //{
+            //    errorMessage = "Please add at least one departure port.";
+            //    return;
+            //}
+
+            //if (!routeModel.ArrivalPorts.Any() || routeModel.ArrivalPorts.All(p => p.Port == null))
+            //{
+            //    errorMessage = "Please add at least one arrival port.";
+            //    return;
+            //}
+            if (!routeModel.ExceedanceProbability.HasValue ||
+                routeModel.ExceedanceProbability <= 0 ||
+                routeModel.ExceedanceProbability >= 1)
+            {
+                errorMessage = "Exceedance probability must be a number between 0 and 1.";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(routeModel.SeasonalType))
+            {
+                errorMessage = "Please select a seasonal type.";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(routeModel.WayType))
+            {
+                errorMessage = "Please select a wave type.";
+                return false;
+            }
+
+            // If all is valid
+            errorMessage = string.Empty;
+            return true;
         }
+
+        private RouteRequest PrepareRouteRequest()
+        {
+            var request = new RouteRequest
+            {
+                Units = "km",
+                IncludePorts = true,
+                OnlyTerminals = true,
+                Restrictions = new[] { routeModel.SeasonalType }  // Use the seasonal type as restriction
+            };
+
+            // Set Origin coordinates
+            if (routeModel.DeparturePorts.Any(p => p.Port != null))
+            {
+                // Use the first departure port
+                var departurePort = routeModel.DeparturePorts.First(p => p.Port != null).Port;
+                request.Origin = new[] { departurePort.Longitude, departurePort.Latitude };
+            }
+            else if (routeModel.DepartureWaypoints.Any())
+            {
+                // Use the first departure waypoint
+                var waypoint = routeModel.DepartureWaypoints.First();
+                if (double.TryParse(waypoint.Longitude, out double longitude) &&
+                    double.TryParse(waypoint.Latitude, out double latitude))
+                {
+                    request.Origin = new[] { longitude, latitude };
+                }
+            }
+
+            // Set Destination coordinates
+            if (routeModel.ArrivalPorts.Any(p => p.Port != null))
+            {
+                // Use the first arrival port
+                var arrivalPort = routeModel.ArrivalPorts.First(p => p.Port != null).Port;
+                request.Destination = new[] { arrivalPort.Longitude, arrivalPort.Latitude };
+            }
+            else if (routeModel.ArrivalWaypoints.Any())
+            {
+                // Use the first arrival waypoint
+                var waypoint = routeModel.ArrivalWaypoints.First();
+                if (double.TryParse(waypoint.Longitude, out double longitude) &&
+                    double.TryParse(waypoint.Latitude, out double latitude))
+                {
+                    request.Destination = new[] { longitude, latitude };
+                }
+            }
+
+            return request;
+        }
+
+        private async Task CalculateRouteReductionFactor()
+        {
+            try
+            {
+                // Validate necessary data is available
+                if (!ValidateRouteData())
+                {
+                    // Show error message to user
+                    // You can implement this using a toast/notification system
+                    Console.WriteLine("Please complete all required route information");
+                    return;
+                }
+
+                // Prepare the RouteRequest object
+                var routeRequest = PrepareRouteRequest();
+
+
+                // Call the API
+                //var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
+                //// Process the result
+                //ProcessRouteCalculationResult(result);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions
+                Console.WriteLine($"Error calculating route reduction factor: {ex.Message}");
+                // You can add additional error handling or user notification here
+            }
+        }
+
+        private void ProcessRouteCalculationResult(dynamic result)
+        {
+            // Here you would process the result returned from the API
+            // This might include:
+            // 1. Extracting route properties
+            // 2. Calculating the route reduction factor based on the result and the model parameters
+            // 3. Updating the UI with the results
+
+            if (result != null)
+            {
+                // Extract route length
+                string routeLength = result.route_length;
+
+                // Calculate reduction factor based on wave type and exceedance probability
+                double reductionFactor = CalculateReductionFactor(
+                    routeModel.WayType,
+                    routeModel.ExceedanceProbability.Value,
+                    result
+                );
+
+                // Update the UI or model with the calculated values
+                // routeModel.ReductionFactor = reductionFactor;
+
+                // You might want to display this information to the user
+                // DisplayResults(routeLength, reductionFactor);
+            }
+        }
+        private double CalculateReductionFactor(string waveType, double exceedanceProbability, dynamic routeData)
+        {
+            // Implement your reduction factor calculation logic here
+            // This would depend on your specific business requirements
+
+            // Example placeholder calculation:
+            double baseReductionFactor = 1.0;
+
+            // Adjust based on wave type
+            switch (waveType)
+            {
+                case "High":
+                    baseReductionFactor *= 0.8;
+                    break;
+                case "Medium":
+                    baseReductionFactor *= 0.9;
+                    break;
+                case "Low":
+                    baseReductionFactor *= 1.0;
+                    break;
+            }
+
+            // Adjust based on exceedance probability
+            // Lower exceedance probability typically means higher reduction
+            baseReductionFactor *= (1.0 - exceedanceProbability);
+
+            // Further adjustments based on route properties could be made here
+
+            return baseReductionFactor;
+        }
+
 
         protected async Task GetSampleports()
         {
@@ -468,7 +686,7 @@ Longitude = 103.8198
 };
 
         }
-
+        
 
         public List<PortModel> SearchPorts(string searchTerm)
         {
