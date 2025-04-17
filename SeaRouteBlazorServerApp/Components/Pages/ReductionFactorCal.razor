@@ -86,7 +86,7 @@
                     <div class="search-results">
                         @foreach (var result in routeModel.MainDeparturePortSelection.SearchResults)
                         {
-                            <div class="search-result-item" @onclick="() => UpdateDeparturePort(routeModel.MainDeparturePortSelection, result)">
+                            <div class="search-result-item" @onclick="() => UpdateDeparturePortSearchDepartureLocation(routeModel.MainDeparturePortSelection, result)">
                                 <span>@result.Name, @result.Country (@result.Unlocode)</span>
                             </div>
                         }
@@ -213,10 +213,10 @@
             <!-- Search Results Dropdown for Main Arrival -->
             @if (routeModel.MainArrivalPortSelection?.SearchResults?.Any() == true)
             {
-                <div class="search-results">
+                <div class="search-results" style="position:relative" >
                     @foreach (var result in routeModel.MainArrivalPortSelection.SearchResults)
                     {
-                        <div class="search-result-item" @onclick="() => UpdateArrivalPort(routeModel.MainArrivalPortSelection, result)">
+                        <div class="search-result-item" @onclick="() => UpdateArrivalPortSearchArrivalLocation(routeModel.MainArrivalPortSelection, result)">
                             <span>@result.Name, @result.Country (@result.Unlocode)</span>
                         </div>
                     }

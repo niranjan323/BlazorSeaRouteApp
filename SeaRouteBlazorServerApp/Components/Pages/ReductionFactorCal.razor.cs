@@ -183,11 +183,19 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                     routeModel.MainDeparturePortSelection = tempPortSelection;
                 }
 
-                // Call the JavaScript visualization after API search
-                await JS.InvokeVoidAsync("searchLocation", departureLocationQuery, true);
+                
             }
         }
-
+        private async Task UpdateDeparturePortSearchDepartureLocation(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
+            // Call the JavaScript visualization after API search
+            if(!string.IsNullOrWhiteSpace(portSelection.SearchTerm))    
+                await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
+            portSelection.SearchResults.Clear();
+            StateHasChanged();
+        }
         private void AddDeparturePort()
         {
             routeModel.DeparturePorts.Add(new PortSelectionModel());
@@ -218,19 +226,20 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Call API to get search results
             portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
 
+           
+
+            StateHasChanged();
+        }
+
+        private async Task UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
             // Call JS visualization after getting API results
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
                 await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
             }
-
-            StateHasChanged();
-        }
-
-        private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
-        {
-            portSelection.Port = newPort;
-            portSelection.SearchTerm = newPort.Name;
             portSelection.SearchResults.Clear();
             StateHasChanged();
         }
@@ -267,11 +276,20 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                     routeModel.MainArrivalPortSelection = tempPortSelection;
                 }
 
-                // Call the JavaScript visualization after API search
-                await JS.InvokeVoidAsync("searchLocation", arrivalLocationQuery, false);
+                
             }
         }
-
+        private async Task UpdateArrivalPortSearchArrivalLocation(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
+            // Call the JavaScript visualization after API search
+            if(!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+                await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
+           
+            portSelection.SearchResults.Clear();
+            StateHasChanged();
+        }
         private void AddArrivalPort()
         {
             routeModel.ArrivalPorts.Add(new PortSelectionModel());
@@ -302,19 +320,20 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Call API to get search results
             portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
 
+            
+
+            StateHasChanged();
+        }
+
+        private async Task UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
             // Call JS visualization after getting API results
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
                 await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
             }
-
-            StateHasChanged();
-        }
-
-        private void UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
-        {
-            portSelection.Port = newPort;
-            portSelection.SearchTerm = newPort.Name;
             portSelection.SearchResults.Clear();
             StateHasChanged();
         }
@@ -401,18 +420,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             };
         }
 
-        // Adding waypoint methods for completeness
-        private void AddDepartureWaypoint()
-        {
-            routeModel.DepartureWaypoints.Add(new WaypointModel());
-            StateHasChanged();
-        }
 
-        private void AddArrivalWaypoint()
-        {
-            routeModel.ArrivalWaypoints.Add(new WaypointModel());
-            StateHasChanged();
-        }
         //  ------------------------  end  --------------------
 
 
@@ -549,12 +557,12 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             arrivalSearchResults.Clear();
         }
 
-       
-        //private async Task AddDepartureWaypoint()
-        //{
-        //    routeModel.DepartureWaypoints.Add(new WaypointModel());
-        //    await EnableWaypointSelection();
-        //}
+
+        private async Task AddDepartureWaypoint()
+        {
+            routeModel.DepartureWaypoints.Add(new WaypointModel());
+            await EnableWaypointSelection();
+        }
         private async Task EnableWaypointSelection()
         {
             if (JS is not null)
@@ -562,11 +570,11 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await JS.InvokeVoidAsync("setWaypointSelection", true);
             }
         }
-        //private async Task AddArrivalWaypoint()
-        //{
-        //    routeModel.ArrivalWaypoints.Add(new WaypointModel());
-        //    await EnableWaypointSelection();
-        //}
+        private async Task AddArrivalWaypoint()
+        {
+            routeModel.ArrivalWaypoints.Add(new WaypointModel());
+            await EnableWaypointSelection();
+        }
 
         private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
         {
@@ -599,19 +607,19 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 errorMessage = "Please enter a route name.";
                 return false;
             }
-            if (!(routeModel.DeparturePorts.Any(p => p.Port != null) ||
-                  routeModel.DepartureWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
-            {
-                errorMessage = "Please provide at least one valid departure port or waypoint.";
-                return false;
-            }
+            //if (!(routeModel.DeparturePorts.Any(p => p.Port != null) ||
+            //      routeModel.DepartureWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
+            //{
+            //    errorMessage = "Please provide at least one valid departure port or waypoint.";
+            //    return false;
+            //}
             
-            if (!(routeModel.ArrivalPorts.Any(p => p.Port != null) ||
-                  routeModel.ArrivalWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
-            {
-                errorMessage = "Please provide at least one valid arrival port or waypoint.";
-                return false;
-            }
+            //if (!(routeModel.ArrivalPorts.Any(p => p.Port != null) ||
+            //      routeModel.ArrivalWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
+            //{
+            //    errorMessage = "Please provide at least one valid arrival port or waypoint.";
+            //    return false;
+            //}
             //if (!routeModel.DeparturePorts.Any() || routeModel.DeparturePorts.All(p => p.Port == null))
             //{
             //    errorMessage = "Please add at least one departure port.";
@@ -715,9 +723,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
 
                 // Call the API
-                //var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
-                //// Process the result
-                //ProcessRouteCalculationResult(result);
+                var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
+                // Process the result
+                ProcessRouteCalculationResult(result);
             }
             catch (Exception ex)
             {
