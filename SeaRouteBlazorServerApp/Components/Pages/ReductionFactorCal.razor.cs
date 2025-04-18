@@ -709,6 +709,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             try
             {
+                showResultsForReductionFactor = true;
                 // Validate necessary data is available
                 if (!ValidateRouteData())
                 {
@@ -726,6 +727,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
                 // Process the result
                 ProcessRouteCalculationResult(result);
+               // showResultsForReductionFactor = true;
             }
             catch (Exception ex)
             {

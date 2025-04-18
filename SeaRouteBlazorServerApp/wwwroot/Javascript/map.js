@@ -659,9 +659,6 @@ async function searchLocation(query, isDeparture) {
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
 
-            // Initial zoom out
-            map.flyTo([lat + 5, lon + 5], 3, { duration: 1.5 });
-
             // Clear previous pin
             if (isDeparture) {
                 if (departurePin) {
@@ -692,7 +689,6 @@ async function searchLocation(query, isDeparture) {
                 arrivalPin.bindPopup("Arrival: " + query).openPopup();
 
                 // Update route points - arrival should be the last
-                // Find existing arrival point
                 const arrivalIndex = routePoints.findIndex(p => p.type === 'arrival');
                 if (arrivalIndex !== -1) {
                     routePoints[arrivalIndex] = {
@@ -709,11 +705,8 @@ async function searchLocation(query, isDeparture) {
                 }
             }
 
-            // Final zoom in with right shift
-            map.flyTo([lat, lon], 8, {
-                duration: 1.5,
-                paddingTopLeft: [window.innerWidth * 0.45, 20]
-            });
+            // Use the new zoom pattern
+            zoomInThenOut(lat, lon);
 
             // Draw the route if we have both departure and arrival points
             if (departurePin && arrivalPin) {
@@ -754,13 +747,13 @@ async function zoomAndPinLocation(query, isDeparture) {
             // Reorganize route points to keep departure first and arrival last
             reorganizeRoutePoints();
 
+            // Use the new zoom pattern
+            zoomInThenOut(lat, lon);
+
             // Draw updated route
             if (departurePin && arrivalPin) {
                 drawSeaRoute();
             }
-
-            // Zoom to the new port
-            map.flyTo([lat, lon], 8, { duration: 1.5 });
         } else {
             alert("Port not found!");
         }
@@ -775,18 +768,18 @@ function reorganizeRoutePoints() {
     const departurePoint = routePoints.find(p => p.type === 'departure');
     const arrivalPoint = routePoints.find(p => p.type === 'arrival');
     const otherPoints = routePoints.filter(p => p.type !== 'departure' && p.type !== 'arrival');
-
+    
     // Reset route points array
     routePoints = [];
-
+    
     // Add departure first
     if (departurePoint) {
         routePoints.push(departurePoint);
     }
-
+    
     // Add all intermediate points
     routePoints = routePoints.concat(otherPoints);
-
+    
     // Add arrival last
     if (arrivalPoint) {
         routePoints.push(arrivalPoint);
@@ -819,7 +812,7 @@ function drawSeaRoute() {
 
     // Add distance markers between segments
     addDistanceMarkers(seaRoute);
-
+    
     // Calculate bounds with right padding to account for 40% overlay
     const routeBounds = L.latLngBounds(seaRoute);
 
@@ -837,30 +830,30 @@ function drawSeaRoute() {
 // Create a sea route that follows the ocean between ports
 function createSeaRoute(coordinates) {
     const route = [];
-
+    
     // For each segment between two points
     for (let i = 0; i < coordinates.length - 1; i++) {
         const start = coordinates[i];
         const end = coordinates[i + 1];
-
+        
         // Start point
         route.push([start[0], start[1]]);
-
+        
         // Add intermediate points to create a curved sea route
         // This is a simplified approach - in a real-world scenario,
         // you might use actual maritime route data or algorithms
-
+        
         // Create a slight curve for the sea route
         const midLat = (start[0] + end[0]) / 2;
         const midLng = (start[1] + end[1]) / 2;
-
+        
         // Add curvature depending on relation between points
         const latDiff = end[0] - start[0];
         const lngDiff = end[1] - start[1];
-
+        
         // Determine if we need a northern or southern route
         const isMostlyEastWest = Math.abs(lngDiff) > Math.abs(latDiff);
-
+        
         if (isMostlyEastWest) {
             // For east-west routes, add a slight deviation north or south
             // This simulates ships following shipping lanes
@@ -872,33 +865,33 @@ function createSeaRoute(coordinates) {
             route.push([midLat, midLng + curveAmount]);
         }
     }
-
+    
     // End point
     route.push([coordinates[coordinates.length - 1][0], coordinates[coordinates.length - 1][1]]);
-
+    
     return route;
 }
 
 // Add distance markers to the route
 function addDistanceMarkers(routeCoordinates) {
     let totalDistance = 0;
-
+    
     // Add markers between each segment
     for (let i = 0; i < routeCoordinates.length - 1; i++) {
         const start = L.latLng(routeCoordinates[i][0], routeCoordinates[i][1]);
         const end = L.latLng(routeCoordinates[i + 1][0], routeCoordinates[i + 1][1]);
-
+        
         // Calculate distance for this segment
         const segmentDistance = calculateDistance(start, end);
         totalDistance += segmentDistance;
-
+        
         // Add marker at the midpoint of this segment
         if (i > 0 && i < routeCoordinates.length - 2) {
             const midpoint = L.latLng(
                 (start.lat + end.lat) / 2,
                 (start.lng + end.lng) / 2
             );
-
+            
             L.marker(midpoint, {
                 icon: L.divIcon({
                     className: 'distance-marker',
@@ -908,14 +901,14 @@ function addDistanceMarkers(routeCoordinates) {
             }).addTo(routeLayer);
         }
     }
-
+    
     // Add total distance marker at the middle of the route
     const midIndex = Math.floor(routeCoordinates.length / 2);
     const midPoint = L.latLng(
         routeCoordinates[midIndex][0],
         routeCoordinates[midIndex][1]
     );
-
+    
     L.marker(midPoint, {
         icon: L.divIcon({
             className: 'distance-marker',
@@ -1030,17 +1023,14 @@ function updateMapWithPortData(portData, isDeparture) {
         });
     }
 
+    // Use the new zoom pattern
+    zoomInThenOut(lat, lon);
+
     // Reorganize and draw route if we have departure and arrival
     if (departurePin && arrivalPin) {
         reorganizeRoutePoints();
         drawSeaRoute();
     }
-
-    // Zoom to the port
-    map.flyTo([lat, lon], 8, {
-        duration: 1.5,
-        paddingTopLeft: [window.innerWidth * 0.45, 20]
-    });
 }
 
 // Function to add arrival port data
@@ -1080,17 +1070,14 @@ function addArrivalPort(portData) {
         });
     }
 
+    // Use the new zoom pattern
+    zoomInThenOut(lat, lon);
+
     // Reorganize and draw route if we have departure point
     if (departurePin) {
         reorganizeRoutePoints();
         drawSeaRoute();
     }
-
-    // Zoom to the port
-    map.flyTo([lat, lon], 8, {
-        duration: 1.5,
-        paddingTopLeft: [window.innerWidth * 0.45, 20]
-    });
 }
 
 // Get all pins currently on the map
@@ -1107,4 +1094,37 @@ function getAllPins() {
 // Function to get the current route data
 function getRouteData() {
     return routePoints;
+}
+function zoomInThenOut(lat, lon) {
+    // First zoom in to the point
+    map.flyTo([lat, lon], 12, { duration: 1 });
+
+    // Then zoom out after a short delay
+    setTimeout(() => {
+        // Calculate bounds to include all points
+        let bounds;
+
+        if (routePoints.length >= 2) {
+            // If we have multiple points, create bounds based on all route points
+            bounds = L.latLngBounds(routePoints.map(p => p.latLng));
+            // Add some padding to the bounds
+            bounds = bounds.pad(0.3);
+        } else {
+            // If we have only one point, create a view centered on that point but zoomed out
+            bounds = L.latLngBounds([
+                [lat - 10, lon - 10],
+                [lat + 10, lon + 10]
+            ]);
+        }
+
+        // Calculate padding for the info panel
+        const paddingLeft = window.innerWidth * 0.45; // Adjust for overlay width
+
+        // Fly to the bounds with appropriate padding
+        map.flyToBounds(bounds, {
+            paddingTopLeft: [paddingLeft, 20],
+            paddingBottomRight: [20, 20],
+            duration: 1.5
+        });
+    }, 1500); // Delay of 1.5 seconds before zooming out
 }
