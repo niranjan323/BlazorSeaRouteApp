@@ -102,11 +102,14 @@
     </div>
 
     <!-- Dynamic Departure Ports Section -->
-    @foreach (var port in routeModel.DeparturePorts)
+    @for (int i = 0; i < routeModel.DeparturePorts.Count; i++)
     {
+        var port = routeModel.DeparturePorts[i];
+        var portNumber = i + 1;
+
         <div class="cls_route_div port-card">
             <div class="cls_route_div_rep">
-                <h4 class="route_content_heading1">Additional Loading Port</h4>
+                <h4 class="route_content_heading1">Additional Loading Port @portNumber</h4>
                 <div class="cls_sub_heading">
                     <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
                         <span class="content_div_label">Port of Departure</span>
@@ -150,22 +153,23 @@
             </div>
         </div>
     }
+
     <!-- Dynamic Departure Waypoints -->
-    @foreach (var waypoint in routeModel.DepartureWaypoints)
+    @for (int i = 0; i < routeModel.DepartureWaypoints.Count; i++)
     {
+        var waypoint = routeModel.DepartureWaypoints[i];
+        var waypointNumber = i + 1;
+
         <div class="cls_route_div">
             <div class="cls_route_div_rep">
-
+                <h4 class="route_content_heading1">Departure Waypoint @waypointNumber</h4>
                 <div class="cls_sub_heading">
-                    @* <span class="content_div_label_blue">FRMRS</span> *@
-
                     <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
-                        <span class="content_div_label">Port of Departure</span>
+                        <span class="content_div_label">Waypoint</span>
                         <div class="cls_btn_minimize">
                             <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
@@ -180,7 +184,6 @@
                     </div>
 
                     <img src="Images/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
-
                 </div>
 
                 <div class="cls_btn_div">
@@ -189,7 +192,6 @@
                 </div>
             </div>
         </div>
-
     }
 
     <!-- Arrival Section -->
@@ -213,7 +215,7 @@
             <!-- Search Results Dropdown for Main Arrival -->
             @if (routeModel.MainArrivalPortSelection?.SearchResults?.Any() == true)
             {
-                <div class="search-results" style="position:relative" >
+                <div class="search-results" style="position:relative">
                     @foreach (var result in routeModel.MainArrivalPortSelection.SearchResults)
                     {
                         <div class="search-result-item" @onclick="() => UpdateArrivalPortSearchArrivalLocation(routeModel.MainArrivalPortSelection, result)">
@@ -231,11 +233,14 @@
     </div>
 
     <!-- Dynamic Arrival Ports Section -->
-    @foreach (var port in routeModel.ArrivalPorts)
+    @for (int i = 0; i < routeModel.ArrivalPorts.Count; i++)
     {
+        var port = routeModel.ArrivalPorts[i];
+        var portNumber = i + 1;
+
         <div class="cls_route_div port-card">
             <div class="cls_route_div_rep">
-                <h4 class="route_content_heading1">Additional Arrival Port</h4>
+                <h4 class="route_content_heading1">Additional Arrival Port @portNumber</h4>
                 <div class="cls_sub_heading">
                     <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
                         <span class="content_div_label">Port of Arrival</span>
@@ -280,24 +285,22 @@
         </div>
     }
     <!-- Dynamic Arrival Waypoints -->
-    @foreach (var waypoint in routeModel.ArrivalWaypoints)
+    @for (int i = 0; i < routeModel.ArrivalWaypoints.Count; i++)
     {
+        var waypoint = routeModel.ArrivalWaypoints[i];
+        var waypointNumber = i + 1;
 
         <div class="cls_route_div">
             <div class="cls_route_div_rep">
-
-
+                <h4 class="route_content_heading1">Arrival Waypoint @waypointNumber</h4>
                 <div class="cls_sub_heading">
-                    @*   <span class="content_div_label_blue">FRMRS</span> *@
-
                     <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
-                        <span class="content_div_label">Port of Departure</span>
+                        <span class="content_div_label">Waypoint</span>
                         <div class="cls_btn_minimize" @onclick="() => RemoveArrivalWaypoint(waypoint)">
                             <div class="cls_btn_minimize_div"></div>
                         </div>
                     </div>
                 </div>
-
 
                 <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
                     <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
@@ -311,22 +314,18 @@
                     </div>
 
                     <img src="Images/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
-
                 </div>
 
                 <div class="cls_btn_div">
-                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                    <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                    <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
                 </div>
-
-
-
             </div>
         </div>
-
     }
-
-        <div class="cls_flex">
+    
+    
+    <div class="cls_flex">
         <div class="cls_route_div_rep">
 
             <div class="content_div">
