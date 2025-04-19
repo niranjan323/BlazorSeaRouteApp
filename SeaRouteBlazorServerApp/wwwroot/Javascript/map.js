@@ -631,10 +631,89 @@ function initializeMap(dotNetHelper) {
             newPin.bindPopup(`Waypoint: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`).openPopup();
             clickedPins.push(newPin);
 
+            // Also add it to waypoint pins for clarity
+            waypointPins.push(newPin);
+
+            // Add to route points as a waypoint
+            routePoints.push({
+                type: 'waypoint',
+                latLng: [latitude, longitude],
+                name: `Waypoint ${waypointPins.length}`
+            });
+
+            // Use the zoom in-out effect
+            zoomInThenOut(latitude, longitude);
+
+            // Reorganize and draw route if we have departure and arrival
+            if (departurePin && arrivalPin) {
+                reorganizeRoutePoints();
+                drawSeaRoute();
+            }
+
             // Optionally disable selection after click
             setWaypointSelection(false);
         }
     });
+
+    // Update the drawSeaRoute function to use solid blue lines
+    function drawSeaRoute() {
+        // Clear previous route
+        routeLayer.clearLayers();
+
+        if (routePoints.length < 2) {
+            return; // Need at least departure and arrival to draw a route
+        }
+
+        // Collect all lat/lng coordinates in order
+        const coordinates = routePoints.map(point => point.latLng);
+
+        // Create a sea route through all points
+        const seaRoute = createSeaRoute(coordinates);
+
+        // Draw the route line with solid blue style (no dashes)
+        L.polyline(seaRoute, {
+            color: '#0066ff',
+            weight: 3,
+            opacity: 0.8,
+            smoothFactor: 1,
+            dashArray: null,  // Ensure no dash array is set
+            className: 'sea-route-line'
+        }).addTo(routeLayer);
+
+        // Add distance markers between segments
+        addDistanceMarkers(seaRoute);
+
+        // Note: We're not changing the map view here to avoid interfering with zoomInThenOut
+    }
+
+    // Enhanced reorganizeRoutePoints function to handle waypoints better
+    function reorganizeRoutePoints() {
+        // Extract departure and arrival points
+        const departurePoint = routePoints.find(p => p.type === 'departure');
+        const arrivalPoint = routePoints.find(p => p.type === 'arrival');
+
+        // Get all intermediate points (ports and waypoints)
+        const otherPoints = routePoints.filter(p => p.type !== 'departure' && p.type !== 'arrival');
+
+        // Reset route points array
+        routePoints = [];
+
+        // Add departure first
+        if (departurePoint) {
+            routePoints.push(departurePoint);
+        }
+
+        // Add all intermediate points
+        routePoints = routePoints.concat(otherPoints);
+
+        // Add arrival last
+        if (arrivalPoint) {
+            routePoints.push(arrivalPoint);
+        }
+
+        // Optional: Sort intermediate points by some logic if needed
+        // For example, you might want to sort ports and waypoints by their proximity to the route
+    }
 }
 
 function setWaypointSelection(active) {
@@ -807,7 +886,7 @@ function drawSeaRoute() {
         weight: 3,
         opacity: 0.8,
         smoothFactor: 1,
-        className: 'sea-route-line'
+        dashArray: null
     }).addTo(routeLayer);
 
     // Add distance markers between segments

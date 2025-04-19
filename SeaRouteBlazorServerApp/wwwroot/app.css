@@ -1408,10 +1408,6 @@ strong {
     border: 2px solid white;
 }
 
-/* Route line */
-.leaflet-interactive {
-    stroke-dasharray: 5, 5;
-}
 
 /* Distance marker */
 .distance-marker {
