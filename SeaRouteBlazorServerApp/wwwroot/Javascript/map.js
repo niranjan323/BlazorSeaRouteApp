@@ -686,6 +686,8 @@ function initializeMap(dotNetHelper) {
         // Note: We're not changing the map view here to avoid interfering with zoomInThenOut
     }
 
+
+
     // Enhanced reorganizeRoutePoints function to handle waypoints better
     function reorganizeRoutePoints() {
         // Extract departure and arrival points
@@ -806,7 +808,7 @@ async function zoomAndPinLocation(query, isDeparture) {
     try {
         let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
         let data = await response.json();
-
+        //setWaypointSelection(false);
         if (data.length > 0) {
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
@@ -950,7 +952,122 @@ function createSeaRoute(coordinates) {
     
     return route;
 }
+// New function to draw sea route from API coordinates
+//function drawSeaRouteFromAPI(coordinates) {
+//    // Clear previous route
+//    routeLayer.clearLayers();
 
+//    if (!coordinates || coordinates.length < 2) {
+//        console.error("Not enough coordinates to draw a route");
+//        return;
+//    }
+
+//    // Create a polyline from the coordinates
+//    L.polyline(coordinates, {
+//        color: '#0066ff',
+//        weight: 3,
+//        opacity: 0.8,
+//        smoothFactor: 1,
+//        dashArray: null
+//    }).addTo(routeLayer);
+
+//    // Add distance markers between segments
+//    addDistanceMarkers(coordinates);
+
+//    // Calculate bounds with right padding to account for 40% overlay
+//    const routeBounds = L.latLngBounds(coordinates);
+
+//    // Calculate pixel padding - approximately 40% of map width to the left
+//    const paddingLeft = window.innerWidth * 0.45; // Adjust for overlay width
+
+//    // Fly to the bounds of the route with appropriate padding
+//    map.flyToBounds(routeBounds, {
+//        paddingTopLeft: [paddingLeft, 20],
+//        paddingBottomRight: [20, 20],
+//        duration: 1.5
+//    });
+//}
+
+// Function to draw sea route from API coordinates while preserving intermediate points
+function drawSeaRouteFromAPI(apiCoordinates) {
+    // Clear previous route from the route layer
+    routeLayer.clearLayers();
+
+    if (!apiCoordinates || apiCoordinates.length < 2) {
+        console.error("Not enough coordinates to draw a route");
+        return;
+    }
+
+    // Get current departure and arrival coordinates from existing pins
+    const departureCoord = departurePin ? [departurePin.getLatLng().lat, departurePin.getLatLng().lng] : null;
+    const arrivalCoord = arrivalPin ? [arrivalPin.getLatLng().lat, arrivalPin.getLatLng().lng] : null;
+
+    // Get all intermediate waypoints and port coordinates
+    const intermediatePoints = [];
+
+    // Add port pins (in order they were added)
+    portPins.forEach(pin => {
+        intermediatePoints.push([pin.getLatLng().lat, pin.getLatLng().lng]);
+    });
+
+    // Add waypoint pins (in order they were added)
+    waypointPins.forEach(pin => {
+        intermediatePoints.push([pin.getLatLng().lat, pin.getLatLng().lng]);
+    });
+
+    // Create a complete route with all points
+    let completeRoute = [];
+
+    // Start with departure (either from pin or API)
+    if (departureCoord) {
+        completeRoute.push(departureCoord);
+    } else if (apiCoordinates.length > 0) {
+        completeRoute.push(apiCoordinates[0]);
+    }
+
+    // Add all intermediate points
+    completeRoute = completeRoute.concat(intermediatePoints);
+
+    // End with arrival (either from pin or API)
+    if (arrivalCoord) {
+        completeRoute.push(arrivalCoord);
+    } else if (apiCoordinates.length > 1) {
+        completeRoute.push(apiCoordinates[apiCoordinates.length - 1]);
+    }
+
+    // If we have API data but no user points, use the API route directly
+    if (completeRoute.length <= 2 && apiCoordinates.length > 2) {
+        completeRoute = apiCoordinates;
+    }
+
+    // Create a sea route through all points
+    const seaRoute = createSeaRoute(completeRoute);
+
+    // Draw the route line
+    L.polyline(seaRoute, {
+        color: '#0066ff',
+        weight: 3,
+        opacity: 0.8,
+        smoothFactor: 1,
+        dashArray: null
+    }).addTo(routeLayer);
+
+    // Add distance markers between segments
+    addDistanceMarkers(seaRoute);
+
+    // Calculate bounds with right padding to account for 40% overlay
+    const routeBounds = L.latLngBounds(seaRoute);
+
+    // Calculate pixel padding - approximately 40% of map width to the left
+    const paddingLeft = window.innerWidth * 0.45; // Adjust for overlay width
+
+    // Fly to the bounds of the route with appropriate padding
+    map.flyToBounds(routeBounds, {
+        paddingTopLeft: [paddingLeft, 20],
+        paddingBottomRight: [20, 20],
+        duration: 1.5
+    });
+}
 // Add distance markers to the route
 function addDistanceMarkers(routeCoordinates) {
     let totalDistance = 0;
