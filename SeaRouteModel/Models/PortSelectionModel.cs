@@ -8,6 +8,7 @@ namespace SeaRouteModel.Models
 {
     public class PortSelectionModel
     {
+        public int SequenceNumber { get; set; }
         public PortModel? Port { get; set; }
         public string SearchTerm { get; set; } = string.Empty;
         public List<PortModel> SearchResults { get; set; } = new List<PortModel>();

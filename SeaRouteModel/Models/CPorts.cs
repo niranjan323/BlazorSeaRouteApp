@@ -22,6 +22,6 @@ namespace SeaRouteModel.Models
         public string? PortAuthority { get; set; }
 
         public virtual Country? Country { get; set; }
- 
+        public virtual GeoPoints? GeoPoint { get; set; }
     }
 }

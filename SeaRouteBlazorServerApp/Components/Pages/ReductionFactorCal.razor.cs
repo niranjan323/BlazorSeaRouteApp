@@ -5,6 +5,7 @@ using Microsoft.JSInterop;
 using SeaRouteModel.Models;
 using static System.Net.WebRequestMethods;
 using System.Net.Http;
+using System.Text.Json;
 
 namespace SeaRouteBlazorServerApp.Components.Pages
 {
@@ -31,7 +32,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private void CloseOverlay() { /* Logic to hide overlay */ }
         private decimal? routeReductionFactor = 0.82M;
         private int? routeDistance = 5952;
-        private List<PortModel> _ports;
+        private List<PortModel> _ports = new List<PortModel>();
         private bool showReport = false;
         private bool showResults = false;
         private bool showResultsForReductionFactor = false;
@@ -53,7 +54,6 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;
-            await GetSampleports();
 
         }
         private void OnFocus()
@@ -198,7 +198,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         private void AddDeparturePort()
         {
-            routeModel.DeparturePorts.Add(new PortSelectionModel());
+            var nextSeq = routeModel.DeparturePorts.Count + 1;
+            routeModel.DeparturePorts.Add(new PortSelectionModel { SequenceNumber = nextSeq });
             StateHasChanged();
         }
 
@@ -292,7 +293,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         private void AddArrivalPort()
         {
-            routeModel.ArrivalPorts.Add(new PortSelectionModel());
+            var nextSeq = routeModel.ArrivalPorts.Count + 1;
+            routeModel.ArrivalPorts.Add(new PortSelectionModel { SequenceNumber = nextSeq });
             StateHasChanged();
         }
 
@@ -560,7 +562,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
         private async Task AddDepartureWaypoint()
         {
-            routeModel.DepartureWaypoints.Add(new WaypointModel());
+            var nextSeq = routeModel.DepartureWaypoints.Count + 1;
+            
+            routeModel.DepartureWaypoints.Add(new WaypointModel { SequenceNumber = nextSeq });
             await EnableWaypointSelection();
         }
         private async Task EnableWaypointSelection()
@@ -572,7 +576,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         private async Task AddArrivalWaypoint()
         {
-            routeModel.ArrivalWaypoints.Add(new WaypointModel());
+            var nextSeq = routeModel.ArrivalWaypoints.Count + 1;
+            routeModel.ArrivalWaypoints.Add(new WaypointModel { SequenceNumber = nextSeq });
             await EnableWaypointSelection();
         }
 
@@ -607,30 +612,16 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 errorMessage = "Please enter a route name.";
                 return false;
             }
-            //if (!(routeModel.DeparturePorts.Any(p => p.Port != null) ||
-            //      routeModel.DepartureWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
-            //{
-            //    errorMessage = "Please provide at least one valid departure port or waypoint.";
-            //    return false;
-            //}
-            
-            //if (!(routeModel.ArrivalPorts.Any(p => p.Port != null) ||
-            //      routeModel.ArrivalWaypoints.Any(w => !string.IsNullOrEmpty(w.Latitude) && !string.IsNullOrEmpty(w.Longitude))))
-            //{
-            //    errorMessage = "Please provide at least one valid arrival port or waypoint.";
-            //    return false;
-            //}
-            //if (!routeModel.DeparturePorts.Any() || routeModel.DeparturePorts.All(p => p.Port == null))
-            //{
-            //    errorMessage = "Please add at least one departure port.";
-            //    return;
-            //}
-
-            //if (!routeModel.ArrivalPorts.Any() || routeModel.ArrivalPorts.All(p => p.Port == null))
-            //{
-            //    errorMessage = "Please add at least one arrival port.";
-            //    return;
-            //}
+            if (routeModel.MainDeparturePortSelection.Port == null)
+            {
+                errorMessage = "Please select a departure port.";
+                return false;
+            }
+            if (routeModel.MainArrivalPortSelection.Port == null)
+            {
+                errorMessage = "Please select an arrival port.";
+                return false;
+            }
             if (!routeModel.ExceedanceProbability.HasValue ||
                 routeModel.ExceedanceProbability <= 0 ||
                 routeModel.ExceedanceProbability >= 1)
@@ -658,53 +649,80 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
         private RouteRequest PrepareRouteRequest()
         {
+            // Create a route request from the current model
             var request = new RouteRequest
             {
-                Units = "km",
+                // Set origin from main departure port coordinates
+                Origin = new double[] {
+            routeModel.MainDeparturePortSelection.Port.Latitude,
+            routeModel.MainDeparturePortSelection.Port.Longitude
+        },
+
+                // Set destination from main arrival port coordinates
+                Destination = new double[] {
+            routeModel.MainArrivalPortSelection.Port.Latitude,
+            routeModel.MainArrivalPortSelection.Port.Longitude
+        },
+
+                // Set restrictions if any (e.g. "piracy")
+                Restrictions = new string[] { routeModel.SeasonalType },
+
+                // Set other options
                 IncludePorts = true,
-                OnlyTerminals = true,
-                Restrictions = new[] { routeModel.SeasonalType }  // Use the seasonal type as restriction
+                Units = "km",
+                OnlyTerminals = true
             };
 
-            // Set Origin coordinates
-            if (routeModel.DeparturePorts.Any(p => p.Port != null))
+            // Add waypoints if any exist
+            if (routeModel.DepartureWaypoints.Any() || routeModel.ArrivalWaypoints.Any() ||
+                routeModel.DeparturePorts.Any() || routeModel.ArrivalPorts.Any())
             {
-                // Use the first departure port
-                var departurePort = routeModel.DeparturePorts.First(p => p.Port != null).Port;
-                request.Origin = new[] { departurePort.Longitude, departurePort.Latitude };
-            }
-            else if (routeModel.DepartureWaypoints.Any())
-            {
-                // Use the first departure waypoint
-                var waypoint = routeModel.DepartureWaypoints.First();
-                if (double.TryParse(waypoint.Longitude, out double longitude) &&
-                    double.TryParse(waypoint.Latitude, out double latitude))
-                {
-                    request.Origin = new[] { longitude, latitude };
-                }
-            }
+                var allWaypoints = new List<double[]>();
 
-            // Set Destination coordinates
-            if (routeModel.ArrivalPorts.Any(p => p.Port != null))
-            {
-                // Use the first arrival port
-                var arrivalPort = routeModel.ArrivalPorts.First(p => p.Port != null).Port;
-                request.Destination = new[] { arrivalPort.Longitude, arrivalPort.Latitude };
-            }
-            else if (routeModel.ArrivalWaypoints.Any())
-            {
-                // Use the first arrival waypoint
-                var waypoint = routeModel.ArrivalWaypoints.First();
-                if (double.TryParse(waypoint.Longitude, out double longitude) &&
-                    double.TryParse(waypoint.Latitude, out double latitude))
+                // Add intermediate departure ports (ordered by sequence)
+                foreach (var port in routeModel.DeparturePorts.OrderBy(p => p.SequenceNumber))
                 {
-                    request.Destination = new[] { longitude, latitude };
+                    if (port.Port != null)
+                    {
+                        allWaypoints.Add(new double[] { port.Port.Latitude, port.Port.Longitude });
+                    }
                 }
+
+                // Add departure waypoints (ordered by sequence)
+                foreach (var waypoint in routeModel.DepartureWaypoints.OrderBy(w => w.SequenceNumber))
+                {
+                    if (double.TryParse(waypoint.Latitude, out double lat) && double.TryParse(waypoint.Longitude, out double lng))
+                    {
+                        allWaypoints.Add(new double[] { lat, lng });
+                    }
+                }
+
+
+                // Add arrival waypoints (ordered by sequence)
+                foreach (var waypoint in routeModel.ArrivalWaypoints.OrderBy(w => w.SequenceNumber))
+                {
+                    if (double.TryParse(waypoint.Latitude, out double lat) && double.TryParse(waypoint.Longitude, out double lng))
+                    {
+                        allWaypoints.Add(new double[] { lat, lng });
+                    }
+                }
+
+
+                // Add intermediate arrival ports (ordered by sequence)
+                foreach (var port in routeModel.ArrivalPorts.OrderBy(p => p.SequenceNumber))
+                {
+                    if (port.Port != null)
+                    {
+                        allWaypoints.Add(new double[] { port.Port.Latitude, port.Port.Longitude });
+                    }
+                }
+
+                // Add all waypoints to the request
+                //request.Waypoints = allWaypoints;
             }
 
             return request;
         }
-
         private async Task CalculateRouteReductionFactor()
         {
             try
@@ -720,14 +738,24 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 }
 
                 // Prepare the RouteRequest object
-                var routeRequest = PrepareRouteRequest();
+                //var routeRequest = PrepareRouteRequest();
 
+                var dummyRouteRequest = new RouteRequest
+                {
+                    Origin = new double[] { 1.3521, 103.8198 },            // Singapore
+                    Destination = new double[] { 51.9225, 4.4792 },        // Rotterdam
+                    Restrictions = new[] { "piracy" },
+                    IncludePorts = true,
+                    Units = "kilometers",
+                    OnlyTerminals = false
+                };
 
                 // Call the API
-                var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
+                var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", dummyRouteRequest);
                 // Process the result
-                ProcessRouteCalculationResult(result);
-               // showResultsForReductionFactor = true;
+                await ProcessRouteCalculationResult(result);
+                var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, result);
+                // showResultsForReductionFactor = true;
             }
             catch (Exception ex)
             {
@@ -737,94 +765,85 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             }
         }
 
-        private void ProcessRouteCalculationResult(dynamic result)
+        private async Task ProcessRouteCalculationResult(HttpResponseMessage response)
         {
-            // Here you would process the result returned from the API
-            // This might include:
-            // 1. Extracting route properties
-            // 2. Calculating the route reduction factor based on the result and the model parameters
-            // 3. Updating the UI with the results
-
-            if (result != null)
+            try
             {
-                // Extract route length
-                string routeLength = result.route_length;
+                var jsonString = await response.Content.ReadAsStringAsync();
+                using var jsonDoc = JsonDocument.Parse(jsonString);
+                var root = jsonDoc.RootElement;
 
-                // Calculate reduction factor based on wave type and exceedance probability
-                double reductionFactor = CalculateReductionFactor(
-                    routeModel.WayType,
-                    routeModel.ExceedanceProbability.Value,
-                    result
-                );
+                var coordinates = new List<double[]>();
 
-                // Update the UI or model with the calculated values
-                // routeModel.ReductionFactor = reductionFactor;
+                if (root.TryGetProperty("route", out var route) &&
+                    route.TryGetProperty("features", out var features) &&
+                    features.GetArrayLength() > 0)
+                {
+                    var geometry = features[0].GetProperty("geometry");
+                    var coordsArray = geometry.GetProperty("coordinates");
 
-                // You might want to display this information to the user
-                // DisplayResults(routeLength, reductionFactor);
+                    foreach (var coordPair in coordsArray.EnumerateArray())
+                    {
+                        var lat = coordPair[0].GetDouble();
+                        var lon = coordPair[1].GetDouble();
+                        coordinates.Add(new[] { lat, lon });
+                    }
+
+                    //await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates);
+                }
+
+                var routeProps = root.GetProperty("route_properties");
+                var distance = routeProps.GetProperty("length").GetDouble();
+                var units = routeProps.GetProperty("units").GetString();
+
+                var duration = root.GetProperty("route_length").GetString(); // this is a string like "10527.3 kilometers"
+
+                await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates, distance, duration, units);
+                Console.WriteLine($"Distance: {distance} {units}, Duration: {duration}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing route result: {ex.Message}");
             }
         }
+
         private double CalculateReductionFactor(string waveType, double exceedanceProbability, dynamic routeData)
         {
-            // Implement your reduction factor calculation logic here
-            // This would depend on your specific business requirements
+            // Base reduction factor (you can adjust this based on your requirements)
+            double baseFactor = 1.0;
 
-            // Example placeholder calculation:
-            double baseReductionFactor = 1.0;
-
-            // Adjust based on wave type
-            switch (waveType)
+            // Apply adjustments based on wave type
+            switch (waveType.ToLower())
             {
-                case "High":
-                    baseReductionFactor *= 0.8;
+                case "high":
+                    baseFactor *= 0.8; // 20% reduction for high waves
                     break;
-                case "Medium":
-                    baseReductionFactor *= 0.9;
+                case "medium":
+                    baseFactor *= 0.9; // 10% reduction for medium waves
                     break;
-                case "Low":
-                    baseReductionFactor *= 1.0;
+                case "low":
+                    // No reduction for low waves
+                    break;
+                default:
+                    // Default case, no adjustment
                     break;
             }
 
-            // Adjust based on exceedance probability
-            // Lower exceedance probability typically means higher reduction
-            baseReductionFactor *= (1.0 - exceedanceProbability);
+            // Apply adjustments based on exceedance probability
+            // Higher probability generally means greater risk, so reduce the factor more
+            if (exceedanceProbability > 0)
+            {
+                baseFactor *= (1 - (exceedanceProbability / 100));
+            }
 
-            // Further adjustments based on route properties could be made here
+            // Consider route length for additional adjustments if needed
+            var distance = routeData.GetProperty("distance").GetDouble();
+            if (distance > 1000) // For routes longer than 1000 km
+            {
+                baseFactor *= 0.95; // 5% additional reduction for long routes
+            }
 
-            return baseReductionFactor;
-        }
-
-
-        protected async Task GetSampleports()
-        {
-            _ports = new List<PortModel>
-{
-new PortModel
-{
-Legacy_Place_Id = 5000,
-Port_Id = "POR-03000",
-Name = "Marseille",
-Country = "France",
-Country_Code = "FRA",
-Unlocode = "FRMRS",
-Latitude = 43.2965,
-Longitude = 5.3698
-},
-new PortModel
-{
-Legacy_Place_Id = 5001,
-Port_Id = "POR-03001",
-Name = "Singapore",
-Country = "Singapore",
-Country_Code = "SGP",
-Unlocode = "SGSIN",
-Latitude = 1.3521,
-Longitude = 103.8198
-},
-// Add more sample ports as needed
-};
-
+            return baseFactor;
         }
         
 

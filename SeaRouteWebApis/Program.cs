@@ -25,6 +25,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddScoped<DbRecordInserter>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IPortService, PortService>();
 //builder.Services.AddScoped<IPythonApiService, PythonApiService>();
 builder.Services.AddHttpClient<IPythonApiService, PythonApiService>();
 
