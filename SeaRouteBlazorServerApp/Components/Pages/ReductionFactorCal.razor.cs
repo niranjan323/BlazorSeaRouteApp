@@ -389,6 +389,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             public static PortModel ToPortModel(CPorts cPort)
             {
+                var (lat, lon) = GetCoordinates(cPort.CountryCode, cPort.PortName);
+
                 return new PortModel
                 {
                     Port_Id = cPort.PointId.ToString(),
@@ -397,30 +399,50 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                     Country = GetCountryName(cPort.CountryCode),
                     Unlocode = cPort.Unlocode,
                     Port_Authority = cPort.PortAuthority,
-                    Latitude = 0,
-                    Longitude = 0,
+                    Latitude = lat,
+                    Longitude = lon,
                     Last_Updated = cPort.CreatedDate
                 };
             }
+
+            private static string GetCountryName(string countryCode)
+            {
+                return countryCode switch
+                {
+                    "SG" => "Singapore",
+                    "NL" => "Netherlands",
+                    "CN" => "China",
+                    "US" => "United States",
+                    "DE" => "Germany",
+                    "KR" => "South Korea",
+                    "FR" => "France",
+                    "AU" => "Australia",
+                    "IN" => "India",
+                    "AE" => "United Arab Emirates",
+                    _ => countryCode
+                };
+            }
+
+            private static (double Latitude, double Longitude) GetCoordinates(string countryCode, string portName)
+            {
+                return (countryCode, portName.ToLower()) switch
+                {
+                    ("SG", "singapore") => (1.2644, 103.8200),         // Port of Singapore
+                    ("NL", "rotterdam") => (51.9555, 4.1338),          // Port of Rotterdam
+                    ("CN", "shanghai") => (31.2304, 121.4910),         // Port of Shanghai
+                    ("US", "los angeles") => (33.7405, -118.2760),     // Port of Los Angeles
+                    ("DE", "hamburg") => (53.5461, 9.9661),            // Port of Hamburg
+                    ("KR", "busan") => (35.0951, 129.0403),            // Port of Busan
+                    ("FR", "marseille") => (43.3522, 5.3396),          // Port of Marseille
+                    ("AU", "sydney") => (-33.8593, 151.2046),          // Port of Sydney
+                    ("IN", "mumbai") => (18.9536, 72.8358),            // Port of Mumbai
+                    ("AE", "dubai") => (25.2711, 55.3051),             // Port of Dubai (Jebel Ali)
+                    _ => (0.0, 0.0)
+                };
+            }
+
         }
 
-        private static string GetCountryName(string countryCode)
-        {
-            return countryCode switch
-            {
-                "SG" => "Singapore",
-                "NL" => "Netherlands",
-                "CN" => "China",
-                "US" => "United States",
-                "DE" => "Germany",
-                "KR" => "South Korea",
-                "FR" => "France",
-                "AU" => "Australia",
-                "IN" => "India",
-                "AE" => "United Arab Emirates",
-                _ => countryCode
-            };
-        }
 
 
         //  ------------------------  end  --------------------
@@ -738,20 +760,20 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 }
 
                 // Prepare the RouteRequest object
-                //var routeRequest = PrepareRouteRequest();
+                var routeRequest = PrepareRouteRequest();
 
-                var dummyRouteRequest = new RouteRequest
-                {
-                    Origin = new double[] { 1.3521, 103.8198 },            // Singapore
-                    Destination = new double[] { 51.9225, 4.4792 },        // Rotterdam
-                    Restrictions = new[] { "piracy" },
-                    IncludePorts = true,
-                    Units = "kilometers",
-                    OnlyTerminals = false
-                };
+                //var dummyRouteRequest = new RouteRequest
+                //{
+                //    Origin = new double[] { 1.3521, 103.8198 },            // Singapore
+                //    Destination = new double[] { 51.9225, 4.4792 },        // Rotterdam
+                //    Restrictions = new[] { "piracy" },
+                //    IncludePorts = true,
+                //    Units = "kilometers",
+                //    OnlyTerminals = false
+                //};
 
                 // Call the API
-                var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", dummyRouteRequest);
+                var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
                 // Process the result
                 await ProcessRouteCalculationResult(result);
                 var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, result);
@@ -789,7 +811,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                         coordinates.Add(new[] { lat, lon });
                     }
 
-                    //await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates);
+                    await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates);
                 }
 
                 var routeProps = root.GetProperty("route_properties");
@@ -798,7 +820,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
                 var duration = root.GetProperty("route_length").GetString(); // this is a string like "10527.3 kilometers"
 
-                await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates, distance, duration, units);
+               // await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates, distance, duration, units);
                 Console.WriteLine($"Distance: {distance} {units}, Duration: {duration}");
             }
             catch (Exception ex)
