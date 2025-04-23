@@ -199,8 +199,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
             }
-            await CheckAndCalculateRoute();
             portSelection.SearchResults.Clear();
+            await CheckAndCalculateRoute();
             StateHasChanged();
         }
         private void AddDeparturePort()
@@ -295,8 +295,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Call the JavaScript visualization after API search
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
-            await CheckAndCalculateRoute();
             portSelection.SearchResults.Clear();
+            await CheckAndCalculateRoute();
             StateHasChanged();
         }
 

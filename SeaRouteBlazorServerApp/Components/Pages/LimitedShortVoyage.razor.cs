@@ -555,7 +555,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         protected async Task SaveShortVoyage(ReductionFactor reductionFactor)
         {
-            await CalculateLimitedRoute();
+            //await CalculateLimitedRoute();
             ShortVoyageRecord shortVoyage = new ShortVoyageRecord()
             {
                 UserId = "1",
