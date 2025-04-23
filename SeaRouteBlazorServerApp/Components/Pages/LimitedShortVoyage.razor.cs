@@ -294,6 +294,10 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await JS.InvokeVoidAsync("searchLocation", newPort.Name, true);
 
             portSelection.SearchResults.Clear();
+            if (ValidateLimitedRouteData())
+            {
+                await CalculateLimitedRoute();
+            }
             StateHasChanged();
         }
         public async Task<List<PortModel>> SearchPortsAsync(string searchTerm)
@@ -434,6 +438,10 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await JS.InvokeVoidAsync("searchLocation", newPort.Name, false);
 
             portSelection.SearchResults.Clear();
+            if (ValidateLimitedRouteData())
+            {
+                await CalculateLimitedRoute();
+            }
             StateHasChanged();
         }
 

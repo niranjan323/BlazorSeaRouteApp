@@ -730,71 +730,55 @@ function setWaypointSelection(active) {
     }
 }
 
-// Main function to search for a port location and set as departure or arrival
 async function searchLocation(query, isDeparture) {
     try {
         let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
         let data = await response.json();
-
         if (data.length > 0) {
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
 
-            // Clear previous pin
+            // Add pin based on type (departure or arrival)
             if (isDeparture) {
+                // Remove previous departure pin if exists
                 if (departurePin) {
                     map.removeLayer(departurePin);
                 }
+
+                // Create new departure pin with default marker
                 departurePin = L.marker([lat, lon]).addTo(map);
                 departurePin.bindPopup("Departure: " + query).openPopup();
 
-                // Update route points
-                if (routePoints.length === 0) {
-                    routePoints.push({
-                        type: 'departure',
-                        latLng: [lat, lon],
-                        name: query
-                    });
-                } else {
-                    routePoints[0] = {
-                        type: 'departure',
-                        latLng: [lat, lon],
-                        name: query
-                    };
-                }
+                // Zoom in and out animation for departure point
+                zoomInThenOut(lat, lon);
+
+                // Store departure point info (if you need it later)
+                departurePoint = {
+                    latLng: [lat, lon],
+                    name: query
+                };
             } else {
+                // Remove previous arrival pin if exists
                 if (arrivalPin) {
                     map.removeLayer(arrivalPin);
                 }
+
+                // Create new arrival pin with default marker
                 arrivalPin = L.marker([lat, lon]).addTo(map);
                 arrivalPin.bindPopup("Arrival: " + query).openPopup();
 
-                // Update route points - arrival should be the last
-                const arrivalIndex = routePoints.findIndex(p => p.type === 'arrival');
-                if (arrivalIndex !== -1) {
-                    routePoints[arrivalIndex] = {
-                        type: 'arrival',
-                        latLng: [lat, lon],
-                        name: query
-                    };
-                } else {
-                    routePoints.push({
-                        type: 'arrival',
-                        latLng: [lat, lon],
-                        name: query
-                    });
-                }
+                // Zoom in and out animation for arrival point
+                zoomInThenOut(lat, lon);
+
+                // Store arrival point info (if you need it later)
+                arrivalPoint = {
+                    latLng: [lat, lon],
+                    name: query
+                };
             }
 
-            // Use the new zoom pattern
-            zoomInThenOut(lat, lon);
-
-            // Draw the route if we have both departure and arrival points
-            if (departurePin && arrivalPin) {
-                // Clean up the route points to ensure departure is first and arrival is last
-                reorganizeRoutePoints();
-                drawSeaRoute();
-            }
+            // Note: Removed the automatic route drawing as requested
+            // You will handle route drawing with your own method
         } else {
             alert("Port not found!");
         }
@@ -802,6 +786,78 @@ async function searchLocation(query, isDeparture) {
         console.error("Error fetching location:", error);
     }
 }
+// Main function to search for a port location and set as departure or arrival
+//async function searchLocation(query, isDeparture) {
+//    try {
+//        let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+//        let data = await response.json();
+
+//        if (data.length > 0) {
+//            let lat = parseFloat(data[0].lat);
+//            let lon = parseFloat(data[0].lon);
+
+//            // Clear previous pin
+//            if (isDeparture) {
+//                if (departurePin) {
+//                    map.removeLayer(departurePin);
+//                }
+//                departurePin = L.marker([lat, lon]).addTo(map);
+//                departurePin.bindPopup("Departure: " + query).openPopup();
+
+//                // Update route points
+//                if (routePoints.length === 0) {
+//                    routePoints.push({
+//                        type: 'departure',
+//                        latLng: [lat, lon],
+//                        name: query
+//                    });
+//                } else {
+//                    routePoints[0] = {
+//                        type: 'departure',
+//                        latLng: [lat, lon],
+//                        name: query
+//                    };
+//                }
+//            } else {
+//                if (arrivalPin) {
+//                    map.removeLayer(arrivalPin);
+//                }
+//                arrivalPin = L.marker([lat, lon]).addTo(map);
+//                arrivalPin.bindPopup("Arrival: " + query).openPopup();
+
+//                // Update route points - arrival should be the last
+//                const arrivalIndex = routePoints.findIndex(p => p.type === 'arrival');
+//                if (arrivalIndex !== -1) {
+//                    routePoints[arrivalIndex] = {
+//                        type: 'arrival',
+//                        latLng: [lat, lon],
+//                        name: query
+//                    };
+//                } else {
+//                    routePoints.push({
+//                        type: 'arrival',
+//                        latLng: [lat, lon],
+//                        name: query
+//                    });
+//                }
+//            }
+
+//            // Use the new zoom pattern
+//            zoomInThenOut(lat, lon);
+
+//            // Draw the route if we have both departure and arrival points
+//            if (departurePin && arrivalPin) {
+//                // Clean up the route points to ensure departure is first and arrival is last
+//                reorganizeRoutePoints();
+//                drawSeaRoute();
+//            }
+//        } else {
+//            alert("Port not found!");
+//        }
+//    } catch (error) {
+//        console.error("Error fetching location:", error);
+//    }
+//}
 
 // Function to add a port based on API search results
 async function zoomAndPinLocation(query, isDeparture) {
@@ -953,122 +1009,121 @@ function createSeaRoute(coordinates) {
     return route;
 }
 // New function to draw sea route from API coordinates
-//function drawSeaRouteFromAPI(coordinates) {
-//    // Clear previous route
-//    routeLayer.clearLayers();
 
-//    if (!coordinates || coordinates.length < 2) {
-//        console.error("Not enough coordinates to draw a route");
-//        return;
-//    }
 
-//    // Create a polyline from the coordinates
-//    L.polyline(coordinates, {
-//        color: '#0066ff',
-//        weight: 3,
-//        opacity: 0.8,
-//        smoothFactor: 1,
-//        dashArray: null
-//    }).addTo(routeLayer);
+// Function to draw the sea route from GeoJSON response
+function createSeaRoutefromAPI(routeJson) {
+    try {
+        // Parse the GeoJSON string if it's not already an object
+        const routeData = typeof routeJson === 'string' ? JSON.parse(routeJson) : routeJson;
 
-//    // Add distance markers between segments
-//    addDistanceMarkers(coordinates);
+        // Extract LineString coordinates from the GeoJSON
+        const geoJsonCoordinates = routeData.geometry.coordinates;
 
-//    // Calculate bounds with right padding to account for 40% overlay
-//    const routeBounds = L.latLngBounds(coordinates);
+        // Convert from [longitude, latitude] to [latitude, longitude] for Leaflet
+        const leafletCoordinates = geoJsonCoordinates.map(coord => [coord[1], coord[0]]);
 
-//    // Calculate pixel padding - approximately 40% of map width to the left
-//    const paddingLeft = window.innerWidth * 0.45; // Adjust for overlay width
+        // Clear previous route
+        if (routeLayer) {
+            routeLayer.clearLayers();
+        }
 
-//    // Fly to the bounds of the route with appropriate padding
-//    map.flyToBounds(routeBounds, {
-//        paddingTopLeft: [paddingLeft, 20],
-//        paddingBottomRight: [20, 20],
-//        duration: 1.5
-//    });
-//}
+        // Create the polyline with the converted coordinates
+        const seaRoutePolyline = L.polyline(leafletCoordinates, {
+            color: '#0066ff',
+            weight: 3,
+            opacity: 0.8,
+            smoothFactor: 1,
+            dashArray: null
+        }).addTo(routeLayer);
 
-// Function to draw sea route from API coordinates while preserving intermediate points
-function drawSeaRouteFromAPI(apiCoordinates) {
-    // Clear previous route from the route layer
-    routeLayer.clearLayers();
+        // Get start and end points for markers
+        const startPoint = leafletCoordinates[0];
+        const endPoint = leafletCoordinates[leafletCoordinates.length - 1];
 
-    if (!apiCoordinates || apiCoordinates.length < 2) {
-        console.error("Not enough coordinates to draw a route");
-        return;
+        // Add markers for origin and destination if they don't exist yet
+        const properties = routeData.properties;
+
+        if (properties && properties.port_origin) {
+            // Check if departure pin already exists and remove it if it does
+            if (departurePin) {
+                map.removeLayer(departurePin);
+            }
+
+            // Create departure pin
+            departurePin = L.marker(startPoint).addTo(map);
+            departurePin.bindPopup(`Departure: ${properties.port_origin.name} (${properties.port_origin.port})`).openPopup();
+        }
+
+        if (properties && properties.port_dest) {
+            // Check if arrival pin already exists and remove it if it does
+            if (arrivalPin) {
+                map.removeLayer(arrivalPin);
+            }
+
+            // Create arrival pin
+            arrivalPin = L.marker(endPoint).addTo(map);
+            arrivalPin.bindPopup(`Arrival: ${properties.port_dest.name} (${properties.port_dest.port})`).openPopup();
+        }
+
+        // Add distance information
+        if (properties && properties.length) {
+            // Add total distance marker at the middle of the route
+            const midIndex = Math.floor(leafletCoordinates.length / 2);
+            const midPoint = leafletCoordinates[midIndex];
+
+            L.marker(midPoint, {
+                icon: L.divIcon({
+                    className: 'distance-marker',
+                    html: `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
+                            Distance: ${Math.round(properties.length)} km<br>
+                            Duration: ${Math.round(properties.duration_hours)} hours
+                           </div>`,
+                    iconSize: null
+                })
+            }).addTo(routeLayer);
+        }
+
+        // Calculate bounds to fit the entire route
+        const routeBounds = L.latLngBounds(leafletCoordinates);
+
+        // Calculate pixel padding - approximately 40% of map width to the left for your overlay
+        const paddingLeft = window.innerWidth * 0.45;
+
+        // Fit the map to the route bounds with appropriate padding
+        map.flyToBounds(routeBounds, {
+            paddingTopLeft: [paddingLeft, 20],
+            paddingBottomRight: [20, 20],
+            duration: 1.5
+        });
+
+        // Store the route points for potential later use
+        routePoints = [];
+
+        // Add departure point
+        if (properties && properties.port_origin) {
+            routePoints.push({
+                type: 'departure',
+                latLng: startPoint,
+                name: properties.port_origin.name
+            });
+        }
+
+        // Add arrival point
+        if (properties && properties.port_dest) {
+            routePoints.push({
+                type: 'arrival',
+                latLng: endPoint,
+                name: properties.port_dest.name
+            });
+        }
+
+        return seaRoutePolyline;
+    } catch (error) {
+        console.error("Error creating sea route:", error);
+        return null;
     }
-
-    // Get current departure and arrival coordinates from existing pins
-    const departureCoord = departurePin ? [departurePin.getLatLng().lat, departurePin.getLatLng().lng] : null;
-    const arrivalCoord = arrivalPin ? [arrivalPin.getLatLng().lat, arrivalPin.getLatLng().lng] : null;
-
-    // Get all intermediate waypoints and port coordinates
-    const intermediatePoints = [];
-
-    // Add port pins (in order they were added)
-    portPins.forEach(pin => {
-        intermediatePoints.push([pin.getLatLng().lat, pin.getLatLng().lng]);
-    });
-
-    // Add waypoint pins (in order they were added)
-    waypointPins.forEach(pin => {
-        intermediatePoints.push([pin.getLatLng().lat, pin.getLatLng().lng]);
-    });
-
-    // Create a complete route with all points
-    let completeRoute = [];
-
-    // Start with departure (either from pin or API)
-    if (departureCoord) {
-        completeRoute.push(departureCoord);
-    } else if (apiCoordinates.length > 0) {
-        completeRoute.push(apiCoordinates[0]);
-    }
-
-    // Add all intermediate points
-    completeRoute = completeRoute.concat(intermediatePoints);
-
-    // End with arrival (either from pin or API)
-    if (arrivalCoord) {
-        completeRoute.push(arrivalCoord);
-    } else if (apiCoordinates.length > 1) {
-        completeRoute.push(apiCoordinates[apiCoordinates.length - 1]);
-    }
-
-    // If we have API data but no user points, use the API route directly
-    if (completeRoute.length <= 2 && apiCoordinates.length > 2) {
-        completeRoute = apiCoordinates;
-    }
-
-    // Create a sea route through all points
-    const seaRoute = createSeaRoute(completeRoute);
-
-    // Draw the route line
-    L.polyline(seaRoute, {
-        color: '#0066ff',
-        weight: 3,
-        opacity: 0.8,
-        smoothFactor: 1,
-        dashArray: null
-    }).addTo(routeLayer);
-
-    // Add distance markers between segments
-    addDistanceMarkers(seaRoute);
-
-    // Calculate bounds with right padding to account for 40% overlay
-    const routeBounds = L.latLngBounds(seaRoute);
-
-    // Calculate pixel padding - approximately 40% of map width to the left
-    const paddingLeft = window.innerWidth * 0.45; // Adjust for overlay width
-
-    // Fly to the bounds of the route with appropriate padding
-    map.flyToBounds(routeBounds, {
-        paddingTopLeft: [paddingLeft, 20],
-        paddingBottomRight: [20, 20],
-        duration: 1.5
-    });
 }
-// Add distance markers to the route
 function addDistanceMarkers(routeCoordinates) {
     let totalDistance = 0;
     

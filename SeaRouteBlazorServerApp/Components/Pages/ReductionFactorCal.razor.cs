@@ -194,8 +194,12 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             portSelection.SearchTerm = newPort.Name;
             departureLocationQuery = newPort.Name;
             // Call the JavaScript visualization after API search
-            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))    
+            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+            {
+
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
+            }
+            await CheckAndCalculateRoute();
             portSelection.SearchResults.Clear();
             StateHasChanged();
         }
@@ -280,7 +284,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                     routeModel.MainArrivalPortSelection = tempPortSelection;
                 }
 
-                
+
             }
         }
         private async Task UpdateArrivalPortSearchArrivalLocation(PortSelectionModel portSelection, PortModel newPort)
@@ -291,9 +295,20 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Call the JavaScript visualization after API search
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
-           
+            await CheckAndCalculateRoute();
             portSelection.SearchResults.Clear();
             StateHasChanged();
+        }
+
+        private async Task CheckAndCalculateRoute()
+        {
+            // Check if both departure and arrival ports are selected
+            if (routeModel.MainDeparturePortSelection?.Port != null &&
+                routeModel.MainArrivalPortSelection?.Port != null)
+            {
+                // Both ports are selected, calculate and display the route
+                await CalculateRouteReductionFactor();
+            }
         }
         private void AddArrivalPort()
         {
