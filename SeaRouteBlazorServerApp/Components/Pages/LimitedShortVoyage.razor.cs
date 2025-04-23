@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using SeaRouteModel.Models;
+using System.Text.Json;
 using static System.Net.WebRequestMethods;
 
 namespace SeaRouteBlazorServerApp.Components.Pages
@@ -13,7 +14,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         public EventCallback OnBack { get; set; }
         [Parameter]
         public EventCallback OnShowReport { get; set; }
-        [Parameter] 
+        [Parameter]
         public EventCallback OnAddEditVessel { get; set; }
 
         [Parameter]
@@ -26,7 +27,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private void CloseOverlay() { /* Logic to hide overlay */ }
         private decimal? routeReductionFactor = 0.82M;
         private int? routeDistance = 5952;
-        private List<PortModel> _ports;
+        private List<PortModel> _ports = new List<PortModel>();
         private bool showReport = false;
         private bool showResults = false;
         private bool showResultsForReductionFactor = false;
@@ -43,12 +44,16 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private string weatherSuggestion = "";
         private bool isRouteSaved = false;
         private bool AddEditVessalReport = false;
+
+        // changes 
+        public PortSelectionModel LimitedDeparturePortSelection { get; set; } = new();
+        public PortSelectionModel LimitedArrivalPortSelection { get; set; } = new();
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;
-          
+
         }
- 
+
         private async Task GoBack()
         {
             showReport = false;
@@ -250,28 +255,193 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             }
             return true;
         }
+        //private async Task SearchReductionDepartureLocation()
+        //{
+        //    if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
+        //    {
+
+        //        await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
+        //    }
+        //}
         private async Task SearchReductionDepartureLocation()
         {
             if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
             {
+                var searchResults = await SearchPortsAsync(reductionDepartureLocationQuery);
 
-                await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
+                var tempPortSelection = new PortSelectionModel
+                {
+                    SearchTerm = reductionDepartureLocationQuery,
+                    SearchResults = searchResults
+                };
+
+                if (searchResults.Any())
+                {
+                    LimitedDeparturePortSelection = tempPortSelection;
+                }
             }
         }
+        private async Task UpdateReductionDeparturePortSearch(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
+            reductionDepartureLocationQuery = newPort.Name;
 
+            // Save to your main model
+            reductionFactor.PortOfDeparture = newPort.Name;
+
+            if (!string.IsNullOrWhiteSpace(newPort.Name))
+                await JS.InvokeVoidAsync("searchLocation", newPort.Name, true);
+
+            portSelection.SearchResults.Clear();
+            StateHasChanged();
+        }
+        public async Task<List<PortModel>> SearchPortsAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+            {
+                return new List<PortModel>();
+            }
+
+            try
+            {
+                var response = await Http.GetAsync($"api/v1/portsapi/search?searchTerm={Uri.EscapeDataString(searchTerm)}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var cPortResults = await response.Content.ReadFromJsonAsync<List<CPorts>>() ?? new List<CPorts>();
+                    var results = MapToPortModels(cPortResults);
+                    // Update the local cache of ports for filtering
+                    foreach (var port in results)
+                    {
+                        if (!_ports.Any(p => p.Unlocode == port.Unlocode))
+                        {
+                            _ports.Add(port);
+                        }
+                    }
+
+                    return results;
+                }
+
+                return new List<PortModel>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error searching ports: {ex.Message}");
+                return new List<PortModel>();
+            }
+        }
+        // for mapping
+        public static List<PortModel> MapToPortModels(List<CPorts> cPortsList)
+        {
+            return cPortsList?.Select(cport => PortExtensions.ToPortModel(cport)).ToList() ?? new List<PortModel>();
+        }
+
+        // nested static class to hold the method
+        private static class PortExtensions
+        {
+            public static PortModel ToPortModel(CPorts cPort)
+            {
+                var (lat, lon) = GetCoordinates(cPort.CountryCode, cPort.PortName);
+
+                return new PortModel
+                {
+                    Port_Id = cPort.PointId.ToString(),
+                    Name = cPort.PortName,
+                    Country_Code = cPort.CountryCode,
+                    Country = GetCountryName(cPort.CountryCode),
+                    Unlocode = cPort.Unlocode,
+                    Port_Authority = cPort.PortAuthority,
+                    Latitude = lat,
+                    Longitude = lon,
+                    Last_Updated = cPort.CreatedDate
+                };
+            }
+
+            private static string GetCountryName(string countryCode)
+            {
+                return countryCode switch
+                {
+                    "SG" => "Singapore",
+                    "NL" => "Netherlands",
+                    "CN" => "China",
+                    "US" => "United States",
+                    "DE" => "Germany",
+                    "KR" => "South Korea",
+                    "FR" => "France",
+                    "AU" => "Australia",
+                    "IN" => "India",
+                    "AE" => "United Arab Emirates",
+                    _ => countryCode
+                };
+            }
+
+            private static (double Latitude, double Longitude) GetCoordinates(string countryCode, string portName)
+            {
+                return (countryCode, portName.ToLower()) switch
+                {
+                    ("SG", "singapore") => (1.2644, 103.8200),         // Port of Singapore
+                    ("NL", "rotterdam") => (51.9555, 4.1338),          // Port of Rotterdam
+                    ("CN", "shanghai") => (31.2304, 121.4910),         // Port of Shanghai
+                    ("US", "los angeles") => (33.7405, -118.2760),     // Port of Los Angeles
+                    ("DE", "hamburg") => (53.5461, 9.9661),            // Port of Hamburg
+                    ("KR", "busan") => (35.0951, 129.0403),            // Port of Busan
+                    ("FR", "marseille") => (43.3522, 5.3396),          // Port of Marseille
+                    ("AU", "sydney") => (-33.8593, 151.2046),          // Port of Sydney
+                    ("IN", "mumbai") => (18.9536, 72.8358),            // Port of Mumbai
+                    ("AE", "dubai") => (25.2711, 55.3051),             // Port of Dubai (Jebel Ali)
+                    _ => (0.0, 0.0)
+                };
+            }
+
+        }
+
+        //private async Task SearchReductionArrivalLocation()
+        //{
+        //    if (!string.IsNullOrWhiteSpace(reductionArrivalLocationQuery))
+        //    {
+        //        await JS.InvokeVoidAsync("searchLocation", reductionArrivalLocationQuery, false);
+        //    }
+        //}
         private async Task SearchReductionArrivalLocation()
         {
             if (!string.IsNullOrWhiteSpace(reductionArrivalLocationQuery))
             {
-                await JS.InvokeVoidAsync("searchLocation", reductionArrivalLocationQuery, false);
+                var searchResults = await SearchPortsAsync(reductionArrivalLocationQuery);
+
+                var tempPortSelection = new PortSelectionModel
+                {
+                    SearchTerm = reductionArrivalLocationQuery,
+                    SearchResults = searchResults
+                };
+
+                if (searchResults.Any())
+                {
+                    LimitedArrivalPortSelection = tempPortSelection;
+                }
             }
+        }
+        private async Task UpdateReductionArrivalPortSearch(PortSelectionModel portSelection, PortModel newPort)
+        {
+            portSelection.Port = newPort;
+            portSelection.SearchTerm = newPort.Name;
+            reductionArrivalLocationQuery = newPort.Name;
+
+            // Save to model
+            reductionFactor.PortOfArrival = newPort.Name;
+
+            if (!string.IsNullOrWhiteSpace(newPort.Name))
+                await JS.InvokeVoidAsync("searchLocation", newPort.Name, false);
+
+            portSelection.SearchResults.Clear();
+            StateHasChanged();
         }
 
         private async Task HandleReductionDepartureEnterKey(KeyboardEventArgs e)
         {
             if (e.Key == "Enter")
             {
-                this.reductionFactor.PortOfDeparture = this.reductionDepartureLocationQuery;
+                //this.reductionFactor.PortOfDeparture = this.reductionDepartureLocationQuery;
                 await SearchReductionDepartureLocation();
             }
         }
@@ -280,7 +450,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             if (e.Key == "Enter")
             {
-                this.reductionFactor.PortOfArrival = this.reductionArrivalLocationQuery;
+               // this.reductionFactor.PortOfArrival = this.reductionArrivalLocationQuery;
                 await SearchReductionArrivalLocation();
             }
         }
@@ -318,7 +488,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await SearchArrivalLocation();
             }
         }
-     
+
 
         private string departureSearchTerm = string.Empty;
         private string arrivalSearchTerm = string.Empty;
@@ -377,7 +547,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         protected async Task SaveShortVoyage(ReductionFactor reductionFactor)
         {
-
+            await CalculateLimitedRoute();
             ShortVoyageRecord shortVoyage = new ShortVoyageRecord()
             {
                 UserId = "1",
@@ -393,9 +563,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
             };
             // Call the API
-           // using var httpClient = new HttpClient();
+            // using var httpClient = new HttpClient();
             // httpClient.BaseAddress = new Uri("https://api-ngea-rf-dev-001.azurewebsites.net/");
-           // httpClient.BaseAddress = new Uri("https://localhost:7155/");
+            // httpClient.BaseAddress = new Uri("https://localhost:7155/");
 
             var response = await Http.PostAsJsonAsync("api/v1/short_voyage", shortVoyage);
             if (response.IsSuccessStatusCode)
@@ -461,7 +631,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             {
                 await OnShowReport.InvokeAsync();
             }
-           if(OnReportDataReady.HasDelegate)
+            if (OnReportDataReady.HasDelegate)
             {
                 await OnReportDataReady.InvokeAsync(reductionFactor);
             }
@@ -613,6 +783,97 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             ).ToList();
         }
 
+        // pythone
+        private bool ValidateLimitedRouteData()
+        {
+            return LimitedDeparturePortSelection?.Port != null &&
+                   LimitedArrivalPortSelection?.Port != null;
+        }
+        private SeaRouteModel.Models.RouteRequest PrepareLimitedRouteRequest()
+        {
+            return new SeaRouteModel.Models.RouteRequest
+            {
+                Origin = new double[] {
+                    LimitedDeparturePortSelection.Port.Longitude,
+            LimitedDeparturePortSelection.Port.Latitude
+        },
+                Destination = new double[] {
+            LimitedArrivalPortSelection.Port.Longitude,
+            LimitedArrivalPortSelection.Port.Latitude
+        },
+                Restrictions = new string[] { "northwest" }, // Customize if needed
+                IncludePorts = true,
+                Units = "km",
+                OnlyTerminals = false
+            };
+        }
+        private async Task CalculateLimitedRoute()
+        {
+            try
+            {
+                if (!ValidateLimitedRouteData())
+                {
+                    Console.WriteLine("Please complete all required limited route information");
+                    return;
+                }
+
+                showResultsForReductionFactor = true;
+                var routeRequest = PrepareLimitedRouteRequest();
+
+                using var httpClient = new HttpClient
+                {
+                    BaseAddress = new Uri("https://api-ngea-rf-dev-001.azurewebsites.net/")
+                };
+
+                var result = await httpClient.PostAsJsonAsync("api/v1/searoutes/calculate-route", routeRequest);
+                await ProcessRouteCalculationResult(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calculating limited route: {ex.Message}");
+            }
+        }
+        private async Task ProcessRouteCalculationResult(HttpResponseMessage response)
+        {
+            try
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                using var jsonDoc = JsonDocument.Parse(jsonString);
+                var root = jsonDoc.RootElement;
+
+                // Check if the route object exists
+                if (root.TryGetProperty("route", out var routeElement))
+                {
+                    // Convert to raw JSON to pass to JS
+                    var routeJson = routeElement.GetRawText();
+
+                    // Pass the route GeoJSON directly to JavaScript
+                    await JS.InvokeVoidAsync("createSeaRoutefromAPI", routeJson);
+
+                    // Log route information
+                    if (root.TryGetProperty("route_length", out var lengthElement))
+                    {
+                        Console.WriteLine($"Route length: {lengthElement.GetString()}");
+                    }
+
+                    if (root.TryGetProperty("route_properties", out var propertiesElement))
+                    {
+                        if (propertiesElement.TryGetProperty("duration_hours", out var durationElement))
+                        {
+                            Console.WriteLine($"Duration: {durationElement.GetDouble()} hours");
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Route element not found in API response");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing route result: {ex.Message}");
+            }
+        }
     }
 }
 

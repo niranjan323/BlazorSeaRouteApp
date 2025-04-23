@@ -79,6 +79,11 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
             StateHasChanged();
         }
+        private async Task HandleReductionReportData(RouteModel _routeModel)
+        {
+            routeModel = _routeModel;
+            StateHasChanged();
+        }
         private async Task SaveVesselInfo()
         {
             // Here you can implement the save logic

@@ -54,8 +54,8 @@
                 @if (selectedForm == 1)
                 {
                     <ReductionFactorCal OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
-                                        OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef" 
-                                        OnShowAbsReport="ShowAbsReport"/>
+                                        OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
+                                        OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData" />
                    
                 }
 
@@ -295,7 +295,7 @@
                             </tr>
                             <tr>
                                 <td>Port of Departure:</td>
-                                <td><strong>@(routeModel.DepartureLocation ?? "Marseille, France")</strong></td>
+                                <td><strong>@(routeModel.MainDeparturePortSelection.Port.Name ?? "Marseille, France")</strong></td>
                                 <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS")</td>
                             </tr>
                             <tr>
@@ -305,7 +305,7 @@
                             </tr>
                             <tr>
                                 <td>Port of Arrival:</td>
-                                <td><strong>@(routeModel.ArrivalLocation ?? "Shanghai, China")</strong></td>
+                                <td><strong>@(routeModel.MainArrivalPortSelection.Port.Name ?? "Shanghai, China")</strong></td>
                                 <td>@(routeModel.ArrivalPorts.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH")</td>
                             </tr>
                         </table>

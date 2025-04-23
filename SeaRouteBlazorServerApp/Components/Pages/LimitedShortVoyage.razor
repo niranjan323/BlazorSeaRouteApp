@@ -35,11 +35,26 @@
                     @*  <span class="content_div_label_blue">NLRTM</span>
                                         <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span> *@
                 </div>
+                <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px">
                     <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
                            placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
                     <img src="Images/path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
                 </div>
+
+                @if (LimitedDeparturePortSelection?.SearchResults?.Any() == true)
+                {
+                    <div class="cls_dropdown_outline">
+                        @foreach (var result in LimitedDeparturePortSelection.SearchResults)
+                        {
+                            <div class="cls_dropdown_div" @onclick="() => UpdateReductionDeparturePortSearch(LimitedDeparturePortSelection, result)">
+                                <span class="cls_dropdown_label">@result.Name, @result.Country (@result.Unlocode)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
             </div>
 
             <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
@@ -66,11 +81,26 @@
                     @*    <span class="content_div_label_blue">GBDBL</span>
                                         <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span> *@
                 </div>
+                <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px">
                     <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
                            placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
                     <img src="Images/path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
                 </div>
+
+                @if (LimitedArrivalPortSelection?.SearchResults?.Any() == true)
+                {
+                        <div class="cls_dropdown_outline">
+                        @foreach (var result in LimitedArrivalPortSelection.SearchResults)
+                        {
+                                <div class="cls_dropdown_div" @onclick="() => UpdateReductionArrivalPortSearch(LimitedArrivalPortSelection, result)">
+                                    <span class="cls_dropdown_label">@result.Name, @result.Country (@result.Unlocode)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
             </div>
 
             <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">

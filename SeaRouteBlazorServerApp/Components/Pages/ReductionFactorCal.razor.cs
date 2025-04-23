@@ -21,6 +21,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         public EventCallback OnShowReportForReductionFactor { get; set; }
         [Parameter]
         public EventCallback<(double, double)> OnCoordinatesCaptured { get; set; }
+        [Parameter]
+        public EventCallback<RouteModel> OnReportDataReady { get; set; }
         private List<string> seasonalOptions = new() { "Annual", "Spring", "Summer", "Fall", "Winter" };
         private List<string> WaytypeOptions = new () { "ABS", "BMT" };
         private bool showDropdown = false;
@@ -190,8 +192,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             portSelection.Port = newPort;
             portSelection.SearchTerm = newPort.Name;
+            departureLocationQuery = newPort.Name;
             // Call the JavaScript visualization after API search
-            if(!string.IsNullOrWhiteSpace(portSelection.SearchTerm))    
+            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))    
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
             portSelection.SearchResults.Clear();
             StateHasChanged();
@@ -284,8 +287,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             portSelection.Port = newPort;
             portSelection.SearchTerm = newPort.Name;
+            arrivalLocationQuery = newPort.Name;
             // Call the JavaScript visualization after API search
-            if(!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
+            if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
            
             portSelection.SearchResults.Clear();
@@ -465,6 +469,10 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             if (OnShowReportForReductionFactor.HasDelegate)
             {
                 await OnShowReportForReductionFactor.InvokeAsync();
+            }
+            if (OnReportDataReady.HasDelegate)
+            {
+                await OnReportDataReady.InvokeAsync(routeModel);
             }
             await Task.Delay(100);
             await CaptureMap();
@@ -747,6 +755,9 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         private async Task CalculateRouteReductionFactor()
         {
+
+
+
             try
             {
                 showResultsForReductionFactor = true;
@@ -778,6 +789,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await ProcessRouteCalculationResult(result);
                 var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, result);
                 // showResultsForReductionFactor = true;
+               
             }
             catch (Exception ex)
             {
@@ -795,33 +807,33 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 using var jsonDoc = JsonDocument.Parse(jsonString);
                 var root = jsonDoc.RootElement;
 
-                var coordinates = new List<double[]>();
-
-                if (root.TryGetProperty("route", out var route) &&
-                    route.TryGetProperty("features", out var features) &&
-                    features.GetArrayLength() > 0)
+                // Check if the route object exists
+                if (root.TryGetProperty("route", out var routeElement))
                 {
-                    var geometry = features[0].GetProperty("geometry");
-                    var coordsArray = geometry.GetProperty("coordinates");
+                    // Convert to raw JSON to pass to JS
+                    var routeJson = routeElement.GetRawText();
 
-                    foreach (var coordPair in coordsArray.EnumerateArray())
+                    // Pass the route GeoJSON directly to JavaScript
+                    await JS.InvokeVoidAsync("createSeaRoute", routeJson);
+
+                    // Log route information
+                    if (root.TryGetProperty("route_length", out var lengthElement))
                     {
-                        var lat = coordPair[0].GetDouble();
-                        var lon = coordPair[1].GetDouble();
-                        coordinates.Add(new[] { lat, lon });
+                        Console.WriteLine($"Route length: {lengthElement.GetString()}");
                     }
 
-                    await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates);
+                    if (root.TryGetProperty("route_properties", out var propertiesElement))
+                    {
+                        if (propertiesElement.TryGetProperty("duration_hours", out var durationElement))
+                        {
+                            Console.WriteLine($"Duration: {durationElement.GetDouble()} hours");
+                        }
+                    }
                 }
-
-                var routeProps = root.GetProperty("route_properties");
-                var distance = routeProps.GetProperty("length").GetDouble();
-                var units = routeProps.GetProperty("units").GetString();
-
-                var duration = root.GetProperty("route_length").GetString(); // this is a string like "10527.3 kilometers"
-
-               // await JS.InvokeVoidAsync("drawSeaRouteFromAPI", coordinates, distance, duration, units);
-                Console.WriteLine($"Distance: {distance} {units}, Duration: {duration}");
+                else
+                {
+                    Console.WriteLine("Route element not found in API response");
+                }
             }
             catch (Exception ex)
             {
