@@ -761,7 +761,245 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             errorMessage = string.Empty;
             return true;
         }
+        // test 
+        public async Task CalculateMultiSegmentRoute()
+        {
+            try
+            {
+                // Initialize route calculation on JS side but don't use its data
+                await JS.InvokeVoidAsync("initializeRouteCalculation");
 
+                // Get route points from JS for ordering/sequence purposes only
+                var routePoints = await JS.InvokeAsync<List<RoutePointModel>>("getRouteData");
+                if (routePoints == null || routePoints.Count < 2)
+                {
+                    return; // Need at least 2 points for a route
+                }
+
+                // Create a mapping of all points for processing
+                Dictionary<string, RoutePointRef> pointMapping = new Dictionary<string, RoutePointRef>();
+
+                // Add departure port
+                if (routeModel.MainDeparturePortSelection?.Port != null)
+                {
+                    pointMapping["departure"] = new RoutePointRef
+                    {
+                        Type = "departure",
+                        Latitude = routeModel.MainDeparturePortSelection.Port.Latitude,
+                        Longitude = routeModel.MainDeparturePortSelection.Port.Longitude,
+                        Name = routeModel.MainDeparturePortSelection.Port.Name
+                    };
+                }
+
+                // Add arrival port
+                if (routeModel.MainArrivalPortSelection?.Port != null)
+                {
+                    pointMapping["arrival"] = new RoutePointRef
+                    {
+                        Type = "arrival",
+                        Latitude = routeModel.MainArrivalPortSelection.Port.Latitude,
+                        Longitude = routeModel.MainArrivalPortSelection.Port.Longitude,
+                        Name = routeModel.MainArrivalPortSelection.Port.Name
+                    };
+                }
+
+                // Add intermediate departure ports
+                for (int i = 0; i < routeModel.DeparturePorts.Count; i++)
+                {
+                    var port = routeModel.DeparturePorts[i];
+                    if (port.Port != null)
+                    {
+                        pointMapping[$"departurePort{i}"] = new RoutePointRef
+                        {
+                            Type = "port",
+                            Latitude = port.Port.Latitude,
+                            Longitude = port.Port.Longitude,
+                            Name = port.Port.Name
+                        };
+                    }
+                }
+
+                // Add intermediate arrival ports
+                for (int i = 0; i < routeModel.ArrivalPorts.Count; i++)
+                {
+                    var port = routeModel.ArrivalPorts[i];
+                    if (port.Port != null)
+                    {
+                        pointMapping[$"arrivalPort{i}"] = new RoutePointRef
+                        {
+                            Type = "port",
+                            Latitude = port.Port.Latitude,
+                            Longitude = port.Port.Longitude,
+                            Name = port.Port.Name
+                        };
+                    }
+                }
+
+                // Process waypoints from C# models
+                // Add departure waypoints
+                for (int i = 0; i < routeModel.DepartureWaypoints.Count; i++)
+                {
+                    var waypoint = routeModel.DepartureWaypoints[i];
+                    if (double.TryParse(waypoint.Latitude, out double lat) &&
+                        double.TryParse(waypoint.Longitude, out double lng))
+                    {
+                        pointMapping[$"departureWaypoint{i}"] = new RoutePointRef
+                        {
+                            Type = "waypoint",
+                            Latitude = lat,
+                            Longitude = lng,
+                            Name = $"Waypoint {i + 1}"
+                        };
+                    }
+                }
+
+                // Add arrival waypoints
+                for (int i = 0; i < routeModel.ArrivalWaypoints.Count; i++)
+                {
+                    var waypoint = routeModel.ArrivalWaypoints[i];
+                    if (double.TryParse(waypoint.Latitude, out double lat) &&
+                        double.TryParse(waypoint.Longitude, out double lng))
+                    {
+                        pointMapping[$"arrivalWaypoint{i}"] = new RoutePointRef
+                        {
+                            Type = "waypoint",
+                            Latitude = lat,
+                            Longitude = lng,
+                            Name = $"Waypoint {i + 1}"
+                        };
+                    }
+                }
+
+                // Process each segment using route points order from JS but data from C#
+                List<RoutePointRef> orderedPoints = new List<RoutePointRef>();
+
+                // Use JS route points to determine order but get actual data from C# models
+                foreach (var jsPoint in routePoints)
+                {
+                    RoutePointRef point = null;
+
+                    // Try to match point from JS with our C# data
+                    if (jsPoint.Type == "departure" && pointMapping.ContainsKey("departure"))
+                    {
+                        point = pointMapping["departure"];
+                    }
+                    else if (jsPoint.Type == "arrival" && pointMapping.ContainsKey("arrival"))
+                    {
+                        point = pointMapping["arrival"];
+                    }
+                    else if (jsPoint.Type == "waypoint")
+                    {
+                        // Find closest waypoint in our mapping by comparing coordinates
+                        string closestKey = null;
+                        double minDistance = double.MaxValue;
+
+                        foreach (var kvp in pointMapping)
+                        {
+                            if (kvp.Value.Type == "waypoint")
+                            {
+                                double dist = Math.Pow(kvp.Value.Latitude - jsPoint.LatLng[0], 2) +
+                                              Math.Pow(kvp.Value.Longitude - jsPoint.LatLng[1], 2);
+                                if (dist < minDistance)
+                                {
+                                    minDistance = dist;
+                                    closestKey = kvp.Key;
+                                }
+                            }
+                        }
+
+                        if (closestKey != null)
+                        {
+                            point = pointMapping[closestKey];
+                        }
+                    }
+                    else if (jsPoint.Type == "port")
+                    {
+                        // Find closest port in our mapping
+                        string closestKey = null;
+                        double minDistance = double.MaxValue;
+
+                        foreach (var kvp in pointMapping)
+                        {
+                            if (kvp.Value.Type == "port")
+                            {
+                                double dist = Math.Pow(kvp.Value.Latitude - jsPoint.LatLng[0], 2) +
+                                              Math.Pow(kvp.Value.Longitude - jsPoint.LatLng[1], 2);
+                                if (dist < minDistance)
+                                {
+                                    minDistance = dist;
+                                    closestKey = kvp.Key;
+                                }
+                            }
+                        }
+
+                        if (closestKey != null)
+                        {
+                            point = pointMapping[closestKey];
+                        }
+                    }
+
+                    if (point != null)
+                    {
+                        orderedPoints.Add(point);
+                    }
+                }
+
+                // Process each segment sequentially using our ordered C# data
+                for (int i = 0; i < orderedPoints.Count - 1; i++)
+                {
+                    var origin = orderedPoints[i];
+                    var destination = orderedPoints[i + 1];
+
+                    // Create route request for this segment
+                    var segmentRequest = new RouteRequest
+                    {
+                        // Use coordinates from C# model
+                        Origin = new double[] { origin.Latitude, origin.Longitude },
+                        Destination = new double[] { destination.Latitude, destination.Longitude },
+                        Restrictions = new string[] { routeModel.SeasonalType },
+                        IncludePorts = true,
+                        Units = "km",
+                        OnlyTerminals = true
+                    };
+
+                    // Call API for this segment
+                    var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", segmentRequest);
+                    if (result.IsSuccessStatusCode)
+                    {
+                        var jsonString = await result.Content.ReadAsStringAsync();
+                        using var jsonDoc = JsonDocument.Parse(jsonString);
+                        var root = jsonDoc.RootElement;
+
+                        // Check if route object exists
+                        if (root.TryGetProperty("route", out var routeElement))
+                        {
+                            // Get the raw JSON for the route
+                            var routeJson = routeElement.GetRawText();
+
+                            // Send to JavaScript to process this segment
+                            await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, orderedPoints.Count - 1);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
+            }
+        }
+
+        // Helper class to store route point information from C# models
+        private class RoutePointRef
+        {
+            public string Type { get; set; }
+            public double Latitude { get; set; }
+            public double Longitude { get; set; }
+            public string Name { get; set; }
+        }
         private RouteRequest PrepareRouteRequest()
         {
             // Create a route request from the current model
