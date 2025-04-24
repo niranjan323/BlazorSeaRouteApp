@@ -286,54 +286,85 @@ function drawCombinedRoute(segments) {
         return;
     }
 
-    // Combine all coordinates from all segments
-    let allCoordinates = [];
+    // Variables for total statistics
     let totalDistance = 0;
     let totalDuration = 0;
 
-    segments.forEach(segment => {
-        if (segment && segment.coordinates) {
-            allCoordinates = allCoordinates.concat(segment.coordinates);
+    // Process each segment individually
+    segments.forEach((segment, index) => {
+        if (!segment || !segment.coordinates || segment.coordinates.length < 2) return;
 
-            // Sum up properties if available
-            if (segment.properties) {
-                if (segment.properties.length) {
-                    totalDistance += Math.round(segment.properties.length);
-                }
-                if (segment.properties.duration_hours) {
-                    totalDuration += Math.round(segment.properties.duration_hours);
-                }
+        // Extract segment information
+        const segmentCoordinates = segment.coordinates;
+        let segmentDistance = 0;
+        let segmentDuration = 0;
+
+        // Get segment properties if available
+        if (segment.properties) {
+            if (segment.properties.length) {
+                segmentDistance = Math.round(segment.properties.length);
+                totalDistance += segmentDistance;
             }
+            if (segment.properties.duration_hours) {
+                segmentDuration = Math.round(segment.properties.duration_hours);
+                totalDuration += segmentDuration;
+            }
+        }
+
+        // Create the segment polyline with a custom color based on index
+        // We'll use a color gradient from blue to green
+        const hue = 210 - (index * 20) % 120; // Vary hue between 210 (blue) and 90 (green)
+        const segmentColor = `hsl(${hue}, 70%, 50%)`;
+
+        const segmentPolyline = L.polyline(segmentCoordinates, {
+            color: segmentColor,
+            weight: 3,
+            opacity: 0.8,
+            smoothFactor: 1
+        }).addTo(routeLayer);
+
+        // Add segment information markers at the middle of each segment
+        if (segmentCoordinates.length > 0) {
+            const midIndex = Math.floor(segmentCoordinates.length / 2);
+            const midPoint = segmentCoordinates[midIndex];
+
+            // Get segment start and end points information
+            const startPointName = index > 0 && routePoints[index] ? routePoints[index].name || "Waypoint" : "Departure";
+            const endPointName = index < segments.length - 1 && routePoints[index + 1] ? routePoints[index + 1].name || "Waypoint" : "Arrival";
+
+            // Create a marker with segment info
+            L.marker(midPoint, {
+                icon: L.divIcon({
+                    className: 'segment-marker',
+                    html: `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid ${segmentColor}; font-weight: bold;">
+                            Segment ${index + 1}: ${startPointName} → ${endPointName}<br>
+                            Distance: ${segmentDistance} km<br>
+                            Duration: ${segmentDuration} hours
+                          </div>`,
+                    iconSize: null
+                })
+            }).addTo(routeLayer);
         }
     });
 
-    // Create the polyline with the combined coordinates
-    const routePolyline = L.polyline(allCoordinates, {
-        color: '#0066ff',
-        weight: 3,
-        opacity: 0.8,
-        smoothFactor: 1,
-        dashArray: null
-    }).addTo(routeLayer);
+    // Add total route information marker at the end
+    if (segments.length > 0 && segments[segments.length - 1].coordinates.length > 0) {
+        const lastCoord = segments[segments.length - 1].coordinates[segments[segments.length - 1].coordinates.length - 1];
 
-    // Add total distance and duration marker at the middle of the route
-    if (allCoordinates.length > 0) {
-        const midIndex = Math.floor(allCoordinates.length / 2);
-        const midPoint = allCoordinates[midIndex];
-
-        L.marker(midPoint, {
+        L.marker(lastCoord, {
             icon: L.divIcon({
-                className: 'distance-marker',
-                html: `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
-                        Distance: ${totalDistance} km<br>
-                        Duration: ${totalDuration} hours
-                       </div>`,
+                className: 'total-marker',
+                html: `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 2px solid #0066ff; font-weight: bold;">
+                        Total Distance: ${totalDistance} km<br>
+                        Total Duration: ${totalDuration} hours
+                      </div>`,
                 iconSize: null
             })
         }).addTo(routeLayer);
     }
 
     // Calculate bounds to fit the entire route
+    const allCoordinates = segments.flatMap(segment => segment.coordinates || []);
     const routeBounds = L.latLngBounds(allCoordinates);
 
     // Calculate pixel padding - approximately 40% of map width to the left for your overlay
@@ -346,7 +377,7 @@ function drawCombinedRoute(segments) {
         duration: 1.5
     });
 
-    return routePolyline;
+    return segments;
 }
 
 // Process a single route segment from FastAPI
@@ -426,6 +457,163 @@ function updateMapWithPortData(portData, isDeparture) {
         currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
     }
 }
+function removePin(pinType, index) {
+    try {
+        // Handle different pin types
+        if (pinType === 'departure') {
+            if (departurePin) {
+                map.removeLayer(departurePin);
+                departurePin = null;
+                routePoints = routePoints.filter(p => p.type !== 'departure');
+            }
+        } else if (pinType === 'arrival') {
+            if (arrivalPin) {
+                map.removeLayer(arrivalPin);
+                arrivalPin = null;
+                routePoints = routePoints.filter(p => p.type !== 'arrival');
+            }
+        } else if (pinType === 'waypoint') {
+            // Remove waypoint pin by index if index is provided
+            if (index !== undefined && index >= 0 && index < waypointPins.length) {
+                // Remove from map
+                map.removeLayer(waypointPins[index]);
+
+                // Remove from arrays
+                waypointPins.splice(index, 1);
+
+                // Remove from clicked pins array if it exists there
+                const waypointLatLng = routePoints.find(p => p.type === 'waypoint' && p.index === index)?.latLng;
+                if (waypointLatLng) {
+                    const clickedIndex = clickedPins.findIndex(pin => {
+                        const pinLatLng = pin.getLatLng();
+                        return Math.abs(pinLatLng.lat - waypointLatLng[0]) < 0.0001 &&
+                            Math.abs(pinLatLng.lng - waypointLatLng[1]) < 0.0001;
+                    });
+
+                    if (clickedIndex !== -1) {
+                        map.removeLayer(clickedPins[clickedIndex]);
+                        clickedPins.splice(clickedIndex, 1);
+                    }
+                }
+
+                // Filter out the waypoint from route points
+                routePoints = routePoints.filter(p => !(p.type === 'waypoint' && p.index === index));
+
+                // Update indexes for remaining waypoints
+                let waypointCounter = 0;
+                routePoints.forEach(p => {
+                    if (p.type === 'waypoint') {
+                        p.index = waypointCounter++;
+                    }
+                });
+            }
+        } else if (pinType === 'port') {
+            // Remove port pin by index if index is provided
+            if (index !== undefined && index >= 0 && index < portPins.length) {
+                // Remove from map
+                map.removeLayer(portPins[index]);
+
+                // Remove from arrays
+                portPins.splice(index, 1);
+
+                // Filter out the port from route points
+                routePoints = routePoints.filter(p => !(p.type === 'port' && p.index === index));
+
+                // Update indexes for remaining ports
+                let portCounter = 0;
+                routePoints.forEach(p => {
+                    if (p.type === 'port') {
+                        p.index = portCounter++;
+                    }
+                });
+            }
+        }
+
+        // Reorganize route points and recalculate route if we have sufficient points
+        reorganizeRoutePoints();
+
+        // Notify Blazor that a point was removed
+        if (currentDotNetHelper && departurePin && arrivalPin) {
+            currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
+        } else if (currentDotNetHelper) {
+            currentDotNetHelper.invokeMethodAsync('UpdateRoutePoints', getRoutePointsJson());
+        }
+
+        // Clear route if we don't have both departure and arrival
+        if (!departurePin || !arrivalPin) {
+            routeLayer.clearLayers();
+            routeSegments = [];
+        }
+
+        return true;
+    } catch (error) {
+        console.error(`Error removing ${pinType} pin:`, error);
+        return false;
+    }
+}
+
+// Function to handle removal from Blazor side
+function removeWaypoint(latitude, longitude) {
+    try {
+        // Find the waypoint in route points by coordinates
+        const waypointIndex = routePoints.findIndex(p =>
+            p.type === 'waypoint' &&
+            Math.abs(p.latLng[0] - latitude) < 0.0001 &&
+            Math.abs(p.latLng[1] - longitude) < 0.0001
+        );
+
+        if (waypointIndex !== -1) {
+            // Get the array index of the waypoint
+            const waypointArrayIndex = waypointPins.findIndex(pin => {
+                const pinLatLng = pin.getLatLng();
+                return Math.abs(pinLatLng.lat - latitude) < 0.0001 &&
+                    Math.abs(pinLatLng.lng - longitude) < 0.0001;
+            });
+
+            if (waypointArrayIndex !== -1) {
+                return removePin('waypoint', waypointArrayIndex);
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error("Error removing waypoint:", error);
+        return false;
+    }
+}
+
+// Function to handle removal of port from Blazor side
+function removePort(portName, latitude, longitude) {
+    try {
+        // Find the port in route points by name or coordinates
+        const portIndex = routePoints.findIndex(p =>
+            p.type === 'port' &&
+            (p.name === portName ||
+                (Math.abs(p.latLng[0] - latitude) < 0.0001 &&
+                    Math.abs(p.latLng[1] - longitude) < 0.0001))
+        );
+
+        if (portIndex !== -1) {
+            // Get the array index of the port
+            const portArrayIndex = portPins.findIndex(pin => {
+                const pinLatLng = pin.getLatLng();
+                return (pin.getPopup().getContent().includes(portName) ||
+                    (Math.abs(pinLatLng.lat - latitude) < 0.0001 &&
+                        Math.abs(pinLatLng.lng - longitude) < 0.0001));
+            });
+
+            if (portArrayIndex !== -1) {
+                return removePin('port', portArrayIndex);
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error("Error removing port:", error);
+        return false;
+    }
+}
+function getRoutePointsJson() {
+    return JSON.stringify(routePoints);
+}
 
 // Function to add arrival port data
 function addArrivalPort(portData) {
@@ -482,8 +670,27 @@ function initializeRouteCalculation() {
     // Clear previous route layer
     routeLayer.clearLayers();
 
-    // Return the currently organized route points
+    // Add indices to route points for tracking
+    let waypointCounter = 0;
+    let portCounter = 0;
+
+    routePoints.forEach(point => {
+        if (point.type === 'waypoint') {
+            point.index = waypointCounter++;
+        } else if (point.type === 'port') {
+            point.index = portCounter++;
+        }
+    });
+
+    // Return the organized route points
     return reorganizeRoutePoints();
+}
+function connectRemoveHandlers(dotNetHelper) {
+    // Store the dotNetHelper for later use
+    currentDotNetHelper = dotNetHelper;
+
+    // Return success
+    return true;
 }
 
 // Reset all map data

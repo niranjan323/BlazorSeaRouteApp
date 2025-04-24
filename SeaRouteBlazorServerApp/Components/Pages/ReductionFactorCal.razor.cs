@@ -280,9 +280,17 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             StateHasChanged();
         }
 
-        private void RemoveDeparturePort(PortSelectionModel port)
+        private async Task RemoveDeparturePort(PortSelectionModel port)
         {
             routeModel.DeparturePorts.Remove(port);
+            if (JS is not null)
+            {
+                await JS.InvokeVoidAsync("removePort", port.Port.Name, port.Port.Latitude, port.Port.Longitude);
+            }
+            //if (JS is not null)
+            //{
+            //    await JS.InvokeVoidAsync("removeWaypoint", waypoint.Latitude, waypoint.Longitude);
+            //}
             StateHasChanged();
         }
 
