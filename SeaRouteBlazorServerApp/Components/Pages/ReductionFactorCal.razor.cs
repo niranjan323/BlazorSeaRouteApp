@@ -122,6 +122,76 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 StateHasChanged();
             }
         }
+        public class RoutePointModel
+        {
+            public string Type { get; set; }
+            public double[] LatLng { get; set; }
+            public string Name { get; set; }
+        }
+        // niranjan
+        public async Task CalculateMultiSegmentRoute()
+        {
+            try
+            {
+                // Initialize route calculation on JS side
+                await JS.InvokeVoidAsync("initializeRouteCalculation");
+
+                // Get all route points in order (departure, waypoints, arrival)
+                var routePoints = await JS.InvokeAsync<List<RoutePointModel>>("getRouteData");
+
+                if (routePoints == null || routePoints.Count < 2)
+                {
+                    return; // Need at least 2 points for a route
+                }
+
+                // Process each segment sequentially
+                for (int i = 0; i < routePoints.Count - 1; i++)
+                {
+                    var origin = routePoints[i];
+                    var destination = routePoints[i + 1];
+
+                    // Create route request for this segment
+                    var segmentRequest = new RouteRequest
+                    {
+                        Origin = new double[] { origin.LatLng[0], origin.LatLng[1] },
+                        Destination = new double[] { destination.LatLng[0], destination.LatLng[1] },
+                        Restrictions = new string[] { routeModel.SeasonalType },
+                        IncludePorts = true,
+                        Units = "km",
+                        OnlyTerminals = true
+                    };
+
+                    // Call API for this segment
+                    var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", segmentRequest);
+
+                    if (result.IsSuccessStatusCode)
+                    {
+                        var jsonString = await result.Content.ReadAsStringAsync();
+                        using var jsonDoc = JsonDocument.Parse(jsonString);
+                        var root = jsonDoc.RootElement;
+
+                        // Check if route object exists
+                        if (root.TryGetProperty("route", out var routeElement))
+                        {
+                            // Get the raw JSON for the route
+                            var routeJson = routeElement.GetRawText();
+
+                            // Send to JavaScript to process this segment
+                            await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, routePoints.Count - 1);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
+            }
+        }
+
         private async Task GoBack()
         {
             showReport = false;
@@ -200,7 +270,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
             }
             portSelection.SearchResults.Clear();
-            await CheckAndCalculateRoute();
+            //await CheckAndCalculateRoute();
             StateHasChanged();
         }
         private void AddDeparturePort()
@@ -296,7 +366,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
                 await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
             portSelection.SearchResults.Clear();
-            await CheckAndCalculateRoute();
+            //await CheckAndCalculateRoute();
             StateHasChanged();
         }
 
@@ -786,23 +856,15 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 }
 
                 // Prepare the RouteRequest object
-                var routeRequest = PrepareRouteRequest();
+                //var routeRequest = PrepareRouteRequest();
 
-                //var dummyRouteRequest = new RouteRequest
-                //{
-                //    Origin = new double[] { 1.3521, 103.8198 },            // Singapore
-                //    Destination = new double[] { 51.9225, 4.4792 },        // Rotterdam
-                //    Restrictions = new[] { "piracy" },
-                //    IncludePorts = true,
-                //    Units = "kilometers",
-                //    OnlyTerminals = false
-                //};
 
-                // Call the API
-                var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
+                //// Call the API
+                //var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
+                await CalculateMultiSegmentRoute();
                 // Process the result
-                await ProcessRouteCalculationResult(result);
-                var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, result);
+               // await ProcessRouteCalculationResult(result);
+                var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, null);
                 // showResultsForReductionFactor = true;
                
             }

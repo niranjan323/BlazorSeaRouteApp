@@ -73,6 +73,16 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             //    StateHasChanged();
             //}
         }
+        [JSInvokable]
+        public async Task RecalculateRoute()
+        {
+            if (reductionFactorCalRef != null)
+            {
+                // Forward coordinates to child component
+               await reductionFactorCalRef.CalculateMultiSegmentRoute();
+            }
+            
+        }
         private async Task HandleReportData(ReductionFactor reportData)
         {
             reductionFactor = reportData;
