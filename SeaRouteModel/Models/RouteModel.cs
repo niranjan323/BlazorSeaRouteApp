@@ -16,6 +16,9 @@ namespace SeaRouteModel.Models
         public string DepartureLocation { get; set; } = string.Empty;
         public string ArrivalLocation { get; set; } = string.Empty;
 
+        public List<RouteItemModel> DepartureItems { get; set; } = new List<RouteItemModel>();
+        public List<RouteItemModel> ArrivalItems { get; set; } = new List<RouteItemModel>();
+
         // For main departure and arrival port selections
         public PortSelectionModel MainDeparturePortSelection { get; set; } = new PortSelectionModel();
         public PortSelectionModel MainArrivalPortSelection { get; set; } = new PortSelectionModel();
