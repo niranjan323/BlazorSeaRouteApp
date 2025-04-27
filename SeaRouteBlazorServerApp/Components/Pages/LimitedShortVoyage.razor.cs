@@ -445,23 +445,71 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             StateHasChanged();
         }
 
-        private async Task HandleReductionDepartureEnterKey(KeyboardEventArgs e)
-        {
-            if (e.Key == "Enter")
-            {
-                //this.reductionFactor.PortOfDeparture = this.reductionDepartureLocationQuery;
-                await SearchReductionDepartureLocation();
-            }
-        }
+        //private async Task HandleReductionDepartureEnterKey(KeyboardEventArgs e)
+        //{
+        //    if (e.Key == "Enter")
+        //    {
+        //        //this.reductionFactor.PortOfDeparture = this.reductionDepartureLocationQuery;
+        //        await SearchReductionDepartureLocation();
+        //    }
+        //}
 
-        private async Task HandleReductionArrivalEnterKey(KeyboardEventArgs e)
+        private void HandleReductionDepartureEnterKey(ChangeEventArgs e)
         {
-            if (e.Key == "Enter")
+            reductionDepartureLocationQuery = e.Value?.ToString();
+
+            _debounceService.Debounce(async () =>
             {
-               // this.reductionFactor.PortOfArrival = this.reductionArrivalLocationQuery;
-                await SearchReductionArrivalLocation();
-            }
+                await InvokeAsync(async () =>
+                {
+                    if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
+                    {
+                        await SearchReductionDepartureLocation();
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        if (LimitedDeparturePortSelection != null)
+                        {
+                            LimitedDeparturePortSelection.SearchResults?.Clear();
+                            StateHasChanged();
+                        }
+                    }
+                });
+            });
         }
+        private void HandleReductionArrivalEnterKey(ChangeEventArgs e)
+        {
+            reductionArrivalLocationQuery = e.Value?.ToString();
+
+            _debounceService.Debounce(async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (!string.IsNullOrWhiteSpace(reductionArrivalLocationQuery))
+                    {
+                        await SearchReductionArrivalLocation();
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        if (LimitedArrivalPortSelection != null)
+                        {
+                            LimitedArrivalPortSelection.SearchResults?.Clear();
+                            StateHasChanged();
+                        }
+                    }
+                });
+            });
+        }
+        //private async Task HandleReductionArrivalEnterKey(KeyboardEventArgs e)
+        //{
+        //    if (e.Key == "Enter")
+        //    {
+        //       // this.reductionFactor.PortOfArrival = this.reductionArrivalLocationQuery;
+        //        await SearchReductionArrivalLocation();
+        //    }
+        //}
 
         // separate
         private async Task SearchDepartureLocation()

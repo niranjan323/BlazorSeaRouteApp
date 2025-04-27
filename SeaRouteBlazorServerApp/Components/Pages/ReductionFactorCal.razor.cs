@@ -56,7 +56,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;
-
+            // Timer setup
+           // _debounceTimer = new Timer(_ => { }, null, Timeout.Infinite, Timeout.Infinite);
         }
         private void OnFocus()
         {
@@ -225,13 +226,62 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
         //  ------------------------  ports  --------------------
         #region Departure Port Methods
-        private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
+        //private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
+        //{
+        //    if (e.Key == "Enter")
+        //    {
+        //        await SearchDepartureLocation();
+        //    }
+        //}
+        // Add these fields to your class
+        // debouncing logic
+        private void OnSearchInputChanged(ChangeEventArgs e)
         {
-            if (e.Key == "Enter")
+            departureLocationQuery = e.Value?.ToString();
+
+            _debounceService.Debounce(async () =>
             {
-                await SearchDepartureLocation();
-            }
+                await InvokeAsync(async () =>
+                {
+                    if (!string.IsNullOrWhiteSpace(departureLocationQuery))
+                    {
+                        await SearchDepartureLocation();
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        if (routeModel.MainDeparturePortSelection != null)
+                        {
+                            routeModel.MainDeparturePortSelection.SearchResults?.Clear();
+                            StateHasChanged();
+                        }
+                    }
+                });
+            });
         }
+
+
+        private void HandleDepartureInputChanged(PortSelectionModel portSelection)
+        {
+            _debounceService.Debounce(async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (!string.IsNullOrWhiteSpace(portSelection?.SearchTerm))
+                    {
+                        portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
+                    }
+                    else
+                    {
+                        portSelection?.SearchResults?.Clear();
+                    }
+
+                    StateHasChanged();
+                });
+            });
+        }
+
+
 
         private async Task SearchDepartureLocation()
         {
@@ -316,13 +366,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             StateHasChanged();
         }
 
-        private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
-        {
-            if (e.Key == "Enter")
-            {
-                await SearchDeparturePortsForExisting(portSelection);
-            }
-        }
+      
 
         private async Task SearchDeparturePortsForExisting(PortSelectionModel portSelection)
         {
@@ -354,6 +398,30 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         #endregion
 
         #region Arrival Port Methods
+        private void OnArrivalSearchInputChanged(ChangeEventArgs e)
+        {
+            arrivalLocationQuery = e.Value?.ToString();
+
+            _debounceService.Debounce(async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (!string.IsNullOrWhiteSpace(arrivalLocationQuery))
+                    {
+                        await SearchArrivalLocation();
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        if (routeModel.MainArrivalPortSelection != null)
+                        {
+                            routeModel.MainArrivalPortSelection.SearchResults?.Clear();
+                            StateHasChanged();
+                        }
+                    }
+                });
+            });
+        }
         private async Task HandleArrivalEnterKey(KeyboardEventArgs e)
         {
             if (e.Key == "Enter")

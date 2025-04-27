@@ -1,8 +1,10 @@
 ﻿@page "/LimitedShortVoyage"
+@using SeaRouteBlazorServerApp.Components.Services
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject HttpClient Http
 @inject ILogger<LimitedShortVoyage> Logger
+@inject DebounceService _debounceService
 <button class="back-btn" @onclick="GoBack">⬅ Back</button>
 
 <div class="cls_block">
@@ -37,8 +39,11 @@
                 </div>
                 <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px">
-                    <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
-                           placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
+                    
+                        <input type="text"
+                               value="@reductionDepartureLocationQuery"
+                               @oninput="HandleReductionDepartureEnterKey"
+                               placeholder="Enter departure location" />
                     <img src="Images/path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
                 </div>
 
@@ -83,8 +88,10 @@
                 </div>
                 <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px">
-                    <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
-                           placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
+                        <input type="text"
+                               value="@reductionArrivalLocationQuery"
+                               @oninput="HandleReductionArrivalEnterKey"
+                               placeholder="Enter arrival location" />
                     <img src="Images/path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
                 </div>
 

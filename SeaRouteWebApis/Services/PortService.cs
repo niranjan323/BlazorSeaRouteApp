@@ -74,5 +74,37 @@ namespace SeaRouteWebApis.Services
         {
             throw new NotImplementedException();
         }
+
+        //public async Task<List<PortModel>> SearchPortsAsync(string searchTerm)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+        //        {
+        //            return new List<PortModel>();
+        //        }
+
+        //        // Convert to lowercase once for case-insensitive comparison
+        //        string lowerSearchTerm = searchTerm.ToLower();
+
+        //        // Using EF Core to perform search with eager loading of related data
+        //        var ports = await _context.Ports
+        //            .Include(p => p.Country)
+        //            .Include(p => p.GeoPoint)
+        //            .Where(p =>
+        //                (p.PortName != null && p.PortName.ToLower().StartsWith(lowerSearchTerm)) ||
+        //                (p.Unlocode != null && p.Unlocode.ToLower().StartsWith(lowerSearchTerm)))
+        //            .Take(10)
+        //            .ToListAsync();
+
+        //        // Map to PortModel
+        //        return ports.Select(MapToPortModel).ToList();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error occurred while searching ports");
+        //        throw;
+        //    }
+        //}
     }
 }

@@ -1,4 +1,5 @@
 using SeaRouteBlazorServerApp.Components;
+using SeaRouteBlazorServerApp.Components.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,8 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 
+
+builder.Services.AddScoped<DebounceService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -16,75 +16,43 @@ namespace SeaRouteWebApis.Controllers
     {
         private readonly IRepository<CPorts> _portRepository;
         private readonly IPythonApiService _pythonApiService;
-        private readonly IPortService _portService;
         private readonly ILogger<SeaPorts> _logger;
 
-        public SeaPorts(ILoggerFactory loggerFactory, IRepository<CPorts> portRepository, IPythonApiService pythonApiService, IPortService portService)
+        public SeaPorts(ILoggerFactory loggerFactory, IRepository<CPorts> portRepository, IPythonApiService pythonApiService)
             : base(loggerFactory, portRepository)
         {
             _portRepository = portRepository;
             _pythonApiService = pythonApiService;
             _logger = loggerFactory.CreateLogger<SeaPorts>();
-            _portService = portService;
         }
+
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<PortModel>>> SearchPorts(string searchTerm)
+        public async Task<ActionResult<IEnumerable<CPorts>>> SearchPorts(string searchTerm)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(searchTerm))
+                if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
                 {
-                    return BadRequest("Search term cannot be empty");
+                    return Ok(new List<CPorts>());
                 }
 
-                if (searchTerm.Length < 2)
-                {
-                    return BadRequest("Search term must be at least 2 characters");
-                }
+                // Use mock data instead of DB for testing
+                var mockPorts = GetMockPorts()
+                    .Where(p =>
+                        (!string.IsNullOrEmpty(p.PortName) && p.PortName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrEmpty(p.Unlocode) && p.Unlocode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrEmpty(p.CountryCode) && p.CountryCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+                    .Take(10)
+                    .ToList();
 
-                var results = await _portService.SearchPortsAsync(searchTerm);
-                return Ok(results);
+                return Ok(mockPorts);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred during port search");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request");
+                _logger.LogError(ex, "Error searching ports");
+                return StatusCode(500, "Internal server error");
             }
         }
-
-
-
-
-
-
-
-        //[HttpGet("search")]
-        //public async Task<ActionResult<IEnumerable<CPorts>>> SearchPorts(string searchTerm)
-        //{
-        //    try
-        //    {
-        //        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
-        //        {
-        //            return Ok(new List<CPorts>());
-        //        }
-
-        //        // Use mock data instead of DB for testing
-        //        var mockPorts = GetMockPorts()
-        //            .Where(p =>
-        //                (!string.IsNullOrEmpty(p.PortName) && p.PortName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-        //                (!string.IsNullOrEmpty(p.Unlocode) && p.Unlocode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-        //                (!string.IsNullOrEmpty(p.CountryCode) && p.CountryCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
-        //            .Take(10)
-        //            .ToList();
-
-        //        return Ok(mockPorts);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error searching ports");
-        //        return StatusCode(500, "Internal server error");
-        //    }
-        //}
 
         // 🔹 Mock data using CPorts
         private List<CPorts> GetMockPorts()

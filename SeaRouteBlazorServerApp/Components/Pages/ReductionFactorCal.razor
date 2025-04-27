@@ -1,8 +1,10 @@
 ﻿@page "/reductionfactorcal"
+@using SeaRouteBlazorServerApp.Components.Services
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject HttpClient Http
 @inject ILogger<ReductionFactorCal> Logger
+@inject DebounceService _debounceService
 <!-- Back Button -->
 @* <button class="back-btn" @onclick="GoBack">⬅ Back</button> *@
 
@@ -76,8 +78,10 @@
             <!-- Search Input -->
             <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
-                    <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
-                           placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
+                    <input type="text"
+                           value="@departureLocationQuery"
+                           @oninput="OnSearchInputChanged"
+                           placeholder="Enter departure location" />
                     <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
                 </div>
                 <!-- Search Results Dropdown for Main Departure -->
@@ -135,8 +139,9 @@
                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
                                @bind="port.SearchTerm"
                                @bind:event="oninput"
-                               @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
+                               @bind:after="() => HandleDepartureInputChanged(port)"
                                placeholder="Search ports..." />
+
                         @if (port.SearchResults.Any())
                         {
                             <div class="search-results">
@@ -213,8 +218,11 @@
             }
             <!-- Search Input -->
             <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
-                <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
-                       placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
+
+                <input type="text"
+                       value="@arrivalLocationQuery"
+                       @oninput="OnArrivalSearchInputChanged"
+                       placeholder="Enter arrival location" />
                 <img src="Images/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
             </div>
             <!-- Search Results Dropdown for Main Arrival -->
@@ -267,10 +275,16 @@
                     }
                     <!-- Port Search Section -->
                     <div class="port-search-container">
-                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                        @* <input type="text" class="content_div_input w-100 cls_margin_top_6px"
                                @bind="port.SearchTerm"
                                @bind:event="oninput"
                                @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
+                               placeholder="Search ports..." /> *@
+
+                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                               @bind="port.SearchTerm"
+                               @bind:event="oninput"
+                               @bind:after="() => HandleDepartureInputChanged(port)"
                                placeholder="Search ports..." />
                         @if (port.SearchResults.Any())
                         {
