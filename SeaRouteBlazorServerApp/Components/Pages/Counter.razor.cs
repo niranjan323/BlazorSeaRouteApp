@@ -905,30 +905,30 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Notify UI of changes
             StateHasChanged();
         }
-        public async Task RemoveRouteSegment(int segmentIndex)
-        {
-            if (routeModel.RouteSegments != null && segmentIndex < routeModel.RouteSegments.Count)
-            {
-                // Update total distance and duration
-                routeModel.TotalDistance -= routeModel.RouteSegments[segmentIndex].Distance;
-                routeModel.TotalDurationHours -= routeModel.RouteSegments[segmentIndex].DurationHours;
+        //public async Task RemoveRouteSegment(int segmentIndex)
+        //{
+        //    if (routeModel.RouteSegments != null && segmentIndex < routeModel.RouteSegments.Count)
+        //    {
+        //        // Update total distance and duration
+        //        routeModel.TotalDistance -= routeModel.RouteSegments[segmentIndex].Distance;
+        //        routeModel.TotalDurationHours -= routeModel.RouteSegments[segmentIndex].DurationHours;
 
-                // Remove the segment from C# model
-                routeModel.RouteSegments.RemoveAt(segmentIndex);
+        //        // Remove the segment from C# model
+        //        routeModel.RouteSegments.RemoveAt(segmentIndex);
 
-                // Re-index remaining segments
-                for (int i = segmentIndex; i < routeModel.RouteSegments.Count; i++)
-                {
-                    routeModel.RouteSegments[i].SegmentIndex = i;
-                }
+        //        // Re-index remaining segments
+        //        for (int i = segmentIndex; i < routeModel.RouteSegments.Count; i++)
+        //        {
+        //            routeModel.RouteSegments[i].SegmentIndex = i;
+        //        }
 
-                // Remove from JavaScript as well
-                await JS.InvokeVoidAsync("removeRouteSegment", segmentIndex);
+        //        // Remove from JavaScript as well
+        //        await JS.InvokeVoidAsync("removeRouteSegment", segmentIndex);
 
-                // Update UI
-                StateHasChanged();
-            }
-        }
+        //        // Update UI
+        //        StateHasChanged();
+        //    }
+        //}
         //public async Task CalculateMultiSegmentRoute()
         //{
         //    try
