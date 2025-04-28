@@ -1,367 +1,422 @@
 ﻿@page "/counter"
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject HttpClient Http
 @inject ILogger<Counter> Logger
-@using System.Threading.Tasks
-@using Microsoft.AspNetCore.Components.Web
-@using System.Text.Json
-@using SeaRouteModel.Models
-<div class="map-container">
-    <!-- Map -->
-    <div id="map"></div>
+<!-- Back Button -->
+@* <button class="back-btn" @onclick="GoBack">⬅ Back</button> *@
 
-    <!-- Floating UI -->
-    <div class="overlay">
-        <!-- Header with Tabs and Close Button -->
+<button class="back-btn" @onclick="GoBack">⬅ Back</button>
 
-        <div class="header">
-            <div class="tabs">
-                <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                    Start New Calculation
-                </button>
-                <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
-                    My Routes
-                </button>
+
+<div class="route_content">
+    <!-- Route Name Section -->
+
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                <img src="img/group-92@1x.png" alt="Route Icon" class="icon" />
+                <h3 class="heading_Customize">
+                    Customize Route
+                </h3>
             </div>
-            <button class="close-btn" @onclick="CloseOverlay">×</button>
         </div>
+    </div>
 
-        <!-- Scrollable Content -->
-        <div class="form-container">
-            @if (selectedTab == 1)
+
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Route Name</label>
+                <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
+            </div>
+        </div>
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Season Type</label>
+                <div class="cls_block">
+                    <input type="text"
+                           class="content_div_input"
+                           placeholder="Select Season Type"
+                           @bind="routeModel.SeasonalType"
+                           @onfocus="OnFocus"
+                           @onblur="OnBlur" />
+                    @if (showDropdown)
+                    {
+                        <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
+                            <div class="cls_dropdown_div">
+                                @foreach (var option in seasonalOptions)
+                                {
+                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
+                                        @option
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Departure Section -->
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+            <h4 class="route_content_heading1">Port of Departure</h4>
+            <!-- Static Display for Selected Port -->
+            @if (routeModel.MainDeparturePortSelection?.Port != null)
             {
-                @if (selectedForm == 0)
+                <div class="cls_sub_heading">
+                    <span class="content_div_label_blue">@routeModel.MainDeparturePortSelection.Port.Unlocode</span>
+                    <span class="content_div_label">@routeModel.MainDeparturePortSelection.Port.Name</span>
+                </div>
+            }
+            <!-- Search Input -->
+            <div class="cls_block">
+                <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
+                    <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
+                           placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
+                    <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
+                </div>
+                <!-- Search Results Dropdown for Main Departure -->
+                @if (routeModel.MainDeparturePortSelection?.SearchResults?.Any() == true)
                 {
-                    <!-- Show Selection Options -->
-                    <div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
-                        <label class="cls_main_label">
-                            Select your calculation option below:
-                        </label>
-                    </div>
-
-                    <div class="calculation-options">
-                        <div class="option-card" @onclick="() => ShowForm(1)">
-                            <img src="reduction-factor.png" alt="Reduction Factor">
-                            <h4>Reduction Factor Calculations</h4>
-                        </div>
-                        <div class="option-card" @onclick="() => ShowForm(2)">
-                            <img src="group-92@1x.png" alt="Limited Short">
-                            <h4>Limited Short Voyage</h4>
-                        </div>
+                    <div class="search-results">
+                        @foreach (var result in routeModel.MainDeparturePortSelection.SearchResults)
+                        {
+                            <div class="search-result-item" @onclick="() => UpdateDeparturePortSearchDepartureLocation(routeModel.MainDeparturePortSelection, result)">
+                                <span>@result.Name (@result.Unlocode)</span>
+                            </div>
+                        }
                     </div>
                 }
-                @if (selectedForm == 1)
-                {
-                    <!-- Back Button -->
-                    @* <button class="back-btn" @onclick="GoBack">⬅ Back</button> *@
+            </div>
+            <!-- Add Port/Waypoint Buttons -->
+            <div class="cls_btn_div">
+                <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+            </div>
+        </div>
+    </div>
 
-                    <button class="back-btn" @onclick="GoBack">⬅ Back</button>
+    <!-- Dynamic Departure Ports Section -->
+    @foreach (var item in routeModel.DepartureItems)
+    {
+        @if (item.ItemType == "Port")
+        {
+            var port = item.Port;
+            var portNumber = item.SequenceNumber;
 
-                    <div class="route_content">
-                        <!-- Route Name Section -->
-
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                    <img src="group-92@1x.png" alt="Route Icon" class="icon" />
-                                    <h3 class="heading_Customize">
-                                        Customize Route
-                                    </h3>
-                                </div>
+            <div class="cls_route_div port-card">
+                <div class="cls_route_div_rep">
+                    <h4 class="route_content_heading1"> Loading Port @portNumber</h4>
+                    <div class="cls_sub_heading">
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                            <span class="content_div_label">@* Port of Departure *@</span>
+                            <div class="cls_btn_minimize" @onclick="() => RemoveDeparturePort(port)">
+                                <div class="cls_btn_minimize_div"></div>
                             </div>
-                        </div>
-
-
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-
-                                <div class="content_div">
-                                    <label class="content_div_label1">Route Name</label>
-                                    <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Departure Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Port of Departure</h4>
-
-                                <!-- Static Display for First Time -->
-                                <div class="cls_sub_heading">
-                                    @*  <span class="content_div_label_blue">FRMRS</span>
-                                    <span class="content_div_label">Marseille, France</span> *@
-                                </div>
-                                <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
-                                    <input type="text" @bind="departureLocationQuery" @bind:event="oninput"
-                                           placeholder="Enter departure location" @onkeypress="HandleDepartureEnterKey" />
-                                    <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
-                                </div>
-
-                                <!-- Add Port Button -->
-                                <div class="cls_btn_div">
-                                    <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                                    <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        <!-- Dynamic Departure Ports Section -->
-                        @foreach (var port in routeModel.DeparturePorts)
-                        {
-                            <div class="cls_route_div port-card">
-
-                                <div class="cls_route_div_rep">
-                                    <h4 class="route_content_heading1">loading port2</h4>
-
-                                    <div class="cls_sub_heading">
-                                        @* <span class="content_div_label_blue">FRMRS</span> *@
-
-                                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
-                                            <span class="content_div_label">Port of Departure</span>
-                                            @*  <button class="cls_button_light btn-small" @onclick="() => RemoveDeparturePort(port)">-</button> *@
-                                            @* <img src="path-209@1x.png" alt="Remove" class="btn-small" @onclick="() => RemoveDeparturePort(port)" /> *@
-                                            <div class="cls_btn_minimize" @onclick="() => RemoveDeparturePort(port)">
-                                                <div class="cls_btn_minimize_div"></div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">@port.Port?.Unlocode</span>
-                                        <span class="content_div_label_blue">@port.Port?.Name  @port.Port?.Country</span>
-                                    </div>
-
-                                    <!-- Port Search Section -->
-                                    <div class="port-search-container">
-                                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                               @bind="port.SearchTerm"
-                                               @bind:event="oninput"
-                                               @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
-                                               placeholder="Search ports..." />
-
-                                        @if (port.SearchResults.Any())
-                                        {
-                                            <div class="search-results">
-                                                @foreach (var result in port.SearchResults)
-                                                {
-                                                    <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
-                                                        <span>@result.Name, @result.Country (@result.Unlocode)</span>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                    <div class="cls_btn_div">
-                                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                        }
-
-
-                        <!-- Dynamic Departure Waypoints -->
-                        @foreach (var waypoint in routeModel.DepartureWaypoints)
-                        {
-                            <div class="cls_route_div">
-                                <div class="cls_route_div_rep">
-
-                                    <div class="cls_sub_heading">
-                                        @* <span class="content_div_label_blue">FRMRS</span> *@
-
-                                        <div class="cls_flex cls_flex_gap_8px">
-                                            <span class="content_div_label">Port of Departure</span>
-                                            <div class="cls_btn_minimize">
-                                                <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-
-                                    <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
-                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
-                                            <span class="content_div_label">Latitude:</span>
-                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
-                                        </div>
-
-                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
-                                            <span class="content_div_label">Longitude:</span>
-                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
-                                        </div>
-
-                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
-
-                                    </div>
-
-                                    <div class="cls_btn_div">
-                                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                        }
-
-                        <!-- Arrival Section -->
-                        <div class="cls_route_div">
-                            <div class="cls_route_div_rep">
-                                <h4 class="route_content_heading1">Port of Arrival</h4>
-
-                                <!-- Static Display for First Time -->
-                                <div class="cls_sub_heading">
-                                    @* <span class="content_div_label_blue">SGSIN</span>
-                                    <span class="content_div_label">Singapore</span> *@
-                                </div>
-
-                                <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
-                                    <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
-                                           placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
-                                    <img src="path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
-                                </div>
-
-                                <!-- Add Port Button -->
-                                <div class="cls_btn_div">
-                                    <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
-                                    <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Dynamic Arrival Ports Section -->
-                        @foreach (var port in routeModel.ArrivalPorts)
-                        {
-                            <div class="cls_route_div port-card">
-
-                                <div class="cls_route_div_rep">
-                                    <!--!--><h4 class="route_content_heading1">loading port1</h4>
-
-                                    <!--!--><div class="cls_sub_heading">
-                                        @*   <span class="content_div_label_blue">FRMRS</span> *@
-
-                                        <span class="content_div_label">Port of Departure</span>
-                                        <div class="cls_btn_minimize" @onclick="() => RemoveArrivalPort(port)"><div class="cls_btn_minimize_div"></div></div>
-                                    </div>
-
-
-
-                                    <div class="content_div">
-                                        <span class="content_div_label">@port.Port?.Unlocode</span>
-                                        <span class="content_div_label">@port.Port?.Name, @port.Port?.Country</span>
-                                    </div>
-
-                                    <!-- Port Search Section -->
-                                    <div class="port-search-container">
-                                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                                               value="@port.Port?.Name"
-                                               @oninput="e => port.SearchTerm = e.Value.ToString()"
-                                               @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
-                                               placeholder="Search ports..." />
-
-                                        @if (port.SearchResults.Any())
-                                        {
-                                            <div class="search-results">
-                                                @foreach (var result in port.SearchResults)
-                                                {
-                                                    <div class="search-result-item" @onclick="() => UpdateArrivalPort(port, result)">
-                                                        <span>@result.Name, @result.Country (@result.Unlocode)</span>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-
-
-                            </div>
-                        }
-
-                        <!-- Dynamic Arrival Waypoints -->
-                        @foreach (var waypoint in routeModel.ArrivalWaypoints)
-                        {
-
-                            <div class="cls_route_div">
-                                <div class="cls_route_div_rep">
-
-
-                                    <div class="cls_sub_heading">
-                                        @*   <span class="content_div_label_blue">FRMRS</span> *@
-
-                                        <div class="cls_flex cls_flex_gap_8px">
-                                            <span class="content_div_label">Port of Departure</span>
-                                            <div class="cls_btn_minimize" @onclick="() => RemoveArrivalWaypoint(waypoint)">
-                                                <div class="cls_btn_minimize_div"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-
-                                    <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
-                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
-                                            <span class="content_div_label">Latitude:</span>
-                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
-                                        </div>
-
-                                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
-                                            <span class="content_div_label">Longitude:</span>
-                                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
-                                        </div>
-
-                                        <img src="path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
-
-                                    </div>
-
-                                    <div class="cls_btn_div">
-                                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
-                                    </div>
-
-
-
-                                </div>
-                            </div>
-
-                        }
-
-
-                        <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
-                            <button class="cls_button_blue" @onclick="CalculateRouteReductionFactor">Calculate Route Reduction Factor</button>
                         </div>
                     </div>
-                    <!-- Results visualization (shown after calculation) -->
-                    @if (showResultsForReductionFactor)
+                    <!-- Display Selected Port Info -->
+                    @if (port.Port != null)
                     {
-                        <div class="cls_block">
-
-                            <div class="route_content">
-                                <div class="cls_route_div">
-                                    <div class="cls_route_div_rep">
-                                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                            <img src="group-92@1x.png" alt="Route Icon" class="icon">
-                                            <h3 class="heading_Customize">
-                                                Route
-                                            </h3>
-                                        </div>
+                        <div class="cls_sub_heading">
+                            <span class="content_div_label">@port.Port.Unlocode</span>
+                            <span class="content_div_label_blue">@port.Port.Name </span>
+                        </div>
+                    }
+                    <!-- Port Search Section -->
+                    <div class="port-search-container">
+                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                               @bind="port.SearchTerm"
+                               @bind:event="oninput"
+                               @onkeypress="(e) => HandleDepartureEnterKey(e, port)"
+                               placeholder="Search ports..." />
+                        @if (port.SearchResults.Any())
+                        {
+                            <div class="search-results">
+                                @foreach (var result in port.SearchResults)
+                                {
+                                    <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
+                                        <span>@result.Name (@result.Unlocode)</span>
                                     </div>
-                                </div>
-                                <div class="cls_route_div">
-                                    <div class="cls_route_div_rep">
-                                        <div class="content_div">
-                                            <div class="title-text">Marseille - Shanghai</div>
-                                            <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
-                                        </div>
-                                    </div>
-                                </div>
+                                }
                             </div>
+                        }
+                    </div>
+                    <div class="cls_btn_div">
+                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (item.ItemType == "Waypoint")
+        {
+            var waypoint = item.Waypoint;
+            var waypointNumber = item.SequenceNumber;
+
+            <div class="cls_route_div">
+                <div class="cls_route_div_rep">
+                    <h4 class="route_content_heading1">Departure Waypoint @waypointNumber</h4>
+                    <div class="cls_sub_heading">
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                            <span class="content_div_label">Waypoint</span>
+                            <div class="cls_btn_minimize">
+                                <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
+                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                            <span class="content_div_label">Latitude:</span>
+                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
+                        </div>
+
+                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                            <span class="content_div_label">Longitude:</span>
+                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
+                        </div>
+
+                        <img src="img/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
+                    </div>
+
+                    <div class="cls_btn_div">
+                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- Arrival Section -->
+    <div class="cls_route_div">
+        <div class="cls_route_div_rep">
+            <h4 class="route_content_heading1">Port of Arrival</h4>
+            <!-- Static Display for Selected Port -->
+            @if (routeModel.MainArrivalPortSelection?.Port != null)
+            {
+                <div class="cls_sub_heading">
+                    <span class="content_div_label_blue">@routeModel.MainArrivalPortSelection.Port.Unlocode</span>
+                    <span class="content_div_label">@routeModel.MainArrivalPortSelection.Port.Name</span>
+                </div>
+            }
+            <!-- Search Input -->
+            <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
+                <input type="text" @bind="arrivalLocationQuery" @bind:event="oninput"
+                       placeholder="Enter arrival location" @onkeypress="HandleArrivalEnterKey" />
+                <img src="img/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
+            </div>
+            <!-- Search Results Dropdown for Main Arrival -->
+            @if (routeModel.MainArrivalPortSelection?.SearchResults?.Any() == true)
+            {
+                <div class="search-results" style="position:relative">
+                    @foreach (var result in routeModel.MainArrivalPortSelection.SearchResults)
+                    {
+                        <div class="search-result-item" @onclick="() => UpdateArrivalPortSearchArrivalLocation(routeModel.MainArrivalPortSelection, result)">
+                            <span>@result.Name (@result.Unlocode)</span>
+                        </div>
+                    }
+                </div>
+            }
+            <!-- Add Port/Waypoint Buttons -->
+            <div class="cls_btn_div">
+                <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dynamic Arrival Ports Section -->
+    @foreach (var item in routeModel.ArrivalItems)
+    {
+        @if (item.ItemType == "Port")
+        {
+            var port = item.Port;
+            var portNumber = item.SequenceNumber;
+
+            <div class="cls_route_div port-card">
+                <div class="cls_route_div_rep">
+                    <h4 class="route_content_heading1">Arrival Port @portNumber</h4>
+                    <div class="cls_sub_heading">
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                            @* <span class="content_div_label">Port of Arrival</span> *@
+                            <div class="cls_btn_minimize" @onclick="() => RemoveArrivalPort(port)">
+                                <div class="cls_btn_minimize_div"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Display Selected Port Info -->
+                    @if (port.Port != null)
+                    {
+                        <div class="cls_sub_heading">
+                            <span class="content_div_label">@port.Port.Unlocode</span>
+                            <span class="content_div_label_blue">@port.Port.Name, @port.Port.Country</span>
+                        </div>
+                    }
+                    <!-- Port Search Section -->
+                    <div class="port-search-container">
+                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                               @bind="port.SearchTerm"
+                               @bind:event="oninput"
+                               @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
+                               placeholder="Search ports..." />
+                        @if (port.SearchResults.Any())
+                        {
+                            <div class="search-results">
+                                @foreach (var result in port.SearchResults)
+                                {
+                                    <div class="search-result-item" @onclick="() => UpdateArrivalPort(port, result)">
+                                        <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <!-- Add Port/Waypoint Buttons -->
+                    <div class="cls_btn_div">
+                        <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (item.ItemType == "Waypoint")
+        {
+            var waypoint = item.Waypoint;
+            var waypointNumber = item.SequenceNumber;
+
+            <div class="cls_route_div">
+                <div class="cls_route_div_rep">
+                    <h4 class="route_content_heading1">Arrival Waypoint @waypointNumber</h4>
+                    <div class="cls_sub_heading">
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
+                            <span class="content_div_label">Waypoint</span>
+                            <div class="cls_btn_minimize" @onclick="() => RemoveArrivalWaypoint(waypoint)">
+                                <div class="cls_btn_minimize_div"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cls_flex cls_flex_gap_2 cls_flex_align_end">
+                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                            <span class="content_div_label">Latitude:</span>
+                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Latitude" placeholder="Latitude">
+                        </div>
+
+                        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W40 cls_flex_justify_end">
+                            <span class="content_div_label">Longitude:</span>
+                            <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
+                        </div>
+
+                        <img src="img/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
+                    </div>
+
+                    <div class="cls_btn_div">
+                        <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
 
 
-                            @*        <div class="route_content">
+    <div class="cls_flex">
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Exceedance Probability</label>
+                <input type="number"
+                       step="any"
+                       class="content_div_input"
+                       placeholder="Exceedance Probability"
+                       @bind="routeModel.ExceedanceProbability"
+                       @oninput="ValidateExceedanceProbability" />
+                @if (!isValidExceedanceProbability)
+                {
+                    <div style="color: red; font-size: 0.8rem;">Value must be > 0 and &lt; 1</div>
+                }
+            </div>
+        </div>
+        <div class="cls_route_div_rep">
+
+            <div class="content_div">
+                <label class="content_div_label1">Wave type</label>
+                <div class="cls_block">
+                    <input type="text"
+                           class="content_div_input"
+                           placeholder="Select Wave type"
+                           @bind="routeModel.WayType"
+                           @onfocus="OnFocuswaypoint"
+                           @onblur="OnBlurwaypoint" />
+                    @if (showDropdownforwaypoint)
+                    {
+                        <div class="cls_dropdown_outline_waypont cls_block" @onclick:stopPropagation>
+                            <div class="cls_dropdown_div">
+                                @foreach (var option in WaytypeOptions)
+                                {
+                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOptionForWayType(option)">
+                                        @option
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
+        <button class="cls_button_blue" @onclick="CalculateRouteReductionFactorReport">Calculate Route Reduction Factor</button>
+    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="cls_flex cls_flex_justify_center cls_width_100 text-danger">
+            @errorMessage
+        </div>
+    }
+</div>
+<!-- Results visualization (shown after calculation) -->
+@if (showResultsForReductionFactor)
+{
+    <div class="cls_block">
+
+        <div class="route_content">
+            <div class="cls_route_div">
+                <div class="cls_route_div_rep">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="img/group-92@1x.png" alt="Route Icon" class="icon">
+                        <h3 class="heading_Customize">
+                            Route
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="cls_route_div">
+                <div class="cls_route_div_rep">
+                    <div class="content_div">
+                        <div class="title-text">Marseille - Shanghai</div>
+                        <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        @*        <div class="route_content">
                                     <div class="route-header">
-                                        <img src="group-92@1x.png" alt="Route" class="icon" />
+                                        <img src="img/group-92@1x.png" alt="Route" class="icon" />
                                         <span>Route</span>
                                     </div>
 
@@ -372,1641 +427,108 @@
                                     </div>
                                 </div> *@
 
-                            <div class="route_content">
+        <div class="route_content">
 
-                                <!-- Overall Stats -->
-                                <div class="route-stats">
-                                    <div class="stat-row">
-                                        <span class="stat-label">Reduction Factor:</span>
-                                        <span class="stat-value">0.8563</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span class="stat-label">Route Distance:</span>
-                                        <span class="stat-value">1200 nm</span>
-                                    </div>
-                                </div>
+            <!-- Overall Stats -->
+            <div class="route-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Reduction Factor:</span>
+                    <span class="stat-value">0.8563</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Route Distance:</span>
+                    <span class="stat-value">1200 nm</span>
+                </div>
+            </div>
 
-                                <!-- Segment 1 -->
+            <!-- Segment 1 -->
 
-                                <div class="route-segment">
-                                    <div class="segment-header">
-                                        @* <img src="group-92@1x.png" alt="Port" class="icon" /> *@
-                                        <span>Port 1 to Port 2:</span>
-                                    </div>
-                                    <div class="segment-stats">
-                                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                            <img src="group-92@1x.png" alt="Port" class="icon" />
-                                            <div class="stat-row">
-                                                <span class="stat-label">Reduction Factor:</span>
-                                                <span class="stat-value">0.82</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                            <img src="group-3728-11@1x.png" alt="Port" class="icon" />
-                                            <div class="stat-row">
-                                                <span class="stat-label">Route Distance:</span>
-                                                <span class="stat-value">200 nm</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Segment 2 -->
-
-                                <div class="route-segment">
-                                    <div class="segment-header">
-                                        <span>Port 2 to Port 3:</span>
-                                    </div>
-                                    <div class="segment-stats">
-                                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                            <img src="group-92@1x.png" alt="Port" class="icon" />
-                                            <div class="stat-row">
-                                                <span class="stat-label">Reduction Factor:</span>
-                                                <span class="stat-value">0.81</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                            <img src="group-3728-11@1x.png" alt="Port" class="icon" />
-                                            <div class="stat-row">
-                                                <span class="stat-label">Route Distance:</span>
-                                                <span class="stat-value">1000 nm</span>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-
-
-
-                                <div class="cls_alert_div">
-                                    @* action buttons *@
-                                    @if (isRouteSaved)
-                                    {
-                                        <div style="color: green;  text-align: center; width: 100%;">
-                                            ✔ Route Saved
-                                        </div>
-                                    }
-                                </div>
-
-                                <div class="cls_action-buttons cls_four-buttons">
-
-                                    <div class="cls_action-btn" @onclick="AddEditVesselInfo">
-                                        <img src="path-7601-11@1x.png" alt="Edit" />
-                                        <span>Add/Edit Vessel Info</span>
-                                    </div>
-                                    <div class="cls_action-btn" @onclick="ShowReportForReductionFactor">
-                                        <img src="show-report@1x.png" alt="Report" />
-                                        <span>Show Report</span>
-                                    </div>
-                                    <div class="cls_action-btn" @onclick="SaveRoute">
-                                        <img src="group-758-4@1x.png" alt="Save" />
-                                        <span>Save Route</span>
-                                    </div>
-                                    <div class="cls_action-btn">
-                                        <img src="group-3725-2@1x.png" alt="Submit" />
-                                        <span>
-                                            Submit for
-                                            ABS Record
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                        </div>
-                    }
-                }
-
-                else if (selectedForm == 2)
-                {
-                    <button class="back-btn" @onclick="GoBack">⬅ Back</button>
-
-                    <div class="cls_block">
-
-                        <div class="cls_flex cls_flex_gap_2 cls_padding_14px_22px">
-                            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                <span class="content_div_label">Vessel Name</span>
-                                <input type="text" class="content_div_input" style="flex: 1;" placeholder="ABC" @bind="reductionFactor.VesselName" />
-                            </div>
-                            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                <span class="content_div_label">Vessel IMO</span>
-                                <input type="text" class="content_div_input" style="flex: 1;" placeholder="9012345" @bind="reductionFactor.IMONo" />
-                            </div>
-                            <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                <label class="content_div_label">Vessel Breadth</label>
-                                <input type="number" class="content_div_input" style="flex: 1;" placeholder="100,000" @bind="reductionFactor.Breadth" />
-                            </div>
-                        </div>
-
-                        <!-- Port of Departure Section -->
-                        <div class="route_content cls_padding_14px_22px cls_flex_gap_8px">
-                            <h3 class="route_content_heading2 cls_mar_btm_8px">
-                                Port of Departure
-                            </h3>
-
-                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <div class="cls_sub_heading cls_flex_gap_8px">
-                                        @* later make it dynamic *@
-                                        @*  <span class="content_div_label_blue">NLRTM</span>
-                                        <span class="content_div_label cls_flex_text_align_end">Rotterdam, Netherlands</span> *@
-                                    </div>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionDepartureLocationQuery" @bind:event="oninput"
-                                               placeholder="Enter departure location" @onkeypress="HandleReductionDepartureEnterKey">
-                                        <img src="./path-484@1x.png" class="icon" @onclick="SearchReductionDepartureLocation">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Date of Departure</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="date" @bind="reductionFactor.DateOfDeparture">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <label class="content_div_label">Estimated Time of Departure</label>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="time" @bind="reductionFactor.ETD">
-
-                                    </div>
-                                </div>
-
-                                <!-- Port of Arrival Section -->
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <h3 class="route_content_heading2">
-                                        Port of Arrival
-                                    </h3>
-                                    <div class="cls_sub_heading cls_flex_gap_8px">
-                                        @*    <span class="content_div_label_blue">GBDBL</span>
-                                        <span class="content_div_label cls_flex_text_align_end">Bangor, The United Kingdom</span> *@
-                                    </div>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionArrivalLocationQuery" @bind:event="oninput"
-                                               placeholder="Enter arrival location" @onkeypress="HandleReductionArrivalEnterKey">
-                                        <img src="./path-424-7@1x.png" class="icon" @onclick="SearchReductionArrivalLocation">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Date of Arrival</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="date" @bind="reductionFactor.DateOfArrival">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <label class="content_div_label">Estimated time of Arrival</label>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="time" @bind="reductionFactor.ETA" @bind:after="CalculateVoyageDuration">
-
-
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <div class="cls_sub_heading">
-                                        <span class="content_div_label">Time Zone:</span>
-                                    </div>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionFactor.TimeZone">
-                                        <img src="./path-484@1x.png" class="icon">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Duration (Hrs):</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px" @onmouseover="ShowDurationSuggestions" @onmouseout="HideDurationSuggestions">
-                                        <input type="number" @bind="reductionFactor.Duration" readonly>
-                                        <div class="duration_icon">
-                                            <div class="path-container">
-                                                <img class="path-522" src="path-522@1x.png" alt="Path 522">
-                                                <img class="path-523" src="path-523@1x.png" alt="Path 523">
-                                                <img class="path-524" src="path-524@1x.png" alt="Path 524">
-                                                <img class="path-525" src="path-525@1x.png" alt="Path 525">
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                                @if (!string.IsNullOrEmpty(durationSuggestion))
-                                {
-                                    <div class="suggestion-box">
-                                        @foreach (var line in durationSuggestion.Split('\n'))
-                                        {
-                                            <div>@line</div>
-                                        }
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(durationValidationMessage))
-                                {
-                                    <div class="validation-error">@durationValidationMessage</div>
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Weather Forecast Section -->
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
-                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <img src="./forecast-icon@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="route_content_heading">Weather Forecast</h3>
-                            </div>
-
-                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Date</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="date" @bind="reductionFactor.WeatherForecastDate">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Time:</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="time" @bind="reductionFactor.WeatherForecasetTime" @bind:after="CalculateWeatherForecast">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end" @onmouseover="ShowWeatherSuggestions" @onmouseout="HideWeatherSuggestions">
-                                    <span class="content_div_label">Before ETD (Hrs):</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="number" @bind="reductionFactor.WeatherForecastBeforeETD" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            @if (!string.IsNullOrEmpty(weatherSuggestion))
-                            {
-                                <div class="suggestion-box">
-                                    @foreach (var line in weatherSuggestion.Split('\n'))
-                                    {
-                                        <div>@line</div>
-                                    }
-                                </div>
-                            }
-                            @if (!string.IsNullOrEmpty(weatherValidationMessage))
-                            {
-                                <div class="validation-error">@weatherValidationMessage</div>
-                            }
-                        </div>
-
-                        <!-- Wave Height Section -->
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
-                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <img src="./wave-height-icon@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="route_content_heading">Forecast Maximum Significant Wave Height</h3>
-                            </div>
-
-                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Hswell [m]</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="number" step="0.1" @bind="reductionFactor.WaveHeightHswell">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Hwind [m]</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="number" step="0.1" @bind="reductionFactor.WaveHeightHwind">
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Hs, max [m]</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionFactor.WaveHsmax" readonly>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                <label class="route_content_heading1">Source :</label>
-                                <input type="text" @bind="reductionFactor.WeatherForecastSource" style="border:none; outline:none; width:250px;">
-                            </div>
-                        </div>
-
-                        <!-- Output Section -->
-                        <div class="route_content cls_padding_14px_22px cls_flex_row_gap_4px">
-                            <div class="cls_flex cls_flex_gap_8px cls_mar_btm_8px cls_flex_align_center">
-                                <div class="group-3253">
-                                    <img class="path-7591" src="./path-7591-1@1x.png" alt="Path 7591">
-                                    <img class="path-7593" src="./path-7593-1@1x.png" alt="Path 7593">
-                                    <img class="path-7592" src="./path-7592-1@1x.png" alt="Path 7592">
-                                </div>
-                                <h3 class="route_content_heading">Output</h3>
-                            </div>
-
-                            <div class="cls_flex cls_flex_gap_2 cls_flex_wrap cls_flex_row_gap_22px">
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Duration OK</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionFactor.DurationOk" readonly>
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Forecast Before ETD OK</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" @bind="reductionFactor.WeatherForecastBeforeETDOK" readonly>
-                                    </div>
-                                </div>
-
-                                <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                                    <span class="content_div_label">Short Voyage Reduction Factor</span>
-                                    <div class="cls_input_outline cls_flex_gap_8px">
-                                        <input type="text" value="@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? string.Empty)" readonly>
-                                    </div>
-                                </div>
-
-                                <!-- Button for API call -->
-                                <div class="cls_flex cls_flex_justify_center cls_width_100">
-                                    <button class="cls_button_blue" @onclick="CalculateReductionFactor" disabled="@isLoading">
-                                        @if (isLoading)
-                                        {
-                                            <span>Calculating...</span>
-                                        }
-                                        else
-                                        {
-                                            <span>Calculate Limited Short Voyage</span>
-                                        }
-                                    </button>
-                                </div>
-
-                                @if (!string.IsNullOrEmpty(errorMessage))
-                                {
-                                    <div class="cls_flex cls_flex_justify_center cls_width_100 text-danger">
-                                        @errorMessage
-                                    </div>
-                                }
-                            </div>
+            <div class="route-segment">
+                <div class="segment-header">
+                    @* <img src="img/group-92@1x.png" alt="Port" class="icon" /> *@
+                    <span>Port 1 to Port 2:</span>
+                </div>
+                <div class="segment-stats">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="img/group-92@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Reduction Factor:</span>
+                            <span class="stat-value">0.82</span>
                         </div>
                     </div>
 
-
-                    <!-- Result visualization (shown after calculation) -->
-                    @if (showResults)
-                    {
-                        <div class="results-container">
-                            <div class="result-box">
-                                <div class="result-header">
-                                    <img src="group-92@1x.png" alt="Voyage Icon" width="20" height="20" />
-                                    <h3 class="route_content_heading">Limited Short Voyage Reduction Factor</h3>
-                                    <button class="close-btn small" @onclick="CloseResults">✕</button>
-                                </div>
-
-                                <div class="result-value">
-                                    <p>Reduction Factor: <strong>0.60</strong></p>
-                                </div>
-
-                                <div class="chart-container">
-                                    <canvas id="reductionChart1"></canvas>
-                                </div>
-                                <div class="cls_alert_div">
-                                    @* action buttons *@
-                                    @if (isRouteSaved)
-                                    {
-                                        <div style="color: green;  text-align: center; width: 100%;">
-                                            ✔ Route Saved
-                                        </div>
-                                    }
-                                </div>
-                                <div class="cls_action-buttons">
-                                    <div class="cls_action-btn" @onclick="AddEditVesselInfo">
-                                        <img src="path-7601-11@1x.png" alt="Edit" />
-                                        <span>Add/Edit Vessel Info</span>
-                                    </div>
-                                    <div class="cls_action-btn" @onclick="SaveRoute">
-                                        <img src="group-758-4@1x.png" alt="Save" />
-                                        <span>Save Route</span>
-                                    </div>
-                                    <div class="cls_action-btn" @onclick="ShowReport">
-                                        <img src="show-report@1x.png" alt="Report" />
-                                        <span>Show Report</span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="img/group-3728-11@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Route Distance:</span>
+                            <span class="stat-value">200 nm</span>
                         </div>
-                    }
+                    </div>
+                </div>
+            </div>
 
+            <!-- Segment 2 -->
+
+            <div class="route-segment">
+                <div class="segment-header">
+                    <span>Port 2 to Port 3:</span>
+                </div>
+                <div class="segment-stats">
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="img/group-92@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Reduction Factor:</span>
+                            <span class="stat-value">0.81</span>
+                        </div>
+                    </div>
+
+                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                        <img src="img/group-3728-11@1x.png" alt="Port" class="icon" />
+                        <div class="stat-row">
+                            <span class="stat-label">Route Distance:</span>
+                            <span class="stat-value">1000 nm</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+
+            <div class="cls_alert_div">
+                @* action buttons *@
+                @if (isRouteSaved)
+                {
+                    <div style="color: green;  text-align: center; width: 100%;">
+                        ✔ Route Saved
+                    </div>
                 }
-            }
-            else if (selectedTab == 2)
-            {
-                <p>My Routes content here...</p>
-            }
-        </div>
+            </div>
 
+            <div class="cls_action-buttons cls_four-buttons">
+
+                <div class="cls_action-btn" @onclick="AddEditVesselInfo">
+                    <img src="img/path-7601-11@1x.png" alt="Edit" />
+                    <span>Add/Edit Vessel Info</span>
+                </div>
+                <div class="cls_action-btn" @onclick="ShowReportForReductionFactor">
+                    <img src="img/show-report@1x.png" alt="Report" />
+                    <span>Show Report</span>
+                </div>
+                <div class="cls_action-btn" @onclick="SaveRoute">
+                    <img src="img/group-758-4@1x.png" alt="Save" />
+                    <span>Save Route</span>
+                </div>
+                <div class="cls_action-btn" @onclick="ShowAbsReport">
+                    <img src="img/group-3725-2@1x.png" alt="Submit" />
+                    <span>
+                        Submit for
+                        ABS Record
+                    </span>
+                </div>
+            </div>
+
+        </div>
 
     </div>
-
-    <!-- Right side - Report (only shown after calculation) -->
-    @if (showReport)
-    {
-        <div class="report-container">
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn @(selectedTab == 1 ? "active" : "")">
-                        Reports
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseReport">×</button>
-            </div>
-
-            <div class="report-content">
-                <div class="report-actions">
-                    <button class="download-btn" @onclick="DownloadReport">
-                        <img src="path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
-                    </button>
-                    <button class="print-btn" @onclick="PrintReport">
-                        <img src="path-1871-1@1x.png" alt="Print" width="16" height="16" /> Print Report
-                    </button>
-                </div>
-
-                <div class="report-details">
-                    <h4>Report 1 Reduction Factor Calculation</h4>
-
-                    <div class="report-section">
-                        <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
-                        <p>Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is @(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"). More details can be found below.</p>
-                        <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>User Inputs</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Vessel Name:</td>
-                                <td><strong>@(reductionFactor.VesselName ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Vessel IMO:</td>
-                                <td><strong>@(reductionFactor.IMONo ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Vessel Breadth:</td>
-                                <td><strong>@reductionFactor.Breadth</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Port of Departure:</td>
-                                <td><strong>@(reductionFactor.PortOfDeparture ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Port of Arrival:</td>
-                                <td><strong>@(reductionFactor.PortOfArrival ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Time Zone:</td>
-                                <td><strong>@(reductionFactor.TimeZone ?? "UTC")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Date of Departure:</td>
-                                <td>@reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd")</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Date of Arrival:</td>
-                                <td>@reductionFactor.DateOfArrival.ToString("yyyy-MM-dd")</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Duration (Hrs):</td>
-                                <td>@reductionFactor.Duration</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Estimated Time of Departure:</td>
-                                <td>@reductionFactor.ETD.ToString("HH:mm")</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Estimated Time of Arrival:</td>
-                                <td>@reductionFactor.ETA.ToString("HH:mm")</td>
-                                <td></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Weather Forecast</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Date:</td>
-                                <td>@reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd")</td>
-                            </tr>
-                            <tr>
-                                <td>Time:</td>
-                                <td>@reductionFactor.WeatherForecasetTime.ToString("HH:mm")</td>
-                            </tr>
-                            <tr>
-                                <td>Before ETD (Hrs):</td>
-                                <td>@reductionFactor.WeatherForecastBeforeETD</td>
-                            </tr>
-                            <tr>
-                                <td>Source:</td>
-                                <td><a href="http://www.weather.gov">@(reductionFactor.WeatherForecastSource ?? "www.weather.gov")</a></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Forecast Maximum Significant Wave Height</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Hswell [m]:</td>
-                                <td>@reductionFactor.WaveHeightHswell</td>
-                            </tr>
-                            <tr>
-                                <td>Hwind [m]:</td>
-                                <td>@reductionFactor.WaveHeightHwind</td>
-                            </tr>
-                            <tr>
-                                <td>Hs, max [m]:</td>
-                                <td>@reductionFactor.WaveHsmax</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Output</h5>
-                        <p><strong>Duration OK:</strong> @reductionFactor.DurationOk</p>
-                        <p><strong>Forecast Before ETD OK:</strong> @reductionFactor.WeatherForecastBeforeETDOK</p>
-                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</span></p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Voyage Map</h5>
-                        <div id="reportMapContainer" @ref="reportMapContainer"></div>
-                    </div>
-                    <!-- Modal -->
-                    <div id="canvasModal" class="canvas-modal" onclick="hideFullCanvas()">
-                        <img id="fullCanvasImage" />
-                    </div>
-                    <div class="report-section">
-                        <h5>Limited Short Voyage Reduction Factor</h5>
-                        <div class="result-value">
-                            <p>Reduction Factor: <strong>@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</strong></p>
-                        </div>
-
-                        <div class="chart-container">
-                            <canvas id="reductionChart2"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Notes Section -->
-                    <div class="report-section notes-section">
-                        <h5>Notes</h5>
-                        <ul>
-                            <li>The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.</li>
-                            <li>The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).</li>
-                            <li>A short voyage is to have a duration of less than 72 hours from departure port to arrival port.</li>
-                            <li>The weather reports need to be received within 6 hours of departure.</li>
-                            <li>The forecasted wave height needs to cover the duration of the voyage plus 12 hours.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    <!-- Report Panel (only shown after ShowReport is called) -->
-    @if (showReportForReductionFactor)
-    {
-        <div class="report-container">
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn active">
-                        Reports
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseReportForReductionFactor">×</button>
-            </div>
-
-            <div class="report-content">
-                <div class="report-actions">
-                    <button class="download-btn" @onclick="DownloadReport">
-                        <img src="path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
-                    </button>
-                    <button class="print-btn" @onclick="PrintReport">
-                        <img src="path-1871-1@1x.png" alt="Print" width="16" height="16" /> Print Report
-                    </button>
-                </div>
-
-                <div class="report-details">
-                    <h4>Report 1 Reduction Factor Calculation</h4>
-
-                    <div class="report-section">
-                        <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
-                        <p>
-                            Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the route from
-                            @(routeModel.DepartureLocation) to @(routeModel.ArrivalLocation) is @(routeReductionFactor?.ToString("0.00") ?? "0.82").
-                            More details can be found below.
-                        </p>
-                        <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>User Inputs</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Route Name:</td>
-                                <td><strong>@(routeModel.RouteName ?? "Marseille - Shanghai")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Port of Departure:</td>
-                                <td><strong>@(routeModel.DepartureLocation ?? "Marseille, France")</strong></td>
-                                <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS")</td>
-                            </tr>
-                            <tr>
-                                <td>Loading Port:</td>
-                                <td><strong>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Name ?? "Singapore")</strong></td>
-                                <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN")</td>
-                            </tr>
-                            <tr>
-                                <td>Port of Arrival:</td>
-                                <td><strong>@(routeModel.ArrivalLocation ?? "Shanghai, China")</strong></td>
-                                <td>@(routeModel.ArrivalPorts.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH")</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Output</h5>
-                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span></p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Route Map</h5>
-                        <div id="reportMapContainer" @ref="reportMapContainer" style="height: 200px; width: 100%;"></div>
-                    </div>
-
-                    <!-- Notes Section -->
-                    <div class="report-section notes-section">
-                        <h5>Notes</h5>
-                        <ul>
-                            <li>The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.</li>
-                            <li>ABS Container Securing Guide 6.2.4</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (AddEditVessalReport)
-    {
-        <div class="report-container">
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn active">
-                        Vessel Info
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseVesselInfo">×</button>
-            </div>
-
-            <div class="report-content">
-                <a href="#" class="close-link" @onclick="CloseVesselInfo">
-                    <span style="color: #0066cc;">←</span> Close
-                </a>
-
-                <div class="vessel-info-header" style="display: flex; align-items: center; margin: 10px 0;">
-                    <span style="color: #f9a825; margin-right: 5px;">📋</span>
-                    <span style="color: #f9a825; font-weight: 500;">Add/Edit Vessel Information</span>
-                </div>
-
-                <div class="report-section">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Vessel Name</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">IMO Number</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Flag</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Report Date</label>
-                            <div style="position: relative;">
-                                <input type="text" placeholder="MM/DD/YYYY" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📅</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Vessel Name</label>
-                            <input type="text" value="Onasis Royal" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">ABS Number</label>
-                            <input type="text" value="987654" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Owner Name</label>
-                            <input type="text" value="FRAMIX" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Build Date</label>
-                            <div style="position: relative;">
-                                <input type="text" value="06/23/2022" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📅</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Owner Name</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Contact</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Phone</label>
-                            <input type="text" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; display: block; margin-bottom: 3px;">Email</label>
-                            <div style="position: relative;">
-                                <input type="email" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px;">
-                                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">📬</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 20px;">
-                    <button class="download-btn" style="background-color: #2196f3; width: 100px;">Save</button>
-                </div>
-            </div>
-        </div>
-    }
-
-
-
-</div>
-
-@code {
-
-    private ElementReference reportMapContainer;
-    private int selectedTab = 1;
-    private int selectedForm = 0;
-    private ReductionFactor reductionFactor = new ReductionFactor();
-    private bool isLoading = false;
-    private string errorMessage = string.Empty;
-    private void SelectTab(int tab) => selectedTab = tab;
-    private void CloseOverlay() { /* Logic to hide overlay */ }
-    private void ShowForm(int option) => selectedForm = option;
-    private decimal? routeReductionFactor = 0.82M;
-    private int? routeDistance = 5952;
-    private List<PortModel> _ports;
-    private VoyageModel voyageModel = new();
-    private bool showReport = false;
-    private bool showResults = false;
-    private bool showResultsForReductionFactor = false;
-    private bool showReportForReductionFactor = false;
-    private DotNetObjectReference<Counter>? objRef;
-    private string LocationQuery { get; set; } = "";
-    private string departureLocationQuery { get; set; } = "";
-    private string arrivalLocationQuery { get; set; } = "";
-    private string reductionDepartureLocationQuery = "";
-    private string reductionArrivalLocationQuery = "";
-    private string durationValidationMessage = "";
-    private string weatherValidationMessage = "";
-    private string durationSuggestion = "";
-    private string weatherSuggestion = "";
-    private bool isRouteSaved = false;
-    private bool AddEditVessalReport = false;
-    protected async override Task OnInitializedAsync()
-    {
-        await Task.CompletedTask;
-        await GetSampleports();
-
-    }
-    private void CloseVesselInfo()
-    {
-        AddEditVessalReport = false;
-    }
-    private async Task GoBack()
-    {
-        selectedForm = 0;
-        showReport = false;
-        showReportForReductionFactor = false;
-        showResultsForReductionFactor = false;
-        reductionFactor = new ReductionFactor();
-        routeModel = new RouteModel();
-        departureSearchResults = new List<PortModel>();
-        arrivalSearchResults = new List<PortModel>();
-        await JS.InvokeVoidAsync("resetMap");
-    }
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            objRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("initializeMap", objRef);
-        }
-    }
-    private async Task CaptureMap()
-    {
-        bool success = await JS.InvokeAsync<bool>(
-            "captureMapWithRoutes",
-            "map",
-            "reportMapContainer"
-        );
-
-        if (!success)
-        {
-            // Handle error (optional)
-            Console.WriteLine("Failed to capture map");
-        }
-    }
-    private async Task CheckAndUpdateMap(WaypointModel waypoint)
-    {
-        if (!string.IsNullOrEmpty(waypoint.Latitude) && !string.IsNullOrEmpty(waypoint.Longitude))
-        {
-            if (double.TryParse(waypoint.Latitude, out double lat) && double.TryParse(waypoint.Longitude, out double lng))
-            {
-                await JS.InvokeVoidAsync("updateMap", waypoint.Name, lat, lng);
-            }
-        }
-    }
-    // Method to calculate voyage duration
-    private void CalculateVoyageDuration()
-    {
-        durationValidationMessage = "";
-
-        // Validate required fields
-        if (reductionFactor.DateOfDeparture == default ||
-            reductionFactor.ETD == default ||
-            reductionFactor.DateOfArrival == default ||
-            reductionFactor.ETA == default)
-        {
-            durationValidationMessage = "Please fill all departure and arrival fields";
-            return;
-        }
-
-        try
-        {
-            var departureDateTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD);
-            var arrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA);
-
-            // Calculate duration
-            var timeSpan = arrivalDateTime - departureDateTime;
-            reductionFactor.Duration = Convert.ToInt32(timeSpan.TotalHours);
-
-            // Set status
-            reductionFactor.DurationOk = (reductionFactor.Duration > 0 && reductionFactor.Duration <= 72) ? "OK" : "NA";
-
-            // Validate positive duration
-            if (reductionFactor.Duration <= 0)
-            {
-                durationValidationMessage = "Arrival must be after departure";
-            }
-            if (reductionFactor.Duration > 72)
-            {
-                durationValidationMessage = "Voyage duration exceeds 72 hours. Short voyage reduction factor not applicable.";
-            }
-        }
-        catch (Exception ex)
-        {
-            durationValidationMessage = $"Error calculating duration: {ex.Message}";
-        }
-    }
-    private void ShowDurationSuggestions()
-    {
-        durationSuggestion = "• Voyage duration is calculated from departure to arrival\n" +
-                           "• Short voyages must be ≤72 hours\n" +
-                           "• Arrival must be after departure time";
-    }
-    private void HideDurationSuggestions()
-    {
-        durationSuggestion = "";
-    }
-    private void ShowWeatherSuggestions()
-    {
-        weatherSuggestion = "• Forecast must be before departure time\n" +
-                          "• Valid forecast window: 1-6 hours before ETD\n" +
-                          "• Enter both date and time for accurate calculation";
-    }
-
-    private void HideWeatherSuggestions()
-    {
-        weatherSuggestion = "";
-    }
-    // Method to calculate weather forecast
-    private void CalculateWeatherForecast()
-    {
-        weatherValidationMessage = "";
-
-        // Validate required fields
-        if (reductionFactor.WeatherForecastDate == default ||
-            reductionFactor.WeatherForecasetTime == default)
-        {
-            weatherValidationMessage = "Please fill both forecast date and time";
-            return;
-        }
-
-        try
-        {
-            var departureDateTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD);
-            var forecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime);
-
-            // Calculate forecast hours before ETD
-            var timeSpan = departureDateTime - forecastDateTime;
-            reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32(timeSpan.TotalHours);
-
-            // Set status
-            reductionFactor.WeatherForecastBeforeETDOK = (reductionFactor.WeatherForecastBeforeETD > 0 &&
-                                                         reductionFactor.WeatherForecastBeforeETD <= 6) ? "OK" : "NA";
-
-            // Validate positive forecast time
-            if (reductionFactor.WeatherForecastBeforeETD <= 0)
-            {
-                weatherValidationMessage = "Forecast must be before departure time";
-            }
-            if (reductionFactor.WeatherForecastBeforeETD > 6)
-            {
-                weatherValidationMessage = "Weather forecast must be within 6 hours of departure";
-            }
-        }
-        catch (Exception ex)
-        {
-            weatherValidationMessage = $"Error calculating forecast: {ex.Message}";
-        }
-    }
-    private bool ValidateReductionFactor()
-    {
-        List<string> validationErrors = new List<string>();
-
-        // Check required vessel info
-        // if (string.IsNullOrWhiteSpace(reductionFactor.VesselName))
-        //     validationErrors.Add("Vessel Name is required");
-
-        // if (string.IsNullOrWhiteSpace(reductionFactor.IMONo))
-        //     validationErrors.Add("Vessel IMO Number is required");
-
-        // if (reductionFactor.Breadth <= 0)
-        //     validationErrors.Add("Vessel Breadth must be greater than 0");
-
-        // Check port information
-        if (string.IsNullOrWhiteSpace(reductionFactor.PortOfDeparture))
-            validationErrors.Add("Port of Departure is required");
-
-        if (string.IsNullOrWhiteSpace(reductionFactor.PortOfArrival))
-            validationErrors.Add("Port of Arrival is required");
-
-        // Check dates and times
-        DateTime departureDateTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD);
-        DateTime arrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA);
-
-        if (departureDateTime >= arrivalDateTime)
-            validationErrors.Add("Arrival date/time must be after departure date/time");
-
-        // Validate weather forecast
-        DateTime forecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime);
-
-        if (forecastDateTime >= departureDateTime)
-            validationErrors.Add("Weather forecast date/time must be before departure date/time");
-
-        // Calculate time difference between forecast and departure
-        TimeSpan forecastDifference = departureDateTime - forecastDateTime;
-        if (forecastDifference.TotalHours > 6)
-            validationErrors.Add("Weather forecast must be within 6 hours of departure");
-
-        if (forecastDifference.TotalHours <= 0)
-            validationErrors.Add("Weather forecast must be before departure time");
-
-        // Validate wave height parameters
-        if (reductionFactor.WaveHeightHswell <= 0)
-            validationErrors.Add("Wave Height Hswell must be greater than 0");
-
-        if (reductionFactor.WaveHeightHwind <= 0)
-            validationErrors.Add("Wave Height Hwind must be greater than 0");
-
-        // Check voyage duration constraints
-        TimeSpan voyageDuration = arrivalDateTime - departureDateTime;
-        if (voyageDuration.TotalHours <= 0 || voyageDuration.TotalHours > 72)
-            validationErrors.Add("Voyage duration must be between 0 and 72 hours");
-
-        // If there are any validation errors, display them and return false
-        if (validationErrors.Count > 0)
-        {
-            errorMessage = $"Please correct the following errors:\n{string.Join("\n", validationErrors)}";
-            return false;
-        }
-        if (reductionFactor.DurationOk == "NA")
-        {
-            errorMessage = "Voyage duration exceeds 72 hours. Short voyage reduction factor not applicable.";
-            return false;
-        }
-        return true;
-    }
-    private async Task SearchReductionDepartureLocation()
-    {
-        if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
-        {
-            await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
-        }
-    }
-
-    private async Task SearchReductionArrivalLocation()
-    {
-        if (!string.IsNullOrWhiteSpace(reductionArrivalLocationQuery))
-        {
-            await JS.InvokeVoidAsync("searchLocation", reductionArrivalLocationQuery, false);
-        }
-    }
-
-    private async Task HandleReductionDepartureEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            this.reductionFactor.PortOfDeparture = this.reductionDepartureLocationQuery;
-            await SearchReductionDepartureLocation();
-        }
-    }
-
-    private async Task HandleReductionArrivalEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            this.reductionFactor.PortOfArrival = this.reductionArrivalLocationQuery;
-            await SearchReductionArrivalLocation();
-        }
-    }
-
-    // separate
-    private async Task SearchDepartureLocation()
-    {
-        if (!string.IsNullOrWhiteSpace(departureLocationQuery))
-        {
-            await JS.InvokeVoidAsync("searchLocation", departureLocationQuery, true);
-        }
-    }
-
-    private async Task SearchArrivalLocation()
-    {
-        if (!string.IsNullOrWhiteSpace(arrivalLocationQuery))
-        {
-            await JS.InvokeVoidAsync("searchLocation", arrivalLocationQuery, false);
-        }
-    }
-
-    private async Task HandleDepartureEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-
-            await SearchDepartureLocation();
-        }
-    }
-
-    private async Task HandleArrivalEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            await SearchArrivalLocation();
-        }
-    }
-
-    [JSInvokable]
-
-    public void CaptureCoordinates(double latitude, double longitude)
-    {
-        if (routeModel.DepartureWaypoints.Count > 0)
-        {
-            var lastWaypoint = routeModel.DepartureWaypoints.Last();
-            lastWaypoint.Latitude = latitude.ToString();
-            lastWaypoint.Longitude = longitude.ToString();
-            StateHasChanged();
-        }
-    }
-    private RouteModel routeModel = new RouteModel();
-    private string departureSearchTerm = string.Empty;
-    private string arrivalSearchTerm = string.Empty;
-    private List<PortModel> departureSearchResults = new List<PortModel>();
-    private List<PortModel> arrivalSearchResults = new List<PortModel>();
-
-    // private async Task CalculateReductionFactor()
-    // {
-    //     try
-    //     {
-    //         isLoading = true;
-    //         errorMessage = string.Empty;
-    //         // if (!ValidateReductionFactor())
-    //         // {
-    //         //     isLoading = false;
-    //         //     return;
-    //         // }
-    //         // Perform the actual calculation based on the API logic
-    //         DateTime dateOfArrivalDateTime = reductionFactor.DateOfArrival.ToDateTime(TimeOnly.MinValue);
-    //         DateTime dateOfDepartureDateTime = reductionFactor.DateOfDeparture.ToDateTime(TimeOnly.MinValue);
-
-    //         // Calculate duration
-    //         reductionFactor.Duration = Convert.ToInt32((dateOfArrivalDateTime - dateOfDepartureDateTime).TotalHours) +
-    //                                   Convert.ToInt32((reductionFactor.ETA - reductionFactor.ETD).TotalHours);
-
-    //         // Check if duration is valid (between 0 and 72 hours)
-    //         reductionFactor.DurationOk = reductionFactor.Duration > 0 && reductionFactor.Duration <= 72 ? "OK" : "NA";
-
-    //         // Calculate weather forecast timing
-    //         DateTime weatherForecastDateTime = reductionFactor.WeatherForecastDate.ToDateTime(TimeOnly.MinValue);
-    //         reductionFactor.WeatherForecastBeforeETD = Convert.ToInt32((dateOfDepartureDateTime - weatherForecastDateTime).TotalHours) +
-    //                                                   Convert.ToInt32((reductionFactor.ETD.Hour - reductionFactor.WeatherForecasetTime.Hour));
-
-    //         // Check if weather forecast is within valid timeframe (0-6 hours before departure)
-    //         reductionFactor.WeatherForecastBeforeETDOK = reductionFactor.WeatherForecastBeforeETD > 0 &&
-    //                                                     reductionFactor.WeatherForecastBeforeETD <= 6 ? "OK" : "NA";
-
-    //         // Calculate maximum wave height
-    //         if (reductionFactor.WaveHeightHswell > 0 && reductionFactor.WaveHeightHwind > 0)
-    //         {
-    //             var value = (reductionFactor.WaveHeightHswell * reductionFactor.WaveHeightHswell) +
-    //                         (reductionFactor.WaveHeightHwind * reductionFactor.WaveHeightHwind);
-
-    //             double result = Math.Sqrt(Convert.ToDouble(value));
-    //             result = Math.Round(result, 2);
-    //             reductionFactor.WaveHsmax = result.ToString();
-    //         }
-    //         else
-    //         {
-    //             reductionFactor.WaveHsmax = "NA";
-    //         }
-
-    //         // Calculate short voyage reduction factor
-    //         if (reductionFactor.DurationOk == "OK" && reductionFactor.WeatherForecastBeforeETDOK == "OK" && reductionFactor.Breadth > 0)
-    //         {
-    //             double waveHeight = double.TryParse(reductionFactor.WaveHsmax, out double parsed) ? parsed : 0;
-    //             double result = Math.Max(Math.Min(waveHeight / (2 * Math.Sqrt(Convert.ToDouble(reductionFactor.Breadth))) + 0.4, 1), 0.6);
-    //             result = Math.Round(result, 2);
-    //             reductionFactor.ShortVoyageReductionFactor = Convert.ToDecimal(result);
-    //         }
-    //         else
-    //         {
-    //             reductionFactor.ShortVoyageReductionFactor = 1;
-    //         }
-
-    //         // Fixed values for the graph
-    //         reductionFactor.Xlist = new List<double> { 0.00, 2.82, 8.48, 12.00 };
-    //         reductionFactor.Ylist = new List<double> { 0.6, 0.6, 1.0, 1.0 };
-    //         reductionFactor.XValues = reductionFactor.Xlist.Select(x => (decimal)x).ToList();
-    //         reductionFactor.YValues = reductionFactor.Ylist.Select(x => (decimal)x).ToList();
-
-    //         // Set the point to highlight in the chart
-    //         reductionFactor.CommonX = decimal.TryParse(reductionFactor.WaveHsmax, out decimal parsedX) ? parsedX : 0;
-    //         reductionFactor.CommonY = reductionFactor.ShortVoyageReductionFactor;
-
-    //         // Show the results section
-    //         showResults = true;
-
-    //         // Initialize the chart after component renders
-    //         await Task.Delay(100);
-    //         await InitializeChart();
-
-    //         // Show the report with calculated values
-    //         //await ShowReport();
-    //         await RearranegeReport();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         errorMessage = $"Error calculating reduction factor: {ex.Message}";
-    //     }
-    //     finally
-    //     {
-    //         isLoading = false;
-    //     }
-    // }
-
-    private async Task CalculateReductionFactor()
-    {
-        try
-        {
-            isLoading = true;
-            errorMessage = string.Empty;
-            isLoading = true;
-            if (!ValidateReductionFactor())
-            {
-                isLoading = false;
-                return;
-            }
-
-            // Call the API
-            var response = await Http.PostAsJsonAsync("api/searoute/short_voyage_reduction_factor", reductionFactor);
-
-
-            if (response.IsSuccessStatusCode)
-            {
-                showResults = true;
-                StateHasChanged();
-                var result = await response.Content.ReadFromJsonAsync<ReductionFactor>();
-
-                if (result != null)
-                {
-                    reductionFactor = result;
-
-                    await Task.Delay(300);
-                    StateHasChanged();
-                    await InitializeChart();
-
-                }
-            }
-            else
-            {
-                errorMessage = $"Error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
-                Logger.LogError(errorMessage);
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Exception: {ex.Message}";
-            Logger.LogError(ex, "Error calculating reduction factor");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-    private async Task InitializeChart()
-    {
-
-        try
-        {
-
-            var chartData = new
-            {
-                commonX = reductionFactor.CommonX.ToString(),
-                commonY = reductionFactor.CommonY.ToString()
-            };
-
-            // Serialize to JSON
-            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartData);
-            Console.WriteLine($"Sending chart data: {jsonConfig}");
-
-            // Call JavaScript function
-            await JS.InvokeVoidAsync("drawChart", "reductionChart1", jsonConfig);
-
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error initializing report chart: {ex.Message}";
-        }
-    }
-
-    private async Task InitializeChartForReport()
-    {
-        try
-        {
-
-            var chartData = new
-            {
-                commonX = reductionFactor.CommonX.ToString(),
-                commonY = reductionFactor.CommonY.ToString()
-            };
-
-            // Serialize to JSON
-            var jsonConfig = System.Text.Json.JsonSerializer.Serialize(chartData);
-            Console.WriteLine($"Sending chart data: {jsonConfig}");
-
-            // Call JavaScript function
-            await JS.InvokeVoidAsync("drawChart2", "reductionChart2", jsonConfig);
-
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error initializing report chart: {ex.Message}";
-        }
-    }
-
-    private async Task ShowReport()
-    {
-
-        showReport = true;
-        await Task.Delay(100);
-        await InitializeChartForReport();
-        await Task.Delay(100);
-        await CaptureMap();
-    }
-
-    private async Task ShowReportForReductionFactor()
-    {
-
-        showReportForReductionFactor = true;
-        await Task.Delay(100);
-        await CaptureMap();
-    }
-
-    private async Task RearranegeReport()
-    {
-        await Task.Delay(100);
-        await InitializeChartForReport();
-        await Task.Delay(100);
-        await CaptureMap();
-    }
-
-    private void CloseReport()
-    {
-        showReport = false;
-    }
-    private void CloseReportForReductionFactor()
-    {
-        showReportForReductionFactor = false;
-    }
-
-    private void CloseResults()
-    {
-        showResults = false;
-    }
-
-
-
-    private async Task DownloadReport()
-    {
-        // In a real app, this would trigger PDF generation and download
-        await JS.InvokeVoidAsync("alert", "Download report functionality would be implemented here");
-    }
-
-    private async Task PrintReport()
-    {
-        await JS.InvokeVoidAsync("window.print");
-    }
-
-    private async Task AddEditVesselInfo()
-    {
-        AddEditVessalReport = true;
-    }
-
-    private async Task SaveRoute()
-    {
-        isRouteSaved = true; // Show the message
-        StateHasChanged();   // Update the UI
-
-        await Task.Delay(3000); // Wait for 3 seconds
-
-        isRouteSaved = false; // Hide the message
-        StateHasChanged();
-    }
-    private void SearchDeparturePorts()
-    {
-        departureSearchResults = SearchPorts(departureSearchTerm);
-    }
-
-    private void SearchArrivalPorts()
-    {
-        arrivalSearchResults = SearchPorts(arrivalSearchTerm);
-    }
-
-    private void SelectDeparturePort(PortModel port)
-    {
-        var portSelection = new PortSelectionModel { Port = port };
-        routeModel.DeparturePorts.Add(portSelection);
-        departureSearchTerm = string.Empty;
-        departureSearchResults.Clear();
-    }
-
-    private void SelectArrivalPort(PortModel port)
-    {
-        var portSelection = new PortSelectionModel { Port = port };
-        routeModel.ArrivalPorts.Add(portSelection);
-        arrivalSearchTerm = string.Empty;
-        arrivalSearchResults.Clear();
-    }
-
-    private async Task HandleDepartureEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
-    {
-        if (e.Key == "Enter")
-        {
-            await SearchDeparturePortsForExisting(portSelection);
-        }
-    }
-
-    private async Task HandleArrivalEnterKey(KeyboardEventArgs e, PortSelectionModel portSelection)
-    {
-        if (e.Key == "Enter")
-        {
-            await SearchArrivalPortsForExisting(portSelection);
-        }
-    }
-
-    private async Task SearchDeparturePortsForExisting(PortSelectionModel portSelection)
-    {
-        if (portSelection?.SearchTerm == null || _ports == null)
-        {
-            return;
-        }
-
-        portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
-
-        if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
-        {
-            await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
-        }
-    }
-
-    private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
-    {
-        if (portSelection?.SearchTerm == null || _ports == null)
-        {
-            return;
-        }
-
-        portSelection.SearchResults = SearchPorts(portSelection.SearchTerm);
-
-        if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
-        {
-            await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
-        }
-    }
-
-
-    private void UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
-    {
-        portSelection.Port = newPort;
-        portSelection.SearchTerm = newPort.Name;
-        portSelection.SearchResults.Clear();
-    }
-
-    private void UpdateArrivalPort(PortSelectionModel portSelection, PortModel newPort)
-    {
-        portSelection.Port = newPort;
-        portSelection.SearchTerm = newPort.Name;
-        portSelection.SearchResults.Clear();
-    }
-
-    private void AddDeparturePort()
-    {
-        routeModel.DeparturePorts.Add(new PortSelectionModel());
-    }
-
-    private void AddArrivalPort()
-    {
-        routeModel.ArrivalPorts.Add(new PortSelectionModel());
-    }
-
-    private void RemoveDeparturePort(PortSelectionModel port)
-    {
-        routeModel.DeparturePorts.Remove(port);
-    }
-
-    private void RemoveArrivalPort(PortSelectionModel port)
-    {
-        routeModel.ArrivalPorts.Remove(port);
-    }
-
-    private async Task AddDepartureWaypoint()
-    {
-        routeModel.DepartureWaypoints.Add(new WaypointModel());
-        await EnableWaypointSelection();
-    }
-    private async Task EnableWaypointSelection()
-    {
-        if (JS is not null)
-        {
-            await JS.InvokeVoidAsync("setWaypointSelection", true);
-        }
-    }
-    private async Task AddArrivalWaypoint()
-    {
-        routeModel.ArrivalWaypoints.Add(new WaypointModel());
-        await EnableWaypointSelection();
-    }
-
-    private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
-    {
-        routeModel.DepartureWaypoints.Remove(waypoint);
-        if (JS is not null)
-        {
-            await JS.InvokeVoidAsync("setWaypointSelection", false);
-        }
-    }
-
-    private void RemoveArrivalWaypoint(WaypointModel waypoint)
-    {
-        routeModel.ArrivalWaypoints.Remove(waypoint);
-    }
-
-    private void CalculateRouteReductionFactor()
-    {
-        // For demo purposes, just showing the results
-        showResultsForReductionFactor = true;
-
-        // In a real implementation, you would calculate the reduction factor here
-        routeReductionFactor = 0.82M;
-        routeDistance = 5952;
-    }
-
-
-    public class RouteModel
-    {
-        public string RouteName { get; set; } = string.Empty;
-        public string DepartureLocation { get; set; } = string.Empty;
-        public string ArrivalLocation { get; set; } = string.Empty;
-        public List<PortSelectionModel> DeparturePorts { get; set; } = new List<PortSelectionModel>();
-        public List<PortSelectionModel> ArrivalPorts { get; set; } = new List<PortSelectionModel>();
-        public List<WaypointModel> DepartureWaypoints { get; set; } = new List<WaypointModel>();
-        public List<WaypointModel> ArrivalWaypoints { get; set; } = new List<WaypointModel>();
-    }
-
-    public class PortSelectionModel
-    {
-        public PortModel? Port { get; set; }
-        public string SearchTerm { get; set; } = string.Empty;
-        public List<PortModel> SearchResults { get; set; } = new List<PortModel>();
-    }
-
-    public class PortModel
-    {
-        public int Legacy_Place_Id { get; set; }
-        public string Port_Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string Country_Id { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
-        public string Country_Code { get; set; } = string.Empty;
-        public string Admiralty_Chart { get; set; } = string.Empty;
-        public string Unlocode { get; set; } = string.Empty;
-        public string Principal_Facilities { get; set; } = string.Empty;
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public string Port_Authority { get; set; } = string.Empty;
-        public DateTime Last_Updated { get; set; }
-    }
-
-    public class WaypointModel
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Latitude { get; set; } = string.Empty;
-        public string Longitude { get; set; } = string.Empty;
-    }
-
-    protected async Task GetSampleports()
-    {
-        _ports = new List<PortModel>
-{
-new PortModel
-{
-Legacy_Place_Id = 5000,
-Port_Id = "POR-03000",
-Name = "Marseille",
-Country = "France",
-Country_Code = "FRA",
-Unlocode = "FRMRS",
-Latitude = 43.2965,
-Longitude = 5.3698
-},
-new PortModel
-{
-Legacy_Place_Id = 5001,
-Port_Id = "POR-03001",
-Name = "Singapore",
-Country = "Singapore",
-Country_Code = "SGP",
-Unlocode = "SGSIN",
-Latitude = 1.3521,
-Longitude = 103.8198
-},
-// Add more sample ports as needed
-};
-
-    }
-
-
-
-    public List<PortModel> SearchPorts(string searchTerm)
-    {
-
-        if (string.IsNullOrWhiteSpace(searchTerm) || _ports == null)
-        {
-            departureSearchResults.Clear();
-            return [];
-        }
-        if (string.IsNullOrWhiteSpace(searchTerm))
-            return new List<PortModel>();
-
-        return _ports.Where(p =>
-        p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-        p.Country.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-        p.Unlocode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-        ).ToList();
-    }
-
-    public class VoyageModel
-    {
-        public string DeparturePort { get; set; } = "";
-        public string ArrivalPort { get; set; } = "";
-        public int Distance { get; set; }
-        public string SeaState { get; set; } = "";
-        public int WindSpeed { get; set; }
-        public int WaveHeight { get; set; }
-    }
 }
