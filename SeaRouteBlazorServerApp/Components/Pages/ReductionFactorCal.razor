@@ -26,42 +26,67 @@
 
 
     <div class="cls_route_div">
-        <div class="cls_route_div_rep">
 
-            <div class="content_div">
-                <label class="content_div_label1">Route Name</label>
-                <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
-            </div>
-        </div>
-        <div class="cls_route_div_rep">
+    <!-- RED RADIO BUTTON SECTION -->
+    <div style="margin-bottom: 16px;">
+        <span style="font-weight: 400px;">* Is this calculation intended for one of the following ABS notations?</span><br />
 
-            <div class="content_div">
-                <label class="content_div_label1">Season Type</label>
-                <div class="cls_block">
-                    <input type="text"
-                           class="content_div_input"
-                           placeholder="Select Season Type"
-                           @bind="routeModel.SeasonalType"
-                           @onfocus="OnFocus"
-                           @onblur="OnBlur" />
-                    @if (showDropdown)
-                    {
-                        <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
-                            <div class="cls_dropdown_div">
-                                @foreach (var option in seasonalOptions)
-                                {
-                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
-                                        @option
-                                    </label>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
+        <label style="color: red; margin-right: 10px;">
+            <input type="radio" name="absNotation" value="CLP-V"  style="accent-color: red;" />
+            ABS CLP-V
+        </label>
 
+        <label style="color: red; margin-right: 10px;">
+            <input type="radio" name="absNotation" value="CLP-V(PARR)"  style="accent-color: red;" />
+            ABS CLP-V(PARR)
+        </label>
+
+        <label style="color: red;">
+            <input type="radio" name="absNotation" value="none"  style="accent-color: red;" />
+            none
+        </label>
+    </div>
+
+    <!-- ROUTE NAME INPUT -->
+    <div class="cls_route_div_rep">
+        <div class="content_div">
+            <label class="content_div_label1">Route Name</label>
+            <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
         </div>
     </div>
+
+    <!-- SEASON TYPE INPUT WITH RED NOTE -->
+    <div class="cls_route_div_rep">
+        <div class="content_div">
+            <label class="content_div_label1">Season Type</label>
+            <div style="color: red; font-size: 13px; margin-bottom: 5px;">
+                Note: Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+            </div>
+            <div class="cls_block">
+                <input type="text"
+                       class="content_div_input"
+                       placeholder="Select Season Type"
+                       @bind="routeModel.SeasonalType"
+                       @onfocus="OnFocus"
+                       @onblur="OnBlur" />
+                @if (showDropdown)
+                {
+                    <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
+                        <div class="cls_dropdown_div">
+                            @foreach (var option in seasonalOptions)
+                            {
+                                <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
+                                    @option
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- Departure Section -->
     <div class="cls_route_div">
