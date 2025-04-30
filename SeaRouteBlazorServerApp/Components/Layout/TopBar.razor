@@ -1,26 +1,39 @@
-﻿@inherits ComponentBase
-
-<div class="top-row">
-    <div class="app-title">
-        <img src="Images/group-223-2@1x.png" alt="ABS Logo" class="logo" />
-        <span class="title">RF Lashing Tool</span>
-    </div>
-    <div class="top-row-actions">
-        <div class="top-icons">
-            <button class="icon-btn">
-                <i class="icon">📊</i>
-            </button>
-            <button class="icon-btn">
-                <i class="icon">ℹ️</i>
-            </button>
-            <button class="icon-btn">
-                <i class="icon">👤</i>
-            </button>
-            <button class="btn-login">Login</button>
+﻿<nav class="w-100 p-2" style="background-color: #012B4F; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;">
+    <div class="d-flex justify-content-between align-items-center w-100">
+        <div class="d-flex justify-content-center align-items-center gap-4">
+            <img src="Assets/Menu.svg" style="height:20px;" />
+            <img src="Assets/ABS_RF Lashing Tool logo.svg" style="height:20px;" />
+        </div>
+        <div class="d-flex justify-content-center align-items-center gap-4">
+            <div class="d-flex justify-content-center align-items-center gap-4">
+                <img src="Assets/settings_icon.svg" style="height:20px" />
+                <img src="Assets/help.svg" style="height: 20px;" />
+            </div>
+            <div class="d-flex justify-content-center align-items-center gap-2">
+                <img src="Assets/user.svg" style="height:20px;" />
+                <p style="font-size:17px; color:white;" class="m-0">Login</p>
+            </div>
         </div>
     </div>
-</div>
+</nav>
 
-@code {
-    // Future functionality can be added here
-}
+<!-- Add padding to body or main content container -->
+<style>
+    body {
+        padding-top: 60px; /* Adjust based on your navbar height */
+    }
+
+    #map {
+        position: relative;
+        z-index: 1; /* Ensure map has lower z-index than navbar */
+    }
+
+    .map-container {
+        position: relative;
+    }
+
+    .overlay {
+        position: absolute;
+        z-index: 10; /* Higher than map but lower than navbar */
+    }
+</style>
