@@ -27,65 +27,65 @@
 
     <div class="cls_route_div">
 
-    <!-- RED RADIO BUTTON SECTION -->
-    <div style="margin-bottom: 16px;">
-        <span style="font-weight: 400px;">* Is this calculation intended for one of the following ABS notations?</span><br />
+        <!-- RED RADIO BUTTON SECTION -->
+        <div style="margin-bottom: 16px;">
+            <span style="font-weight: 400px;">* Is this calculation intended for one of the following ABS notations?</span><br />
 
-        <label style="color: red; margin-right: 10px;">
-            <input type="radio" name="absNotation" value="CLP-V"  style="accent-color: red;" />
-            ABS CLP-V
-        </label>
+            <label style="color: red; margin-right: 10px;">
+                <input type="radio" name="absNotation" value="CLP-V"  style="accent-color: red;" />
+                ABS CLP-V
+            </label>
 
-        <label style="color: red; margin-right: 10px;">
-            <input type="radio" name="absNotation" value="CLP-V(PARR)"  style="accent-color: red;" />
-            ABS CLP-V(PARR)
-        </label>
+            <label style="color: red; margin-right: 10px;">
+                <input type="radio" name="absNotation" value="CLP-V(PARR)"  style="accent-color: red;" />
+                ABS CLP-V(PARR)
+            </label>
 
-        <label style="color: red;">
-            <input type="radio" name="absNotation" value="none"  style="accent-color: red;" />
-            none
-        </label>
-    </div>
-
-    <!-- ROUTE NAME INPUT -->
-    <div class="cls_route_div_rep">
-        <div class="content_div">
-            <label class="content_div_label1">Route Name</label>
-            <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
+            <label style="color: red;">
+                <input type="radio" name="absNotation" value="none"  style="accent-color: red;" />
+                none
+            </label>
         </div>
-    </div>
 
-    <!-- SEASON TYPE INPUT WITH RED NOTE -->
-    <div class="cls_route_div_rep">
-        <div class="content_div">
-            <label class="content_div_label1">Season Type</label>
-            <div style="color: red; font-size: 13px; margin-bottom: 5px;">
-                Note: Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+        <!-- ROUTE NAME INPUT -->
+        <div class="cls_route_div_rep">
+            <div class="content_div">
+                <label class="content_div_label1">Route Name</label>
+                <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
             </div>
-            <div class="cls_block">
-                <input type="text"
-                       class="content_div_input"
-                       placeholder="Select Season Type"
-                       @bind="routeModel.SeasonalType"
-                       @onfocus="OnFocus"
-                       @onblur="OnBlur" />
-                @if (showDropdown)
-                {
-                    <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
-                        <div class="cls_dropdown_div">
-                            @foreach (var option in seasonalOptions)
-                            {
-                                <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
-                                    @option
-                                </label>
-                            }
+        </div>
+
+        <!-- SEASON TYPE INPUT WITH RED NOTE -->
+        <div class="cls_route_div_rep">
+            <div class="content_div">
+                <label class="content_div_label1">Season Type</label>
+                <div style="color: red; font-size: 13px; margin-bottom: 5px;">
+                    Note: Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+                </div>
+                <div class="cls_block">
+                    <input type="text"
+                    class="content_div_input"
+                    placeholder="Select Season Type"
+                    @bind="routeModel.SeasonalType"
+                    @onfocus="OnFocus"
+                    @onblur="OnBlur" />
+                    @if (showDropdown)
+                    {
+                        <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
+                            <div class="cls_dropdown_div">
+                                @foreach (var option in seasonalOptions)
+                                {
+                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
+                                        @option
+                                    </label>
+                                }
+                            </div>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 
     <!-- Departure Section -->
@@ -104,9 +104,9 @@
             <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
                     <input type="text"
-                           value="@departureLocationQuery"
-                           @oninput="OnSearchInputChanged"
-                           placeholder="Enter departure location" />
+                    value="@departureLocationQuery"
+                    @oninput="OnSearchInputChanged"
+                    placeholder="Enter departure location" />
                     <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
                 </div>
                 <!-- Search Results Dropdown for Main Departure -->
@@ -162,10 +162,10 @@
                     <!-- Port Search Section -->
                     <div class="port-search-container">
                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                               @bind="port.SearchTerm"
-                               @bind:event="oninput"
-                               @bind:after="() => HandleDepartureInputChanged(port)"
-                               placeholder="Search ports..." />
+                        @bind="port.SearchTerm"
+                        @bind:event="oninput"
+                        @bind:after="() => HandleDepartureInputChanged(port)"
+                        placeholder="Search ports..." />
 
                         @if (port.SearchResults.Any())
                         {
@@ -228,7 +228,7 @@
 
 
 
- 
+
     <!-- Arrival Section -->
     <div class="cls_route_div">
         <div class="cls_route_div_rep">
@@ -245,9 +245,9 @@
             <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
 
                 <input type="text"
-                       value="@arrivalLocationQuery"
-                       @oninput="OnArrivalSearchInputChanged"
-                       placeholder="Enter arrival location" />
+                value="@arrivalLocationQuery"
+                @oninput="OnArrivalSearchInputChanged"
+                placeholder="Enter arrival location" />
                 <img src="Images/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
             </div>
             <!-- Search Results Dropdown for Main Arrival -->
@@ -307,10 +307,10 @@
                                placeholder="Search ports..." /> *@
 
                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                               @bind="port.SearchTerm"
-                               @bind:event="oninput"
-                               @bind:after="() => HandleDepartureInputChanged(port)"
-                               placeholder="Search ports..." />
+                        @bind="port.SearchTerm"
+                        @bind:event="oninput"
+                        @bind:after="() => HandleDepartureInputChanged(port)"
+                        placeholder="Search ports..." />
                         @if (port.SearchResults.Any())
                         {
                             <div class="search-results">
@@ -370,18 +370,18 @@
             </div>
         }
     }
-    
+
     <div class="cls_flex">
         <div class="cls_route_div_rep">
 
             <div class="content_div">
                 <label class="content_div_label1">Exceedance Probability</label>
                 <input type="number"
-                       step="any"
-                       class="content_div_input"
-                       placeholder="Exceedance Probability"
-                       @bind="routeModel.ExceedanceProbability"
-                       @oninput="ValidateExceedanceProbability" />
+                step="any"
+                class="content_div_input"
+                placeholder="Exceedance Probability"
+                @bind="routeModel.ExceedanceProbability"
+                @oninput="ValidateExceedanceProbability" />
                 @if (!isValidExceedanceProbability)
                 {
                     <div style="color: red; font-size: 0.8rem;">Value must be > 0 and &lt; 1</div>
@@ -394,11 +394,11 @@
                 <label class="content_div_label1">Wave type</label>
                 <div class="cls_block">
                     <input type="text"
-                           class="content_div_input"
-                           placeholder="Select Wave type"
-                           @bind="routeModel.WayType"
-                           @onfocus="OnFocuswaypoint"
-                           @onblur="OnBlurwaypoint" />
+                    class="content_div_input"
+                    placeholder="Select Wave type"
+                    @bind="routeModel.WayType"
+                    @onfocus="OnFocuswaypoint"
+                    @onblur="OnBlurwaypoint" />
                     @if (showDropdownforwaypoint)
                     {
                         <div class="cls_dropdown_outline_waypont cls_block" @onclick:stopPropagation>
@@ -415,8 +415,8 @@
                 </div>
             </div>
         </div>
-        </div>
-        
+    </div>
+
 
 
     <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
@@ -450,90 +450,90 @@
                     <div class="content_div">
                         <div class="title-text">Marseille - Shanghai</div>
                         <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
+                        <div style="color: red; font-size: 13px; margin-bottom: 5px;">
+                            Note:
+                            <br/>
+                            . Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+                            <br/>
+                            . Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
 
 
-        @*        <div class="route_content">
-                                    <div class="route-header">
-                                        <img src="Images/group-92@1x.png" alt="Route" class="icon" />
-                                        <span>Route</span>
-                                    </div>
-
-                                    <!-- Route Title as a separate section -->
-                                    <div class="route-title">
-                                        <div class="title-text">Marseille - Shanghai</div>
-                                        <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
-                                    </div>
-                                </div> *@
-
         <div class="route_content">
 
-            <!-- Overall Stats -->
-            <div class="route-stats">
-                <div class="stat-row">
-                    <span class="stat-label">Reduction Factor:</span>
-                    <span class="stat-value">0.8563</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Route Distance:</span>
-                    <span class="stat-value">1200 nm</span>
-                </div>
-            </div>
-
-            <!-- Segment 1 -->
-
-            <div class="route-segment">
-                <div class="segment-header">
-                    @* <img src="Images/group-92@1x.png" alt="Port" class="icon" /> *@
-                    <span>Port 1 to Port 2:</span>
-                </div>
-                <div class="segment-stats">
-                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                        <img src="Images/group-92@1x.png" alt="Port" class="icon" />
-                        <div class="stat-row">
-                            <span class="stat-label">Reduction Factor:</span>
-                            <span class="stat-value">0.82</span>
-                        </div>
+            @foreach (var season in seasonalOptions)
+            {
+                <!-- Overall Stats -->
+                <div class="route-stats">
+                    <h6>@season</h6>
+                    <div class="stat-row">
+                        <span class="stat-label">Reduction Factor:</span>
+                        <span class="stat-value">0.8563</span>
                     </div>
-
-                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                        <img src="Images/group-3728-11@1x.png" alt="Port" class="icon" />
-                        <div class="stat-row">
-                            <span class="stat-label">Route Distance:</span>
-                            <span class="stat-value">200 nm</span>
-                        </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Route Distance:</span>
+                        <span class="stat-value">1200 nm</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Segment 2 -->
+                <!-- Segment 1 -->
 
-            <div class="route-segment">
-                <div class="segment-header">
-                    <span>Port 2 to Port 3:</span>
-                </div>
-                <div class="segment-stats">
-                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                        <img src="Images/group-92@1x.png" alt="Port" class="icon" />
-                        <div class="stat-row">
-                            <span class="stat-label">Reduction Factor:</span>
-                            <span class="stat-value">0.81</span>
+                <div class="route-segment">
+                    <div class="segment-header">
+                        <span>Port 1 to Port 2:</span>
+                    </div>
+                    <div class="segment-stats">
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                            <img src="Images/group-92@1x.png" alt="Port" class="icon" />
+                            <div class="stat-row">
+                                <span class="stat-label">Reduction Factor:</span>
+                                <span class="stat-value">0.82</span>
+                            </div>
+                        </div>
+
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                            <img src="Images/group-3728-11@1x.png" alt="Port" class="icon" />
+                            <div class="stat-row">
+                                <span class="stat-label">Route Distance:</span>
+                                <span class="stat-value">200 nm</span>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                        <img src="Images/group-3728-11@1x.png" alt="Port" class="icon" />
-                        <div class="stat-row">
-                            <span class="stat-label">Route Distance:</span>
-                            <span class="stat-value">1000 nm</span>
-                        </div>
-                    </div>
-
                 </div>
-            </div>
+
+                <!-- Segment 2 -->
+
+                <div class="route-segment">
+                    <div class="segment-header">
+                        <span>Port 2 to Port 3:</span>
+                    </div>
+                    <div class="segment-stats">
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                            <img src="Images/group-92@1x.png" alt="Port" class="icon" />
+                            <div class="stat-row">
+                                <span class="stat-label">Reduction Factor:</span>
+                                <span class="stat-value">0.81</span>
+                            </div>
+                        </div>
+
+                        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+                            <img src="Images/group-3728-11@1x.png" alt="Port" class="icon" />
+                            <div class="stat-row">
+                                <span class="stat-label">Route Distance:</span>
+                                <span class="stat-value">1000 nm</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            
+            }
+           
 
 
 
