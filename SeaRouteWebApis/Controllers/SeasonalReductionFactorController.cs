@@ -12,12 +12,12 @@ namespace SeaRouteWebApis.Controllers
 {
     [Route("api/v1/reductionFactors")]
     [ApiController]
-    public class SeasonalReductionFactorController : SeaRouteBaseController
+    public class SeasonalReductionFactorController : SeaRouteBaseController<RouteModel>
     {
-        private readonly IRepository _repository;
+        private readonly IRepository<RouteModel> _repository;
         private readonly ILogger _logger;
 
-        public SeasonalReductionFactorController(ILoggerFactory loggerFactory, IRepository repository)
+        public SeasonalReductionFactorController(ILoggerFactory loggerFactory, IRepository<RouteModel> repository)
             : base(loggerFactory, repository)
         {
             _repository = repository;
@@ -75,22 +75,22 @@ namespace SeaRouteWebApis.Controllers
             // In a real implementation, you would calculate these based on your business logic
 
             // Example leg 1
-            result.RouteLegs.Add(new RouteSegmentInfo
-            {
-                DeparturePort = "Port 1",
-                ArrivalPort = "Port 2",
-                ReductionFactor = 0.82,
-                Distance = 200
-            });
+            //result.RouteLegs.Add(new RouteSegmentInfo
+            //{
+            //    DeparturePort = "Port 1",
+            //    ArrivalPort = "Port 2",
+            //    ReductionFactor = 0.82,
+            //    Distance = 200
+            //});
 
             // Example leg 2
-            result.RouteLegs.Add(new RouteSegmentInfo
-            {
-                DeparturePort = "Port 2",
-                ArrivalPort = "Port 3",
-                ReductionFactor = 0.81,
-                Distance = 1000
-            });
+            //result.RouteLegs.Add(new RouteSegmentInfo
+            //{
+            //    DeparturePort = "Port 2",
+            //    ArrivalPort = "Port 3",
+            //    ReductionFactor = 0.81,
+            //    Distance = 1000
+            //});
         }
 
         private void ApplySeasonalCorrection(string seasonalType, RouteReductionFactorResult result)
@@ -128,7 +128,7 @@ namespace SeaRouteWebApis.Controllers
             {
                 if (seasonalFactor != 1.0)
                 {
-                    leg.ReductionFactor *= seasonalFactor;
+                    //leg.ReductionFactor *= seasonalFactor;
                 }
             }
 

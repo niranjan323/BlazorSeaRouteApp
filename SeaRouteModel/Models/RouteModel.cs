@@ -15,7 +15,9 @@ namespace SeaRouteModel.Models
         public double? ExceedanceProbability { get; set; }
         public string DepartureLocation { get; set; } = string.Empty;
         public string ArrivalLocation { get; set; } = string.Empty;
-        public List<RouteSegmentInfo> RouteSegments { get; set; } = new List<RouteSegmentInfo>();
+        public string ABSNotation { get; set; } = string.Empty;
+
+         public List<RouteSegmentInfo> RouteSegments { get; set; } = new List<RouteSegmentInfo>();
         public double TotalDistance { get; set; }
         public double TotalDurationHours { get; set; }
         public List<RouteItemModel> DepartureItems { get; set; } = new List<RouteItemModel>();
