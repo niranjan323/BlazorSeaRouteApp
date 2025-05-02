@@ -22,6 +22,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private decimal? routeReductionFactor = 0.82M;
         private RouteModel routeModel = new RouteModel();
         private List<VesselInfo> vesselInfos = new List<VesselInfo>();
+        private List<string> seasonalOptions = new() { "Annual", "Spring", "Summer", "Fall", "Winter" };
         private void ShowForm(int option)
         {
             selectedForm = option;
@@ -30,7 +31,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private bool showReport = false;
         private bool showReportForReductionFactor = false;
         private bool AddEditVessalReport = false;
-
+        private bool isCLPVChecked = false;
+        private bool isCLPVParrChecked = false;
 
 
         protected async override Task OnInitializedAsync()
@@ -41,6 +43,37 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             {
                 AddNewVessel();
             }
+        }
+        private string GetReductionFactorForSeason(string season)
+        {
+            // Placeholder: Replace with real logic or data
+            return season switch
+            {
+                "Spring" => "0.85",
+                "Summer" => "0.80",
+                "Fall" => "0.78",
+                "Winter" => "0.75",
+                _ => "0.82" // Default or "Annual"
+            };
+        }
+
+        private void OnCheckboxChanged(ChangeEventArgs e, string checkboxType)
+        {
+            bool isChecked = (bool)e.Value;
+
+            if (checkboxType == "CLP-V")
+            {
+                isCLPVChecked = isChecked;
+                isCLPVParrChecked = false;
+            }
+            else if (checkboxType == "CLP-V(PARR)")
+            {
+                isCLPVParrChecked = isChecked;
+                isCLPVChecked = false;
+            }
+
+            // Show report only if any one is checked
+            showReportForReductionFactor = isCLPVChecked || isCLPVParrChecked;
         }
         private void AddNewVessel()
         {
@@ -91,7 +124,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         }
         private async Task HandleReductionReportData(RouteModel _routeModel)
         {
-            routeModel = _routeModel;
+            //routeModel = _routeModel;
+            routeModel = new RouteModel();
             StateHasChanged();
         }
         private async Task SaveVesselInfo()

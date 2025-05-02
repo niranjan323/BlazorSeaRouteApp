@@ -1667,3 +1667,17 @@ strong {
 }
 
 /*Dropdown Styles ends*/
+
+.custom-overlay {
+    left: 19% !important;
+    width: 30% !important;
+}
+
+.custom-report-container1 {
+    right: 1% !important;
+    width: 28% !important;
+}
+.custom-report-container {
+    width: 28% !important;
+    right: 31% !important;
+}

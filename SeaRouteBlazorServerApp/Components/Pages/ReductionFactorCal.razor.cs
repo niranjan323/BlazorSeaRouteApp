@@ -23,6 +23,8 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         public EventCallback<(double, double)> OnCoordinatesCaptured { get; set; }
         [Parameter]
         public EventCallback<RouteModel> OnReportDataReady { get; set; }
+        //[Parameter]
+        //public EventCallback<List<RouteLegModel>> OnLegsReady { get; set; }
         private List<string> seasonalOptions = new() { "Annual", "Spring", "Summer", "Fall", "Winter" };
         private List<string> WaytypeOptions = new () { "ABS", "BMT" };
         private bool showDropdown = false;
@@ -132,65 +134,65 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         // niranjan
         public async Task CalculateMultiSegmentRoute()
         {
-            try
-            {
-                // Initialize route calculation on JS side
-                await JS.InvokeVoidAsync("initializeRouteCalculation");
+            //try
+            //{
+            //    // Initialize route calculation on JS side
+            //    //await JS.InvokeVoidAsync("initializeRouteCalculation");
 
-                // Get all route points in order (departure, waypoints, arrival)
-                var routePoints = await JS.InvokeAsync<List<RoutePointModel>>("getRouteData");
+            //    // Get all route points in order (departure, waypoints, arrival)
+            //    var routePoints = await JS.InvokeAsync<List<RoutePointModel>>("getRouteData");
 
-                if (routePoints == null || routePoints.Count < 2)
-                {
-                    return; // Need at least 2 points for a route
-                }
+            //    if (routePoints == null || routePoints.Count < 2)
+            //    {
+            //        return; // Need at least 2 points for a route
+            //    }
 
-                // Process each segment sequentially
-                for (int i = 0; i < routePoints.Count - 1; i++)
-                {
-                    var origin = routePoints[i];
-                    var destination = routePoints[i + 1];
+            //    // Process each segment sequentially
+            //    for (int i = 0; i < routePoints.Count - 1; i++)
+            //    {
+            //        var origin = routePoints[i];
+            //        var destination = routePoints[i + 1];
 
-                    // Create route request for this segment
-                    var segmentRequest = new RouteRequest
-                    {
-                        Origin = new double[] { origin.LatLng[0], origin.LatLng[1] },
-                        Destination = new double[] { destination.LatLng[0], destination.LatLng[1] },
-                        Restrictions = new string[] { routeModel.SeasonalType },
-                        IncludePorts = true,
-                        Units = "km",
-                        OnlyTerminals = true
-                    };
+            //        // Create route request for this segment
+            //        var segmentRequest = new RouteRequest
+            //        {
+            //            Origin = new double[] { origin.LatLng[0], origin.LatLng[1] },
+            //            Destination = new double[] { destination.LatLng[0], destination.LatLng[1] },
+            //            Restrictions = new string[] { routeModel.SeasonalType },
+            //            IncludePorts = true,
+            //            Units = "km",
+            //            OnlyTerminals = true
+            //        };
 
-                    // Call API for this segment
-                    var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", segmentRequest);
+            //        // Call API for this segment
+            //        var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", segmentRequest);
 
-                    if (result.IsSuccessStatusCode)
-                    {
-                        var jsonString = await result.Content.ReadAsStringAsync();
-                        using var jsonDoc = JsonDocument.Parse(jsonString);
-                        var root = jsonDoc.RootElement;
+            //        if (result.IsSuccessStatusCode)
+            //        {
+            //            var jsonString = await result.Content.ReadAsStringAsync();
+            //            using var jsonDoc = JsonDocument.Parse(jsonString);
+            //            var root = jsonDoc.RootElement;
 
-                        // Check if route object exists
-                        if (root.TryGetProperty("route", out var routeElement))
-                        {
-                            // Get the raw JSON for the route
-                            var routeJson = routeElement.GetRawText();
+            //            // Check if route object exists
+            //            if (root.TryGetProperty("route", out var routeElement))
+            //            {
+            //                // Get the raw JSON for the route
+            //                var routeJson = routeElement.GetRawText();
 
-                            // Send to JavaScript to process this segment
-                            await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, routePoints.Count - 1);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
-            }
+            //                // Send to JavaScript to process this segment
+            //               // await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, routePoints.Count - 1);
+            //            }
+            //        }
+            //        else
+            //        {
+            //            Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
+            //        }
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
+            //}
         }
 
         private async Task GoBack()
@@ -317,7 +319,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
 
-                await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
+               // await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
             }
             portSelection.SearchResults.Clear();
             //await CheckAndCalculateRoute();
@@ -357,7 +359,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             routeModel.DeparturePorts.Remove(port);
             if (JS is not null)
             {
-                await JS.InvokeVoidAsync("removePort", port.Port.Name, port.Port.Latitude, port.Port.Longitude);
+               // await JS.InvokeVoidAsync("removePort", port.Port.Name, port.Port.Latitude, port.Port.Longitude);
             }
             //if (JS is not null)
             //{
@@ -390,7 +392,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Call JS visualization after getting API results
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
-                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
+               // await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true);
             }
             portSelection.SearchResults.Clear();
             StateHasChanged();
@@ -462,7 +464,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             arrivalLocationQuery = newPort.Name;
             // Call the JavaScript visualization after API search
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
-                await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
+              //  await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
             portSelection.SearchResults.Clear();
             //await CheckAndCalculateRoute();
             StateHasChanged();
@@ -542,7 +544,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             // Call JS visualization after getting API results
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
-                await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
+               // await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, false);
             }
             portSelection.SearchResults.Clear();
             StateHasChanged();
@@ -662,7 +664,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             {
                 if (double.TryParse(waypoint.Latitude, out double lat) && double.TryParse(waypoint.Longitude, out double lng))
                 {
-                    await JS.InvokeVoidAsync("updateMap", waypoint.Name, lat, lng);
+                   // await JS.InvokeVoidAsync("updateMap", waypoint.Name, lat, lng);
                 }
             }
         }
@@ -679,7 +681,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 await OnReportDataReady.InvokeAsync(routeModel);
             }
             await Task.Delay(100);
-            await CaptureMap();
+            //await CaptureMap();
         }
         private async Task AddEditVesselInfo()
         {
@@ -699,7 +701,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             if (!string.IsNullOrWhiteSpace(reductionDepartureLocationQuery))
             {
-                await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
+               // await JS.InvokeVoidAsync("searchLocation", reductionDepartureLocationQuery, true);
             }
         }
 
@@ -707,7 +709,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             if (!string.IsNullOrWhiteSpace(reductionArrivalLocationQuery))
             {
-                await JS.InvokeVoidAsync("searchLocation", reductionArrivalLocationQuery, false);
+                //await JS.InvokeVoidAsync("searchLocation", reductionArrivalLocationQuery, false);
             }
         }
 
@@ -749,12 +751,12 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private async Task DownloadReport()
         {
             // In a real app, this would trigger PDF generation and download
-            await JS.InvokeVoidAsync("alert", "Download report functionality would be implemented here");
+           // await JS.InvokeVoidAsync("alert", "Download report functionality would be implemented here");
         }
 
         private async Task PrintReport()
         {
-            await JS.InvokeVoidAsync("window.print");
+          //  await JS.InvokeVoidAsync("window.print");
         }
 
         private async Task SaveRoute()
@@ -815,7 +817,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         {
             if (JS is not null)
             {
-                await JS.InvokeVoidAsync("setWaypointSelection", true);
+               // await JS.InvokeVoidAsync("setWaypointSelection", true);
             }
         }
         private async Task AddArrivalWaypoint()
@@ -851,7 +853,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             routeModel.DepartureWaypoints.Remove(waypoint);
             if (JS is not null)
             {
-                await JS.InvokeVoidAsync("setWaypointSelection", false);
+                //await JS.InvokeVoidAsync("setWaypointSelection", false);
             }
         }
 
@@ -869,7 +871,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             }
             if (JS is not null)
             {
-                await JS.InvokeVoidAsync("setWaypointSelection", false);
+              //  await JS.InvokeVoidAsync("setWaypointSelection", false);
             }
             routeModel.ArrivalWaypoints.Remove(waypoint);
         }
@@ -1035,10 +1037,10 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 
                 //// Call the API
                 //var result = await Http.PostAsJsonAsync("api/v1/RouteRequest/RouteRequest", routeRequest);
-                await CalculateMultiSegmentRoute();
+               // await CalculateMultiSegmentRoute();
                 // Process the result
                // await ProcessRouteCalculationResult(result);
-                var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, null);
+                //var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, null);
                 // showResultsForReductionFactor = true;
                
             }

@@ -12,7 +12,7 @@
     <div id="map"></div>
 
     <!-- Floating UI -->
-    <div class="overlay">
+    <div class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
         <!-- Header with Tabs and Close Button -->
 
         <div class="header">
@@ -55,7 +55,7 @@
                 {
                     <ReductionFactorCal OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
                                         OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
-                                        OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData" />
+                                        OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData"/>
                    
                 }
 
@@ -252,7 +252,7 @@
     <!-- Report Panel (only shown after ShowReport is called) -->
     @if (showReportForReductionFactor)
     {
-        <div class="report-container">
+        <div class="report-container @(showReportForReductionFactor ? "custom-report-container1" : "")">
             <div class="header">
                 <div class="tabs">
                     <button class="tab-btn active">
@@ -279,7 +279,7 @@
                         <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
                         <p>
                             Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the route from
-                            @(routeModel.DepartureLocation) to @(routeModel.ArrivalLocation) is @(routeReductionFactor?.ToString("0.00") ?? "0.82").
+                            
                             More details can be found below.
                         </p>
                         <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
@@ -287,34 +287,67 @@
 
                     <div class="report-section">
                         <h5>User Inputs</h5>
-                        <table class="report-table">
+                       @*  <table class="report-table">
                             <tr>
                                 <td>Route Name:</td>
-                                <td><strong>@(routeModel.RouteName ?? "Marseille - Shanghai")</strong></td>
+                                <td><strong>@(routeModel?.RouteName ?? "Marseille - Shanghai")</strong></td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td>Port of Departure:</td>
-                                <td><strong>@(routeModel.MainDeparturePortSelection.Port.Name ?? "Marseille, France")</strong></td>
-                                <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS")</td>
+                                <td><strong>@(routeModel?.MainDeparturePortSelection.Port.Name ?? "Marseille, France")</strong></td>
+                                <td>@(routeModel?.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS")</td>
                             </tr>
                             <tr>
                                 <td>Loading Port:</td>
-                                <td><strong>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Name ?? "Singapore")</strong></td>
-                                <td>@(routeModel.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN")</td>
+                                <td><strong>@(routeModel?.DeparturePorts.FirstOrDefault()?.Port?.Name ?? "Singapore")</strong></td>
+                                <td>@(routeModel?.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN")</td>
                             </tr>
                             <tr>
                                 <td>Port of Arrival:</td>
-                                <td><strong>@(routeModel.MainArrivalPortSelection.Port.Name ?? "Shanghai, China")</strong></td>
-                                <td>@(routeModel.ArrivalPorts.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH")</td>
+                                <td><strong>@(routeModel?.MainArrivalPortSelection.Port.Name ?? "Shanghai, China")</strong></td>
+                                <td>@(routeModel?.ArrivalPorts.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH")</td>
                             </tr>
-                        </table>
+                        </table> *@
                     </div>
+
+                    @* <div class="report-section">
+                        <h5>Output</h5>
+                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span></p>
+                    </div> *@
 
                     <div class="report-section">
                         <h5>Output</h5>
-                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span></p>
+
+                        @if (isCLPVChecked)
+                        {
+                            <p>
+                                <strong>Reduction Factor: </strong>
+                                <span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span>
+                            </p>
+                        }
+                        else if (isCLPVParrChecked)
+                        {
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Season</th>
+                                        <th>Reduction Factor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var season in seasonalOptions)
+                                    {
+                                        <tr>
+                                            <td>@season</td>
+                                            <td><span class="reduction-factor">@(GetReductionFactorForSeason(season))</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
                     </div>
+
 
                     <div class="report-section">
                         <h5>Route Map</h5>
@@ -430,7 +463,7 @@
 
     @if (ShowABSReport)
     {
-        <div class="report-container">
+        <div class="report-container @(showReportForReductionFactor ? "custom-report-container" : "")">
             <div class="header">
                 <div class="tabs">
                     <button class="tab-btn active">
@@ -466,11 +499,11 @@
 
                         <div class="cls_abs_radio_outline">
                             <div class="cls_abs_radio_div">
-                                <input type="checkbox" name="name" value="CLP-V" />
+                                <input type="checkbox" name="name" @onchange='e => OnCheckboxChanged(e, "CLP-V")' checked="@isCLPVChecked" />
                                 <label class="cls_radio_text">CLP-V</label>
                             </div>
                             <div class="cls_abs_radio_div">
-                                <input type="checkbox" name="name" value="CLP-V(PARR)" />
+                                <input type="checkbox" name="name" @onchange='e => OnCheckboxChanged(e, "CLP-V(PARR)")' checked="@isCLPVParrChecked" />
                                 <label class="cls_radio_text">CLP-V(PARR)</label>
                             </div>
                             <div class="cls_abs_radio_div">
