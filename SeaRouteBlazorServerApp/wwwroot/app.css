@@ -1681,3 +1681,97 @@ strong {
     width: 28% !important;
     right: 31% !important;
 }
+
+/*Added content*/
+.cls_red_outline {
+    background-color: #ff000026;
+    font-size: 13px;
+    margin-bottom: 5px;
+    color: red;
+    font-weight: 600;
+    border-radius: 5px;
+    padding: 6px 13px;
+    margin: 0px 6px;
+}
+.cls_route_table {
+    width: 100%;
+    background: #fff;
+    padding: 14px 12px;
+    border-radius: 0px;
+}
+.cls_route_table table{
+    width: 100%;
+    border-spacing:0px;
+    box-sizing:border-box;
+}
+    .cls_route_table table td {
+        font-size: 9px;
+        font-weight: 500;
+        color: #000;
+        border: 1px solid #d1d1d1;
+        text-align: center;
+        align-items: center;
+        padding: 6px 4px;
+        line-height: 14px;
+    }
+.cls_route_table_tr td {
+    font-size: 11px;
+    font-weight: 500;
+    color: #007bff !important;
+    border: 1px solid #d1d1d1;
+    background-color: #F4F4F4;
+}
+.cls_table_img{
+    width: 18px;
+}
+.cls_table_div_outline{
+    display : flex;
+    column-gap: 6px;
+    width: 100%;
+
+}
+.cls_table_div{
+    display: flex;
+    row-gap : 4px;
+    flex-direction: column;
+    align-items: center;
+    width :100%;
+    justify-content: center;
+
+}
+.cls_width33{
+    width: 33.333%;
+}
+.cls_width25 {
+    width: 25%;
+}
+.cls_cards_outline {
+    justify-content: center;
+    column-gap: 6px;
+    padding: 12px 14px;
+    display: flex;
+    margin: 15px 0px;
+}
+.cls_card_div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px;
+    text-align: center;
+    row-gap: 6px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 3px 5px 5px #00000026;
+    width: 20%;
+    justify-content: center;
+}
+    .cls_card_div img {
+        width: 20px;
+        height: 20px;
+        margin-bottom: 5px;
+    }
+    .cls_card_div span {
+        font-size: 10px;
+        font-weight: 500;
+    }
