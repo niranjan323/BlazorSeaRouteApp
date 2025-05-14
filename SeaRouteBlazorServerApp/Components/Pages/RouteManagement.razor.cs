@@ -9,6 +9,7 @@ namespace SeaRouteBlazorServerApp.Components.Pages
 {
     public partial class RouteManagement
     {
+
         //parent component
         private ElementReference reportMapContainer;
         private int selectedTab = 1;
@@ -34,7 +35,27 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private bool isCLPVChecked = false;
         private bool isCLPVParrChecked = false;
 
+        private string HeadingText { get; set; } = "Report 1 Reduction Factor Calculation";
+        private string OriginalText { get; set; } = "Report 1 Reduction Factor Calculation";
+        private bool IsEditing { get; set; } = false;
 
+        private void StartEditing()
+        {
+            OriginalText = HeadingText;
+            IsEditing = true;
+        }
+
+        private void SaveHeading()
+        {
+            IsEditing = false;
+            // Here you could add code to save the heading to a database or state management service
+        }
+
+        private void CancelEditing()
+        {
+            HeadingText = OriginalText;
+            IsEditing = false;
+        }
         protected async override Task OnInitializedAsync()
         {
             await Task.CompletedTask;

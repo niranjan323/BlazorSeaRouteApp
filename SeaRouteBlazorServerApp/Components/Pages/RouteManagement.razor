@@ -273,7 +273,23 @@
                 </div>
 
                 <div class="report-details">
-                    <h4>Report 1 Reduction Factor Calculation</h4>
+                    @if (IsEditing)
+                    {
+                        <div class="edit-heading-container">
+                            <input @bind="HeadingText" @bind:event="oninput" class="heading-edit-input" />
+                            <button @onclick="SaveHeading" class="save-button">Save</button>
+                            <button @onclick="CancelEditing" class="cancel-button">Cancel</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="heading-container">
+                            <h4>@HeadingText</h4>
+                            <button @onclick="StartEditing" class="edit-button">
+                                <img src="Images/pencil-48.png" alt="Edit" class="edit-icon" />
+                            </button>
+                        </div>
+                    }
 
                     <div class="report-section">
                         <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
@@ -416,8 +432,21 @@
                                 <div class="cls_vessel_div_btm">
                                     <div class="cls_vessel_div">
                                         <label class="cls_vessel_div_label">Flag</label>
-                                        <input type="text" @bind="vessel.Flag" class="content_div_input" />
+                                        <select @bind="vessel.Flag" class="content_div_input">
+                                            <option value="">-- Select Flag --</option>
+                                            <option>Liberia</option>
+                                            <option>Marshall Islands</option>
+                                            <option>Hong Kong</option>
+                                            <option>Bahamas</option>
+                                            <option>Singapore</option>
+                                            <option>Greece</option>
+                                            <option>Malta</option>
+                                            <option>China</option>
+                                            <option>Cyprus</option>
+                                            <option>Japan</option>
+                                        </select>
                                     </div>
+
                                     <div class="cls_vessel_div">
                                         <label class="cls_vessel_div_label">Report Date</label>
                                         <input type="date" @bind="vessel.ReportDate" class="content_div_input" />
