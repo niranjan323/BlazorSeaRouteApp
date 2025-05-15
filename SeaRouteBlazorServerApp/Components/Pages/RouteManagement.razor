@@ -11,10 +11,14 @@
 @inject IPdfService PdfService
 <div class="map-container">
     <!-- Map -->
-    <div id="map"></div>
+    <div id="map" style="margin-top:42px;"></div>
+
+
+    <div class="cls_floating_outline">
+
 
     <!-- Floating UI -->
-    <div class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
+        <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
         <!-- Header with Tabs and Close Button -->
 
         <div class="header">
@@ -79,7 +83,7 @@
     <!-- Right side - Report (only shown after calculation) -->
     @if (showReport)
     {
-        <div class="report-container">
+            <div class=cls_floating_content>
             <div class="header">
                 <div class="tabs">
                     <button class="tab-btn @(selectedTab == 1 ? "active" : "")">
@@ -254,7 +258,7 @@
     <!-- Report Panel (only shown after ShowReport is called) -->
     @if (showReportForReductionFactor)
     {
-        <div class="report-container @(showReportForReductionFactor ? "custom-report-container1" : "")">
+            <div class="cls_floating_content @(showReportForReductionFactor ? "custom-report-container1" : "")">
             <div class="header">
                 <div class="tabs">
                     <button class="tab-btn active">
@@ -387,7 +391,7 @@
 
     @if (AddEditVessalReport)
     {
-        <div class="report-container">
+        <div class="cls_floating_content">
             <div class="header">
                 <div class="tabs">
                     <button class="tab-btn active">
@@ -494,7 +498,7 @@
 
     @if (ShowABSReport)
     {
-        <div class="report-container @(showReportForReductionFactor ? "custom-report-container" : "")">
+            <div class="cls_floating_content @(showReportForReductionFactor ? "custom-report-container" : "")">
             <div class="header">
                 <div class="tabs">
                     <button class="tab-btn active">
@@ -584,5 +588,6 @@
         </div>
     }
 
+    </div>
 </div>
 
