@@ -234,8 +234,111 @@ Longitude = 103.8198
 
         private async Task DownloadReport()
         {
-            // In a real app, this would trigger PDF generation and download
-            await JS.InvokeVoidAsync("alert", "Download report functionality would be implemented here");
+            try
+            {
+                // Create report data 
+                var reportData = CreateShortVoyageReportData();
+
+                // Generate file name
+                string fileName = $"ShortVoyageReport_{DateTime.Now:yyyyMMdd}_{reductionFactor.VesselName}.pdf";
+
+                // Call the PDF service
+                await PdfService.DownloadPdfAsync(reportData, fileName);
+            }
+            catch (Exception ex)
+            {
+                // Handle exception
+                Console.Error.WriteLine($"Error downloading report: {ex.Message}");
+            }
+        }
+
+        private ReportData CreateShortVoyageReportData()
+        {
+            var reportData = new ReportData
+            {
+                ReportName = "Short Voyage Reduction Factor Report",
+                Title = HeadingText,
+                AttentionText = $"Mr. Alan Bond, Mani Industries (WCN: 123456)"
+            };
+
+            // User Inputs Section
+            var userInputsSection = new ReportSection
+            {
+                Title = "User Inputs",
+                Type = "table",
+                TableData = new List<ReportTableRow>
+            {
+                // Header row
+                new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
+                // Data rows
+                new ReportTableRow { Cells = new List<string> { "Vessel Name", reductionFactor.VesselName ?? "N/A" } },
+                new ReportTableRow { Cells = new List<string> { "Vessel IMO", reductionFactor.IMONo ?? "N/A" } },
+                new ReportTableRow { Cells = new List<string> { "Vessel Breadth", reductionFactor.Breadth.ToString() } },
+                new ReportTableRow { Cells = new List<string> { "Port of Departure", reductionFactor.PortOfDeparture ?? "N/A" } },
+                new ReportTableRow { Cells = new List<string> { "Port of Arrival", reductionFactor.PortOfArrival ?? "N/A" } },
+                new ReportTableRow { Cells = new List<string> { "Time Zone", reductionFactor.TimeZone ?? "UTC" } },
+                new ReportTableRow { Cells = new List<string> { "Date of Departure", reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd") } },
+                new ReportTableRow { Cells = new List<string> { "Date of Arrival", reductionFactor.DateOfArrival.ToString("yyyy-MM-dd") } },
+                new ReportTableRow { Cells = new List<string> { "Duration (Hrs)", reductionFactor.Duration.ToString() } },
+                new ReportTableRow { Cells = new List<string> { "ETD", reductionFactor.ETD.ToString("HH:mm") } },
+                new ReportTableRow { Cells = new List<string> { "ETA", reductionFactor.ETA.ToString("HH:mm") } }
+            }
+            };
+            reportData.Sections.Add(userInputsSection);
+
+            // Weather Forecast Section
+            var weatherSection = new ReportSection
+            {
+                Title = "Weather Forecast",
+                Type = "table",
+                TableData = new List<ReportTableRow>
+            {
+                new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
+                new ReportTableRow { Cells = new List<string> { "Date", reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd") } },
+                new ReportTableRow { Cells = new List<string> { "Time", reductionFactor.WeatherForecasetTime.ToString("HH:mm") } },
+                new ReportTableRow { Cells = new List<string> { "Before ETD (Hrs)", reductionFactor.WeatherForecastBeforeETD.ToString() } },
+                new ReportTableRow { Cells = new List<string> { "Source", reductionFactor.WeatherForecastSource ?? "www.weather.gov" } }
+            }
+            };
+            reportData.Sections.Add(weatherSection);
+
+            // Wave Height Section
+            //var waveHeightSection = new ReportSection
+            //{
+            //    Title = "Forecast Maximum Significant Wave Height",
+            //    Type = "table",
+            //    TableData = new List<ReportTableRow>
+            //{
+            //    new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
+            //    new ReportTableRow { Cells = new List<string> { "Hswell [m]", reductionFactor.WaveHeightHswell.ToString() } },
+            //    new ReportTableRow { Cells = new List<string> { "Hwind [m]", reductionFactor.WaveHeightHwind.ToString() } },
+            //    new ReportTableRow { Cells = new List<string> { "Hs, max [m]", reductionFactor.WaveHsmax.ToString() } }
+            //}
+            //};
+            //reportData.Sections.Add(waveHeightSection);
+
+            // Output Section
+            var outputSection = new ReportSection
+            {
+                Title = "Output",
+                Type = "text",
+                Content = $"Duration OK: {reductionFactor.DurationOk}\n" +
+                          $"Forecast Before ETD OK: {reductionFactor.WeatherForecastBeforeETDOK}\n" +
+                          $"Reduction Factor: {reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"}"
+            };
+            reportData.Sections.Add(outputSection);
+
+            // Add notes
+            reportData.Notes = new List<string>
+        {
+            "The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.",
+            "The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).",
+            "A short voyage is to have a duration of less than 72 hours from departure port to arrival port.",
+            "The weather reports need to be received within 6 hours of departure.",
+            "The forecasted wave height needs to cover the duration of the voyage plus 12 hours."
+        };
+
+            return reportData;
         }
 
         private async Task PrintReport()

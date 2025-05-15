@@ -15,6 +15,7 @@ builder.Services.AddScoped(sp => new HttpClient
 
 
 builder.Services.AddScoped<DebounceService>();
+builder.Services.AddScoped<IPdfService, PdfService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

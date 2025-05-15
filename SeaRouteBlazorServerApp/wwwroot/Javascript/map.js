@@ -30,6 +30,12 @@ function debounce(func, wait) {
 const locationCache = new Map();
 
 function initializeMap(dotNetHelper) {
+    // Check if map already exists
+    if (map) {
+        console.log('Map already initialized');
+        return;
+    }
+
     currentDotNetHelper = dotNetHelper;
     map = L.map('map', {
         // Disable zoom animation for better performance
@@ -634,7 +640,7 @@ function initializeRouteCalculation() {
 
 // Reset all map data - optimized
 function resetMap() {
-    // Clear departure and arrival pins efficiently
+    // Clear all pins and layers
     if (departurePin) {
         map.removeLayer(departurePin);
         departurePin = null;
@@ -643,34 +649,37 @@ function resetMap() {
         map.removeLayer(arrivalPin);
         arrivalPin = null;
     }
-
-    // Clear route layer efficiently
-    routeLayer.clearLayers();
-
-    // Remove all pins efficiently in bulk operations
-    // Remove all clicked pins
-    clickedPins.forEach(pin => map.removeLayer(pin));
+    if (routeLayer) {
+        routeLayer.clearLayers();
+    }
+    
+    // Clear all waypoint pins
+    clickedPins.forEach(pin => {
+        if (pin) map.removeLayer(pin);
+    });
     clickedPins = [];
-
-    // Remove all port pins
-    portPins.forEach(pin => map.removeLayer(pin));
+    
+    portPins.forEach(pin => {
+        if (pin) map.removeLayer(pin);
+    });
     portPins = [];
-
-    // Remove all waypoint pins
-    waypointPins.forEach(pin => map.removeLayer(pin));
+    
+    waypointPins.forEach(pin => {
+        if (pin) map.removeLayer(pin);
+    });
     waypointPins = [];
-
-    // Reset data structures efficiently
+    
+    // Clear route points and segments
     routePoints = [];
     routeSegments = [];
+    
+    // Reset waypoint selection
     isWaypointSelectionActive = false;
-    map.getContainer().style.cursor = '';
-
-    // Reset the map view efficiently - use setView instead of flyTo for better performance
-    map.setView([20, 60], 3, { animate: false });
-
-    // Clear the location cache to prevent stale data
-    locationCache.clear();
+    if (map) {
+        map.getContainer().style.cursor = '';
+        // Reset the map view to the initial state
+        map.setView([20, 60], 3);
+    }
 }
 
 // Get all pins currently on the map - unchanged
@@ -896,5 +905,31 @@ function removePort(portName, latitude, longitude) {
     } catch (error) {
         console.error("Error removing port:", error);
         return false;
+    }
+}
+
+function destroyMap() {
+    if (map) {
+        // Remove all layers and event listeners
+        map.eachLayer(function(layer) {
+            map.removeLayer(layer);
+        });
+        
+        // Remove the map instance
+        map.remove();
+        map = null;
+        
+        // Clear all references
+        departurePin = null;
+        arrivalPin = null;
+        routeLayer = null;
+        isWaypointSelectionActive = false;
+        coordTooltip = null;
+        currentDotNetHelper = null;
+        clickedPins = [];
+        portPins = [];
+        waypointPins = [];
+        routePoints = [];
+        routeSegments = [];
     }
 }
