@@ -1,3 +1,5 @@
+
+/*added*/
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     padding:0px !important;
@@ -63,6 +65,7 @@ h1:focus {
     height: 100vh;
 }
 
+/*added*/
 #map {
     width: 100%;
     height: 100%;
@@ -1782,10 +1785,11 @@ strong {
         font-weight: 500;
     }
 
+    /*addded*/
 .cls_floating_outline {
     display: flex;
     column-gap: 2%;
-    justify-content: space-evenly;
+    /*justify-content: space-evenly;*/
     width: 100%;
     padding:58px;
 }
