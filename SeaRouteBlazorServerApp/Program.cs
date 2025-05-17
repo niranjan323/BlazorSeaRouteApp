@@ -12,10 +12,11 @@ builder.Services.AddScoped(sp => new HttpClient
     BaseAddress = new Uri("https://localhost:7081/")
 });
 
-
-
+builder.Services.AddScoped<RouteService>();
 builder.Services.AddScoped<DebounceService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IApiService, ApiService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
