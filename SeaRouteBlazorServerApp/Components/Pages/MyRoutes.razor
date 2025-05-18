@@ -8,297 +8,233 @@
 @inject IJSRuntime JSRuntime;
 @inject IApiService apiService;
 @inject RouteService routeService;
-<div id="map"></div>
-<div class="bg-white rounded-4 w-100  position-absolute" style="min-height:500px; max-height:668px; overflow:hidden; margin-top:60px;">
-<div class="d-flex gap-5 p-3" style="border-bottom:1px solid #626266">
-<p @onclick="@(()=> Back())" class="fs6 fw-bold p-0 m-0" style="cursor:pointer">Start New Calculation</p>
-<p class="fs6 fw-bold p-0 m-0" style="color:#1473E6; border-bottom:1px solid #1473E6;">My Calculation Results</p>
+<button class="back-btn" @onclick="Back">⬅ Back</button>
+<div class="route_content">
+    <div class="filter-section">
+        <div class="filter-dropdown">
+            <span class="filter-label">Sort by</span>
+            <div class="dropdown">
+                <button class="dropdown-button" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <img src="@currentIcon" class="dropdown-icon" /> @currentLabel
+                </button>
+
+                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <div class="dropdown-item-container">
+                        <img src="images/route_name.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("name", "asc", "Route Name", "images/route_name.svg"))">Route Name</a>
+                    </div>
+                    <div class="dropdown-item-container">
+                        <img src="images/loading_port.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("pod", "asc", "Port of Departure", "images/loading_port.svg"))">Port of Departure</a>
+                    </div>
+                    <div class="dropdown-item-container">
+                        <img src="images/location pin.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("Arr", "asc", "Port of Arrival", "images/location pin.svg"))">Port of Arrival</a>
+                    </div>
+                    <div class="dropdown-item-container">
+                        <img src="images/date_of_voyage.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("date", "asc", "Date of Voyage", "images/date_of_voyage.svg"))">Date of Voyage</a>
+                    </div>
+                    <div class="dropdown-item-container">
+                        <img src="images/Calculate.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("rf", "asc", "Reduction Factor", "images/Calculate.svg"))">Reduction Factor</a>
+                    </div>
+                    <div class="dropdown-item-container">
+                        <img src="images/vessel_IMO_icon.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("imo", "asc", "Vessel IMO", "images/vessel_IMO_icon.svg"))">Vessel IMO</a>
+                    </div>
+                    <div class="dropdown-item-container">
+                        <img src="images/Vessel_name_icon.svg" class="dropdown-item-icon" />
+                        <a class="dropdown-item" @onclick="@(() => SortedList("vesselname", "asc", "Vessel Name", "images/Vessel_name_icon.svg"))">Vessel Name</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="select-instruction">Select and show on map</div>
+
+    <div class="table-container">
+        <table class="route-table">
+            <thead>
+                <tr>
+                    <th class="expand-column"></th>
+                    <th class="checkbox-column">
+                        <input class="checkbox" type="checkbox" @onclick="SelectAll" id="checkAll" @bind="CheckAll">
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/route_name.svg" class="header-icon" />
+                            Route Name
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            Calcs Type
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/loading_port.svg" class="header-icon" />
+                            Port of Departure
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/location pin.svg" class="header-icon" />
+                            Port of Arrival
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/date_of_voyage.svg" class="header-icon" />
+                            Date of Voyage
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/Calculate.svg" class="header-icon" />
+                            Reduction Factor
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/route_distance_icon.svg" class="header-icon" />
+                            Route Distance
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/vessel_IMO_icon.svg" class="header-icon" />
+                            Vessel IMO
+                        </div>
+                    </th>
+                    <th class="with-icon">
+                        <div class="th-content">
+                            <img src="images/Vessel_name_icon.svg" class="header-icon" />
+                            Vessel Name
+                        </div>
+                    </th>
+                    <th class="season-column">
+                        <div class="th-content">
+                            <img src="images/spring_icon.svg" class="header-icon" />
+                            Spring
+                        </div>
+                    </th>
+                    <th class="season-column">
+                        <div class="th-content">
+                            <img src="images/summer_icon.svg" class="header-icon" />
+                            Summer
+                        </div>
+                    </th>
+                    <th class="season-column">
+                        <div class="th-content">
+                            <img src="images/fall_icon.svg" class="header-icon" />
+                            Fall
+                        </div>
+                    </th>
+                    <th class="season-column">
+                        <div class="th-content">
+                            <img src="images/winter_icon.svg" class="header-icon" />
+                            Winter
+                        </div>
+                    </th>
+                    <th class="actions-column">
+                        <div class="th-content">
+                            <img src="images/actions_icon.svg" class="header-icon" />
+                            Actions
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (routelist != null)
+                {
+                    @foreach (var item in routelist)
+                    {
+                        var routeId = item.RecordId;
+                        var routeName = item.RecordName;
+                        <tr class="parent-row @(item.IsSelected ? "selected" : "")">
+                            <td class="expand-column">
+                                @if (item.Expanded)
+                                {
+                                    <span class="expand-btn" @onclick="@(() => ToggleExpand(item))">−</span>
+                                }
+                                else
+                                {
+                                    <span class="expand-btn" @onclick="@(() => ToggleExpand(item))">+</span>
+                                }
+                            </td>
+                            <td class="checkbox-column">
+                                <input class="checkbox" type="checkbox" @onclick="@(() => SelectRoute(routeId))" @bind="item.IsSelected">
+                            </td>
+                            <td>@item.RecordName</td>
+                            <td>Reduction Factor</td>
+                            <td>@item.DeparturePort</td>
+                            <td>@item.ArrivalPort</td>
+                            <td>@item.VoyageDate</td>
+                            <td>@Math.Round(item.ReductionFactor, 2)</td>
+                            <td>@Math.Round(item.RouteDistance).ToString() nm</td>
+                            <td>@item.VesselIMO</td>
+                            <td>@item.VesselName</td>
+                            <td class="season-value">@GetSeasonValue(item, "Spring")</td>
+                            <td class="season-value">@GetSeasonValue(item, "Summer")</td>
+                            <td class="season-value">@GetSeasonValue(item, "Fall")</td>
+                            <td class="season-value">@GetSeasonValue(item, "Winter")</td>
+                            <td class="actions-column">
+                                <div class="action-icons">
+                                    <a href="images/report.png" target="_blank"><img src="images/download-icon-10@1x.png" class="action-icon" /></a>
+                                    <img src="images/edit.svg" class="action-icon" />
+                                    <a @onclick="@(() => DeleteVesselRoute(routeId))"><img src="images/remove.svg" class="action-icon" /></a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        if (item.Legs.Count > 0 && item.Expanded)
+                        {
+                            @foreach (var childItem in item.Legs)
+                            {
+                                <tr class="child-row">
+                                    <td class="expand-column"></td>
+                                    <td class="checkbox-column"></td>
+                                    <td>@childItem.RecordLegName</td>
+                                    <td></td>
+                                    <td>@childItem.DeparturePort</td>
+                                    <td>@childItem.ArrivalPort</td>
+                                    <td>@item.VoyageDate</td>
+                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
+                                    <td>@Math.Round(childItem.Distance) nm</td>
+                                    <td>@item.VesselIMO</td>
+                                    <td>@item.VesselName</td>
+                                    <td class="season-value">@GetSeasonValue(childItem, "Spring")</td>
+                                    <td class="season-value">@GetSeasonValue(childItem, "Summer")</td>
+                                    <td class="season-value">@GetSeasonValue(childItem, "Fall")</td>
+                                    <td class="season-value">@GetSeasonValue(childItem, "Winter")</td>
+                                    <td class="actions-column">
+                                        <div class="action-icons">
+                                            <img src="images/download-icon-10@1x.png" class="action-icon" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (routelist != null && routelist.Any(x => x.IsSelected))
+    {
+        <div class="view-map-footer">
+            <img src="images/map-icon@1x.png" class="view-map-icon" />
+            <a class="view-map-link" @onclick="@(() => ViewOnMap())">
+                View on map
+                <img src="images/right arrow.png" class="arrow-icon" />
+            </a>
+        </div>
+    }
 </div>
-<div class="d-flex px-4 pt-3">
-<div class="d-flex justify-content-center align-items-center gap-2">
-<div>
-<p class="p-0 m-0">Sort by</p>
-</div>
-<div class="dropdown">
-<button class="btn btn-secondary dropdown-toggle bg-white text-black rounded-pill" type="button"
-id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-<img src="@currentIcon" class="px-2 mb-1" /> @currentLabel
-</button>
-
-<div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/route_name.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(() => SortedList("name", "asc", "Route Name A-Z", "Assets/route_name.svg"))">Route Name A-Z</a>
-</div>
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/loading_port.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(() => SortedList("pod", "asc", "Port of Departure A-Z", "Assets/loading_port.svg"))">Port of Departure A-Z</a>
-</div>
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/location pin.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("Arr","asc", "Port of Arrival A-Z", "Assets/location pin.svg"))">Port of Arrival A-Z</a>
-</div>
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/date_of_voyage.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("date","asc", "Date of Voyage", "Assets/date_of_voyage.svg"))">Date of Voyage</a>
-</div>
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/Calculate.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("rf","asc", "Reduction Factor", "Assets/Calculate.svg"))">Reduction Factor</a>
-</div>
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/vessel_IMO_icon.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("imo","asc", "Vessel IMO", "Assets/vessel_IMO_icon.svg"))">Vessel IMO</a>
-</div>
-<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
-<img src="Assets/Vessel_name_icon.svg" class="pb-1" style="width:15px;" />
-<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("vesselname","asc", "Vessel Name", "Assets/Vessel_name_icon.svg"))">Vessel Name</a>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="px-4 pt-3">
-<p class="m-0 p-0">Select and show on map</p>
-</div>
-<div class="overflow-scroll w-100" style="height:400px; margin-top: 20px;">
-<table>
-<thead>
-<tr>
-<th></th>
-<th>
-<input class="form-check-input" style="border:1px solid black" type="checkbox"
-  @onclick="SelectAll" id="checkAll" @bind="CheckAll">
-</th>
-<th>Route Name</th>
-<th>Calcs Type</th>
-<th>Port of Departure</th>
-<th>Port of Arrival</th>
-<th>Date of Voyage</th>
-<th>Reduction Factor</th>
-<th>Route Distance (nm)</th>
-<th>Vessel IMO</th>
-<th>Vessel Name</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody>
-@if (routelist != null)
-{
-@foreach (var item in routelist)
-{
-var routeId = item.RecordId;
-var routeName = item.RecordName;
-<tr class="parent-row">
-<td>
-@* @if (item.Legs.Count > 0)
-{ *@
-@if (item.Expanded)
-{
-<span class="expand-btn" @onclick="@(()=>ToggleExpand(item))">-</span>
-
-}
-else
-{
-<span class="expand-btn" @onclick="@(()=>ToggleExpand(item))">+</span>
-}
-@* } *@
-</td>
-<td>
-@{
-<input class="form-check-input" style="border:1px solid black" type="checkbox" id="checkAll"
-  @onclick="@(()=>SelectRoute(routeId))" @bind="item.IsSelected">
-}
-</td>
-<td>@item.RecordName</td>
-<td>Reduction Factor</td>
-<td>@item.DeparturePort</td>
-<td>@item.ArrivalPort</td>
-<td>@item.VoyageDate</td>
-<td>@Math.Round(item.ReductionFactor, 2)</td>
-<td>@Math.Round(item.RouteDistance).ToString() </td>
-<td>@item.VesselIMO</td>
-<td>@item.VesselName</td>
-<td>
-@* <img src="Assets/location pin.svg" style="height:15px; padding-right:10px; cursor:pointer;" />  *@
-<a href="Assets/report.png" target="_blank"><img src="Assets/download-icon-10@1x.png" style="height:15px; padding-right:10px; cursor:pointer;" /></a>
-<img src="Assets/edit.svg" style="height:15px; padding-right:10px;cursor:pointer;" />
-<a @onclick="@(()=>DeleteVesselRoute(routeId))"><img src="Assets/remove.svg" style="height:15px; cursor:pointer;" /></a>
-</td>
-</tr>
-if (item.Legs.Count > 0)
-{
-@if (item.Expanded)
-{
-@foreach (var childItem in item.Legs)
-{
-<tr class="child-row">
-<td></td>
-<td></td>
-<td>@childItem.RecordLegName</td>
-<td></td>
-<td>@childItem.DeparturePort</td>
-<td>@childItem.ArrivalPort</td>
-<td>@item.VoyageDate</td>
-<td>@Math.Round(childItem.ReductionFactor, 3)</td>
-<td>@Math.Round(childItem.Distance) km</td>
-<td>@item.VesselIMO</td>
-<td>@item.VesselName</td>
-<td>
-@* <img src="Assets/location pin.svg" style="height:15px; padding-right:10px; cursor:pointer;" /> *@
-<img src="Assets/download-icon-10@1x.png" style="height:15px; padding-right:10px; cursor:pointer;" />
-</td>
-</tr>
-}
-}
-}
-}
-}
-
-@* <tr class="parent-row">
-<td><span class="expand-btn" onclick="toggleRow(this)">+</span></td>
-<td>Marseille to Shanghai</td>
-<td>Marseille</td>
-<td>Shanghai</td>
-<td>Singapore</td>
-<td>02/04/2025</td>
-<td>0.80</td>
-<td>1200 nm</td>
-<td>346165</td>
-<td>ABS</td>
-<td>
-<span class="action-icons">📍</span>
-<span class="action-icons">⬇️</span>
-<span class="action-icons">✏️</span>
-<span class="action-icons">🗑️</span>
-</td>
-</tr>
-
-<tr class="child-row">
-<td></td>
-<td>Leg 1</td>
-<td>Marseille</td>
-<td>Shanghai</td>
-<td>Singapore</td>
-<td>02/04/2025</td>
-<td>0.80</td>
-<td>1200 nm</td>
-<td>346165</td>
-<td>ABS</td>
-<td>
-<span class="action-icons">📍</span>
-<span class="action-icons">⬇️</span>
-</td>
-</tr>
-
-<tr class="child-row">
-<td></td>
-<td>Leg 1</td>
-<td>Marseille</td>
-<td>Shanghai</td>
-<td>Singapore</td>
-<td>02/04/2025</td>
-<td>0.80</td>
-<td>1200 nm</td>
-<td>346165</td>
-<td>ABS</td>
-<td>
-<span class="action-icons">📍</span>
-<span class="action-icons">⬇️</span>
-</td>
-</tr> *@
-
-</tbody>
-</table>
-</div>
-@if (routelist != null && routelist.Any(x => x.IsSelected))
-{
-<div class="d-flex w-100 gap-2 px-5 pb-4 pt-4">
-<img src="Assets/map-icon@1x.png" style="height:20px;" />
-<div class="d-flex justify-content-center align-items-center gap-1">
-<a @onclick="@(()=> ViewOnMap())"><span style="cursor:pointer;">View on map</span></a>
-<div style="height:20px; width:10px;">
-<img src="Assets/right arrow.png" />
-</div>
-</div>
-</div>
-}
-</div>
-
-
-
-
-
-<script>
-function toggleRow(button) {
-const row = button.parentElement.parentElement.nextElementSibling;
-const isVisible = row.style.display === 'table-row';
-row.style.display = isVisible ? 'none' : 'table-row';
-button.textContent = isVisible ? '+' : '−';
-}
-
-</script>
-
-<style>
-
-table {
-border-collapse: collapse;
-width: 100%;
-/* margin-top: 20px; */
-}
-
-td {
-border: 1px solid #ddd;
-padding: 10px;
-}
-
-th {
-/* background-color: #f4f4f4; */
-padding: 10px;
-}
-
-thead th {
-position: sticky;
-top: 0;
-background: white;
-z-index: 2;
-}
-
-.parent-row td {
-padding-top: 30px;
-padding-bottom: 30px;
-border-top: 1px solid black;
-border-bottom: 1px solid black;
-border-right: none;
-border-left: none;
-text-align: left;
-}
-
-.child-row {
-/* display: none; */
-background-color: #f9f9f9;
-}
-
-.child-row td {
-padding-left: 10px;
-border-top: 1px solid black;
-border-bottom: 1px solid black;
-border-right: none;
-border-left: none;
-}
-
-/* .action-icons {
-cursor: pointer;
-margin: 0 5px;
-} */
-
-.expand-btn {
-cursor: pointer;
-font-weight: bold;
-font-size: 18px;
-}
-
-</style>
 
 @code {
     List<RouteListModel> routelist { get; set; } = new();
@@ -311,6 +247,8 @@ font-size: 18px;
         var items = routeService.RouteNames;
         if (items != null)
 {
+
+
 for (int i = 0; i < items.Count; i++)
 {
 string routeId = items[i].Key;
@@ -337,6 +275,18 @@ catch (Exception ex)
 throw;
 }
 
+}
+
+private string GetSeasonValue(dynamic item, string season)
+{
+    // For the demo, we'll return placeholder values
+    // In real implementation, you would get these from your data model
+    if (season == "Spring") return "0.85";
+    if (season == "Summer") return "0.85";
+    if (season == "Fall") return "0.85";
+    if (season == "Winter") return "0.85";
+    
+    return "0.80";
 }
 bool CheckAll { get; set; } = false;
 async Task ToggleExpand(RouteListModel route)

@@ -1,3 +1,5 @@
+using SeaRouteModel.Models;
+
 namespace SeaRouteBlazorServerApp.Components.Services;
 
 public class ApiService : IApiService

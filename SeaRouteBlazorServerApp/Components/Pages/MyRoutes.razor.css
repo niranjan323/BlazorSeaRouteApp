@@ -1,0 +1,300 @@
+﻿
+.route-panel {
+    position: absolute;
+    width: 100%;
+    max-width: 95%;
+    margin: 60px auto 0;
+    left: 0;
+    right: 0;
+    max-height: 668px;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    z-index: 2;
+}
+
+/* Tab headers */
+.tab-header {
+    display: flex;
+    gap: 40px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tab {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    padding-bottom: 2px;
+}
+
+    .tab.active {
+        color: #1473E6;
+        border-bottom: 2px solid #1473E6;
+    }
+
+/* Filter section */
+.filter-section {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+}
+
+.filter-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.filter-label {
+    font-size: 14px;
+    color: #333;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropdown-button {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 18px;
+    padding: 6px 16px;
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.dropdown-icon {
+    height: 16px;
+    width: 16px;
+    margin-right: 8px;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    display: none;
+}
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+.dropdown-item-container {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+}
+
+.dropdown-item-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+.dropdown-item {
+    font-size: 14px;
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+    .dropdown-item:hover {
+        color: #1473E6;
+    }
+
+/* Select instruction */
+.select-instruction {
+    padding: 0 24px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+/* Table styles */
+.table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.route-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .route-table th,
+    .route-table td {
+        padding: 12px 16px;
+        font-size: 14px;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .route-table th {
+        position: sticky;
+        top: 0;
+        background-color: white;
+        color: #666;
+        font-weight: 600;
+        z-index: 5;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+.th-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.route-table tbody tr:not(.child-row) {
+    height: 60px;
+}
+
+.parent-row {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+    .parent-row.selected {
+        background-color: rgba(20, 115, 230, 0.05);
+    }
+
+    .parent-row td {
+        color: #333;
+    }
+
+.child-row {
+    background-color: #f9f9f9;
+}
+
+    .child-row td {
+        color: #555;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+.expand-column {
+    width: 30px;
+    text-align: center;
+}
+
+.checkbox-column {
+    width: 40px;
+    text-align: center;
+}
+
+.checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    border: 1px solid #999;
+    border-radius: 3px;
+}
+
+.expand-btn {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 16px;
+    text-align: center;
+}
+
+.season-column {
+    text-align: center;
+}
+
+.season-value {
+    text-align: center;
+}
+
+.actions-column {
+    width: 110px;
+    text-align: right;
+}
+
+.action-icons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.action-icon {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* View on map footer */
+.view-map-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.view-map-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.view-map-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1473E6;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.arrow-icon {
+    width: 12px;
+    height: 12px;
+}
+
+/* Custom scrollbar */
+.table-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: #999;
+    }
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .route-panel {
+        max-width: 98%;
+    }
+}
