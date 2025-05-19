@@ -1859,7 +1859,7 @@ strong {
 }
 
     .cls_myroute_table table td {
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 500;
         color: #000;
         border-top: 1px solid #d1d1d1;
@@ -1871,19 +1871,24 @@ strong {
     }
 .cls_myroute_table table th {
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 500;
     color: #000;
     border: 0px solid #d1d1d1;
     text-align: center;
     align-items: center;
     padding: 6px 4px;
     line-height: 14px;
+    width: 2%;
 }
 
 .cls_myroute_table_tr td {
     font-size: 11px;
     font-weight: 500;
     background-color: #F4F4F4;
+}
+.cls_myroute_table_tr_selected td {
+
+    background-color: #1868bd14;
 }
 
 .cls_myroute_table table tr td:first-child {
@@ -1894,9 +1899,10 @@ strong {
 .cls_myroute_table table tr td:last-child {
     border-right: 1px solid #d1d1d1;
 }
-.dropdown-button{
+.dropdown-button {
     font-size: 12px !important;
     font-weight: 500;
+    background-color: #1868bd14 !important;
 }
 .cls_myroute_content {
     display: flex;
@@ -1923,4 +1929,10 @@ strong {
     padding: 0px 10px !important;
     background-color: #FFF;
     width: 100%;
+}
+.cls_width3{
+    width: 3% !important;
+}
+.cls_width1 {
+    width: 1% !important;
 }
