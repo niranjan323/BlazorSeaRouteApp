@@ -8,9 +8,51 @@
 @inject IJSRuntime JSRuntime;
 @inject IApiService apiService;
 @inject RouteService routeService;
-<button class="back-btn" @onclick="Back">⬅ Back</button>
-<div class="route_content">
-    <div class="filter-section">
+<div class="cls_myroute_content">
+
+        <div class="cls_route_div_rep"  >
+            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center"  >
+                <label class="cls_myroute_label">Sort by</label>
+                <div class="dropdown">
+                    <button class="dropdown-button" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <img src="@currentIcon" class="dropdown-icon" /> @currentLabel
+                    </button>
+
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <div class="dropdown-item-container">
+                            <img src="images/route_name.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("name", "asc", "Route Name", "images/route_name.svg"))">Route Name</a>
+                        </div>
+                        <div class="dropdown-item-container">
+                            <img src="images/loading_port.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("pod", "asc", "Port of Departure", "images/loading_port.svg"))">Port of Departure</a>
+                        </div>
+                        <div class="dropdown-item-container">
+                            <img src="images/location pin.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("Arr", "asc", "Port of Arrival", "images/location pin.svg"))">Port of Arrival</a>
+                        </div>
+                        <div class="dropdown-item-container">
+                            <img src="images/date_of_voyage.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("date", "asc", "Date of Voyage", "images/date_of_voyage.svg"))">Date of Voyage</a>
+                        </div>
+                        <div class="dropdown-item-container">
+                            <img src="images/Calculate.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("rf", "asc", "Reduction Factor", "images/Calculate.svg"))">Reduction Factor</a>
+                        </div>
+                        <div class="dropdown-item-container">
+                            <img src="images/vessel_IMO_icon.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("imo", "asc", "Vessel IMO", "images/vessel_IMO_icon.svg"))">Vessel IMO</a>
+                        </div>
+                        <div class="dropdown-item-container">
+                            <img src="images/Vessel_name_icon.svg" class="dropdown-item-icon" />
+                            <a class="dropdown-item" @onclick="@(() => SortedList("vesselname", "asc", "Vessel Name", "images/Vessel_name_icon.svg"))">Vessel Name</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+@*     <div class="filter-section">
         <div class="filter-dropdown">
             <span class="filter-label">Sort by</span>
             <div class="dropdown">
@@ -50,11 +92,19 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> *@
+@* 
+    <div class="select-instruction"></div> *@
+    
+        <div class="cls_route_div_rep"  >
+            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center"  >
+                <h3 class="cls_myroute_label"  >
+                    Select and show on map
+                </h3>
+            </div>
+        </div>
 
-    <div class="select-instruction">Select and show on map</div>
-
-    <div class="table-container">
+@*     <div class="table-container">
         <table class="route-table">
             <thead>
                 <tr>
@@ -223,6 +273,189 @@
             </tbody>
         </table>
     </div>
+ *@
+
+    <div class="cls_myroute_table">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>
+                        <input type="checkbox" @onclick="SelectAll" id="checkAll" @bind="CheckAll">
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/route_name.svg" class="cls_myroute_table_img" />
+                            Route Name <br />
+                            &nbsp;
+                            
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/calculation_type.svg" class="cls_myroute_table_img" />
+                            Calcs Type<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/calculation_type.svg" class="cls_myroute_table_img" />
+                            Port of <br /> Departure
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/download-icon-10@1x.png" class="cls_myroute_table_img" />
+                            Port of <br />Arrival
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/date-of-voyage@1x.png" class="cls_myroute_table_img" />
+                            Date of <br />Voyage
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/reduction-factor.png" class="cls_myroute_table_img" />
+                            Reduction<br /> Factor
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/routes.png" class="cls_myroute_table_img" />
+                            Route <br />Distance
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/vessel_IMO_icon.svg" class="cls_myroute_table_img" />
+                            Vessel <br />IMO
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Vessel_name_icon.svg" class="cls_myroute_table_img" />
+                            Vessel Name<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Spring.svg" class="cls_myroute_table_img" />
+                            Spring<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Summer.svg" class="cls_myroute_table_img" />
+                            Summer<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Fall.svg" class="cls_myroute_table_img" />
+                            Fall<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Winter.svg" class="cls_myroute_table_img" />
+                            Winter<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Actions.svg" class="cls_myroute_table_img" />
+                            Actions<br />
+                            &nbsp;
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @if (routelist != null)
+                {
+                    @foreach (var item in routelist)
+                    {
+                        var routeId = item.RecordId;
+                        var routeName = item.RecordName;
+                        <tr >
+                            <td >
+                                @if (item.Expanded)
+                                {
+                                    <span class="expand-btn" @onclick="@(() => ToggleExpand(item))">−</span>
+                                }
+                                else
+                                {
+                                    <span class="expand-btn" @onclick="@(() => ToggleExpand(item))">+</span>
+                                }
+                            </td>
+                            <td >
+                                <input  type="checkbox" @onclick="@(() => SelectRoute(routeId))" @bind="item.IsSelected">
+                            </td>
+                            <td>@item.RecordName</td>
+                            <td>Reduction Factor</td>
+                            <td>@item.DeparturePort</td>
+                            <td>@item.ArrivalPort</td>
+                            <td>@item.VoyageDate</td>
+                            <td>@Math.Round(item.ReductionFactor, 2)</td>
+                            <td>@Math.Round(item.RouteDistance).ToString() nm</td>
+                            <td>@item.VesselIMO</td>
+                            <td>@item.VesselName</td>
+                            <td >@GetSeasonValue(item, "Spring")</td>
+                            <td >@GetSeasonValue(item, "Summer")</td>
+                            <td >@GetSeasonValue(item, "Fall")</td>
+                            <td >@GetSeasonValue(item, "Winter")</td>
+                            <td >
+                                <div >
+                                    <a href="images/report.png" target="_blank"><img src="images/download-icon-10@1x.png" class="cls_myroute_table_img" /></a>
+                                    <img src="images/edit.svg" class="cls_myroute_table_img" />
+                                    <a @onclick="@(() => DeleteVesselRoute(routeId))"><img src="images/remove.svg" class="cls_myroute_table_img" /></a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        if (item.Legs.Count > 0 && item.Expanded)
+                        {
+                            @foreach (var childItem in item.Legs)
+                            {
+                                <tr class="cls_myroute_table_tr">
+                                    <td ></td>
+                                    <td ></td>
+                                    <td>@childItem.RecordLegName</td>
+                                    <td></td>
+                                    <td>@childItem.DeparturePort</td>
+                                    <td>@childItem.ArrivalPort</td>
+                                    <td>@item.VoyageDate</td>
+                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
+                                    <td>@Math.Round(childItem.Distance) nm</td>
+                                    <td>@item.VesselIMO</td>
+                                    <td>@item.VesselName</td>
+                                    <td >@GetSeasonValue(childItem, "Spring")</td>
+                                    <td >@GetSeasonValue(childItem, "Summer")</td>
+                                    <td >@GetSeasonValue(childItem, "Fall")</td>
+                                    <td >@GetSeasonValue(childItem, "Winter")</td>
+                                    <td >
+                                        <div >
+                                            <img src="images/download-icon-10@1x.png" class="cls_myroute_table_img" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
 
     @if (routelist != null && routelist.Any(x => x.IsSelected))
     {

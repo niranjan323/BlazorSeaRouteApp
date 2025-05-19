@@ -18,27 +18,30 @@
 
         @* added cls_floating_content*@
     <!-- Floating UI -->
-        <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
-        <!-- Header with Tabs and Close Button -->
-
-        <div class="header">
-            <div class="tabs">
-                <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                    Start New Calculation
-                </button>
-                <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
-                    My Routes
-                </button>
-            </div>
-            <button class="close-btn" @onclick="CloseOverlay">×</button>
-        </div>
+      
 
         <!-- Scrollable Content -->
-        <div class="form-container">
             @if (selectedTab == 1)
             {
                 @if (selectedForm == 0)
                 {
+                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+                    <!-- Header with Tabs and Close Button -->
+
+                    <div class="header">
+                        <div class="tabs">
+                            <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+                                Start New Calculation
+                            </button>
+                            <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
+                                My Routes
+                            </button>
+                        </div>
+                        <button class="close-btn" @onclick="CloseOverlay">×</button>
+                    </div>
+
+                    <div class="cls_form_container">
+
                     <!-- Show Selection Options -->
                     <div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
                         <label class="cls_main_label">
@@ -55,30 +58,87 @@
                             <img src="Images/group-92@1x.png" alt="Limited Short">
                             <h4>Limited Short Voyage</h4>
                         </div>
+                        </div>
                     </div>
+                </div>
+
                 }
                 @if (selectedForm == 1)
                 {
+                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+                    <!-- Header with Tabs and Close Button -->
+
+                    <div class="header">
+                        <div class="tabs">
+                            <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+                                Start New Calculation
+                            </button>
+                            <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
+                                My Routes
+                            </button>
+                        </div>
+                        <button class="close-btn" @onclick="CloseOverlay">×</button>
+                    </div>
+
+                    <div class="cls_form_container">
+
                     <ReductionFactorCal OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
                                         OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
                                         OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData"/>
-                   
+                    </div>
+                </div>
+
                 }
 
                 else if (selectedForm == 2)
                 {
+                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+                    <!-- Header with Tabs and Close Button -->
+
+                    <div class="header">
+                        <div class="tabs">
+                            <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+                                Start New Calculation
+                            </button>
+                            <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
+                                My Routes
+                            </button>
+                        </div>
+                        <button class="close-btn" @onclick="CloseOverlay">×</button>
+                    </div>
+                    <div class="cls_form_container">
 
                     <LimitedShortVoyage OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" OnReportDataReady="HandleReportData" />
+                    </div>
+                </div>
+                
                 }
             }
             else if (selectedTab == 2)
             {
+            <div class="cls_myfloating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+                <!-- Header with Tabs and Close Button -->
+
+                <div class="header">
+                    <div class="tabs">
+                        <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+                            Start New Calculation
+                        </button>
+                        <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
+                            My Routes
+                        </button>
+                    </div>
+                    <button class="close-btn" @onclick="CloseOverlay">×</button>
+                </div>
+                <div class="cls_form_container1">
+
                 <MyRoutes></MyRoutes>
+                </div>
+            </div>
+
             }
-        </div>
 
 
-    </div>
 
     <!-- Right side - Report (only shown after calculation) -->
     @if (showReport)
@@ -401,7 +461,7 @@
                 <button class="close-btn" @onclick="CloseVesselInfo">×</button>
             </div>
 
-            <div class="form-container">
+            <div class="cls_form_container">
                 <button class="back-btn" @onclick="CloseVesselInfo">
                     ⬅ Back
                 </button>
@@ -508,7 +568,7 @@
                 <button class="close-btn" @onclick="CloseABSReportForm">×</button>
             </div>
 
-            <div class="form-container">
+            <div class="cls_form_container">
                 <button class="back-btn" @onclick="CloseABSReportForm">
                     ⬅ Back
                 </button>

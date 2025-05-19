@@ -1801,11 +1801,126 @@ strong {
     max-height: 80vh;
     overflow-y: auto;
     /* position: absolute; */
-    max-width: 40%;
-    background: #FFF;
+    max-width: 100%;
+    background: #F4F4F4;
     padding: 0;
     z-index: 1000;
 }
 .leaflet-top .leaflet-control{
     margin-top:58px;
+}
+
+/*19May Added*/
+.cls_form_container {
+    /*max-height: 400px;*/
+    overflow-y: auto;
+    padding: 0px 10px !important;
+    background-color: #F4F4F4;
+    width: 100%;
+}
+
+.cls_myroute_table_img{
+    width: 20px;
+    height: 20px;
+}
+.cls_route_div1 {
+    padding: 5px 0;
+    border-top: 0px !important;
+}
+.cls_myroute_label{
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0px;
+}
+.cls_red_outline {
+    background-color: #ff000026;
+    font-size: 13px;
+    margin-bottom: 5px;
+    color: red;
+    font-weight: 600;
+    border-radius: 5px;
+    padding: 6px 13px;
+    margin: 0px 6px;
+}
+
+.cls_myroute_table {
+    width: 100%;
+    background: #fff;
+    padding: 5px 12px 14px 12px;
+    border-radius: 0px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.cls_myroute_table table {
+    width: 100%;
+    border-spacing: 0px;
+    box-sizing: border-box;
+}
+
+    .cls_myroute_table table td {
+        font-size: 9px;
+        font-weight: 500;
+        color: #000;
+        border-top: 1px solid #d1d1d1;
+        border-bottom: 1px solid #d1d1d1;
+        text-align: center;
+        align-items: center;
+        padding: 12px 4px;
+        line-height: 14px;
+    }
+.cls_myroute_table table th {
+    font-size: 10px;
+    font-weight: 600;
+    color: #000;
+    border: 0px solid #d1d1d1;
+    text-align: center;
+    align-items: center;
+    padding: 6px 4px;
+    line-height: 14px;
+}
+
+.cls_myroute_table_tr td {
+    font-size: 11px;
+    font-weight: 500;
+    background-color: #F4F4F4;
+}
+
+.cls_myroute_table table tr td:first-child {
+    border-left: 1px solid #d1d1d1;
+}
+
+/* Style the last <td> in every <tr> */
+.cls_myroute_table table tr td:last-child {
+    border-right: 1px solid #d1d1d1;
+}
+.dropdown-button{
+    font-size: 12px !important;
+    font-weight: 500;
+}
+.cls_myroute_content {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0px !important;
+    margin: 14px 0px;
+    background-color: #FFF;
+}
+.cls_myfloating_content {
+    min-width: 30%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-height: 80vh;
+    overflow-y: auto;
+    /* position: absolute; */
+    width: 100%;
+    background: #FFF;
+    padding: 0;
+    z-index: 1000;
+}
+.cls_form_container1 {
+    overflow-y: auto;
+    padding: 0px 10px !important;
+    background-color: #FFF;
+    width: 100%;
 }
