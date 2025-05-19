@@ -1,5 +1,5 @@
 ﻿
-.route-panel {
+/*.route-panel {
     position: absolute;
     width: 100%;
     max-width: 95%;
@@ -12,10 +12,10 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     z-index: 2;
-}
+}*/
 
 /* Tab headers */
-.tab-header {
+/*.tab-header {
     display: flex;
     gap: 40px;
     padding: 12px 20px;
@@ -33,10 +33,10 @@
     .tab.active {
         color: #1473E6;
         border-bottom: 2px solid #1473E6;
-    }
+    }*/
 
 /* Filter section */
-.filter-section {
+/*.filter-section {
     padding: 16px 24px;
     display: flex;
     align-items: center;
@@ -113,18 +113,18 @@
 
     .dropdown-item:hover {
         color: #1473E6;
-    }
+    }*/
 
 /* Select instruction */
-.select-instruction {
+/*.select-instruction {
     padding: 0 24px;
     margin-bottom: 10px;
     font-size: 14px;
     color: #333;
-}
+}*/
 
 /* Table styles */
-.table-container {
+/*.table-container {
     overflow-x: auto;
     overflow-y: auto;
     max-height: 400px;
@@ -242,10 +242,10 @@
     width: 16px;
     height: 16px;
     cursor: pointer;
-}
+}*/
 
 /* View on map footer */
-.view-map-footer {
+/*.view-map-footer {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -271,10 +271,10 @@
 .arrow-icon {
     width: 12px;
     height: 12px;
-}
+}*/
 
 /* Custom scrollbar */
-.table-container::-webkit-scrollbar {
+/*.table-container::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
@@ -290,11 +290,11 @@
 
     .table-container::-webkit-scrollbar-thumb:hover {
         background: #999;
-    }
+    }*/
 
 /* Responsive adjustments */
-@media (max-width: 1200px) {
+/*@media (max-width: 1200px) {
     .route-panel {
         max-width: 98%;
     }
-}
+}*/

@@ -1886,11 +1886,13 @@ strong {
     font-weight: 500;
     background-color: #F4F4F4;
 }
-.cls_myroute_table_tr_selected td {
+
+/*added 19May*/
+/*.cls_myroute_table_tr_selected td {
 
     background-color: #1868bd14;
 }
-
+*/
 .cls_myroute_table table tr td:first-child {
     border-left: 1px solid #d1d1d1;
 }
@@ -1929,10 +1931,24 @@ strong {
     padding: 0px 10px !important;
     background-color: #FFF;
     width: 100%;
+    /*if needed adjust height */
+    height : 70vh;
 }
 .cls_width3{
     width: 3% !important;
 }
 .cls_width1 {
     width: 1% !important;
+}
+
+
+.expand-btn {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 16px;
+    text-align: center;
 }

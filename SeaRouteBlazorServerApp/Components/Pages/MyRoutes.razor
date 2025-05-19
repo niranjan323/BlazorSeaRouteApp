@@ -53,7 +53,7 @@
         </div>
 
 
-    
+   
         <div class="cls_route_div_rep"  >
             <div class="cls_flex cls_flex_gap_8px cls_flex_align_center"  >
                 <h3 class="cls_myroute_label"  >
@@ -72,96 +72,88 @@
                     <th class="cls_width1">
                         <input type="checkbox" @onclick="SelectAll" id="checkAll" @bind="CheckAll">
                     </th>
-                    <th  >
+                    <th>
                         <div class="cls_table_div">
                             <img src="images/route_name.svg" class="cls_myroute_table_img" />
-                            Route Name <br />
-                            &nbsp;
-                            
-                        </div>
-                    </th>
-                    <th  >
-                        <div class="cls_table_div">
-                            <img src="images/calculation_type.svg" class="cls_myroute_table_img" />
-                            Calcs Type<br />
-                            &nbsp;
+                            Route Name
                         </div>
                     </th>
                     <th>
                         <div class="cls_table_div">
                             <img src="images/calculation_type.svg" class="cls_myroute_table_img" />
-                            Port of <br /> Departure
-                        </div>
-                    </th>
-                    <th>
-                        <div class="cls_table_div">
-                            <img src="images/download-icon-10@1x.png" class="cls_myroute_table_img" />
-                            Port of <br />Arrival
-                        </div>
-                    </th>
-                    <th  >
-                        <div class="cls_table_div">
-                            <img src="images/date-of-voyage@1x.png" class="cls_myroute_table_img" />
-                            Date of <br />Voyage
-                        </div>
-                    </th>
-                    <th>
-                        <div class="cls_table_div">
-                            <img src="images/reduction-factor.png" class="cls_myroute_table_img" />
-                            Reduction<br /> Factor
-                        </div>
-                    </th>
-                    <th>
-                        <div class="cls_table_div">
-                            <img src="images/routes.png" class="cls_myroute_table_img" />
-                            Route <br />Distance
+                            Calcs Type
                         </div>
                     </th>
                     <th>
                         <div class="cls_table_div">
                             <img src="images/vessel_IMO_icon.svg" class="cls_myroute_table_img" />
-                            Vessel <br />IMO
+                            Vessel<br />IMO
                         </div>
                     </th>
-                    <th  >
+                    <th>
                         <div class="cls_table_div">
                             <img src="images/Vessel_name_icon.svg" class="cls_myroute_table_img" />
-                            Vessel Name
+                            Vessel<br />Name
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/loading_port.svg" class="cls_myroute_table_img" />
+                            Port of<br />Departure
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/location pin.svg" class="cls_myroute_table_img" />
+                            Port of<br />Arrival
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/routes.png" class="cls_myroute_table_img" />
+                            Route<br />Distance
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/Calculate.svg" class="cls_myroute_table_img" />
+                            Short Voyage<br />Reduction Factor
+                        </div>
+                    </th>
+                    <th>
+                        <div class="cls_table_div">
+                            <img src="images/reduction-factor.png" class="cls_myroute_table_img" />
+                            Reduction<br />Factor
                         </div>
                     </th>
                     <th>
                         <div class="cls_table_div">
                             <img src="images/Spring.svg" class="cls_myroute_table_img" />
-                            Spring<br />
-                            &nbsp;
+                            Spring
                         </div>
                     </th>
                     <th>
                         <div class="cls_table_div">
                             <img src="images/Summer.svg" class="cls_myroute_table_img" />
-                            Summer<br />
-                            &nbsp;
+                            Summer
                         </div>
                     </th>
                     <th>
                         <div class="cls_table_div">
                             <img src="images/Fall.svg" class="cls_myroute_table_img" />
-                            Fall<br />
-                            &nbsp;
+                            Fall
                         </div>
                     </th>
                     <th>
                         <div class="cls_table_div">
                             <img src="images/Winter.svg" class="cls_myroute_table_img" />
-                            Winter<br />
-                            &nbsp;
+                            Winter
                         </div>
                     </th>
                     <th class="cls_width3">
                         <div class="cls_table_div">
                             <img src="images/Actions.svg" class="cls_myroute_table_img" />
-                            Actions<br />
-                            &nbsp;
+                            Actions
                         </div>
                     </th>
                 </tr>
@@ -190,13 +182,13 @@
                             </td>
                             <td>@item.RecordName</td>
                             <td>Reduction Factor</td>
-                            <td>@item.DeparturePort</td>
-                            <td>@item.ArrivalPort</td>
-                            <td>@item.VoyageDate</td>
-                            <td>@Math.Round(item.ReductionFactor, 2)</td>
-                            <td>@Math.Round(item.RouteDistance).ToString() nm</td>
                             <td>@item.VesselIMO</td>
                             <td>@item.VesselName</td>
+                            <td>@item.DeparturePort</td>
+                            <td>@item.ArrivalPort</td>
+                            <td>@Math.Round(item.RouteDistance).ToString() nm</td>
+                            <td>@Math.Round(item.ReductionFactor, 2)</td>
+                            <td>@Math.Round(item.ReductionFactor, 2)</td>
                             <td >@GetSeasonValue(item, "Spring")</td>
                             <td >@GetSeasonValue(item, "Summer")</td>
                             <td >@GetSeasonValue(item, "Fall")</td>
@@ -219,13 +211,14 @@
                                     <td ></td>
                                     <td>@childItem.RecordLegName</td>
                                     <td></td>
-                                    <td>@childItem.DeparturePort</td>
+                                     <td>@item.VesselIMO</td>
+                                     <td>@item.VesselName</td>
+                                     <td>@childItem.DeparturePort</td>
                                     <td>@childItem.ArrivalPort</td>
-                                    <td>@item.VoyageDate</td>
-                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
                                     <td>@Math.Round(childItem.Distance) nm</td>
-                                    <td>@item.VesselIMO</td>
-                                    <td>@item.VesselName</td>
+                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
+                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
+
                                     <td >@GetSeasonValue(childItem, "Spring")</td>
                                     <td >@GetSeasonValue(childItem, "Summer")</td>
                                     <td >@GetSeasonValue(childItem, "Fall")</td>
@@ -306,7 +299,7 @@ private string GetSeasonValue(dynamic item, string season)
     if (season == "Summer") return "0.85";
     if (season == "Fall") return "0.85";
     if (season == "Winter") return "0.85";
-    
+   
     return "0.80";
 }
 bool CheckAll { get; set; } = false;
