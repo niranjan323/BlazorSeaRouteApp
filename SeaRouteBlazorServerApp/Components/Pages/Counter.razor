@@ -1,1 +1,162 @@
-﻿
+﻿@* @page "/"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject ILogger<Home> Logger
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components.Web
+@using System.Text.Json
+@using System.Globalization
+@inject NavigationManager navigationManager;
+@inject NextGenEngApps.DigitalRules.CRoute.Services.RouteService routeService;
+@inject CRoute.Services.ICRouteAPIService routeAPIService;
+
+<div class="map-container">
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Floating UI -->
+    <div id="divRF" class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
+
+        <!-- Header with Tabs and Close Button -->
+
+        <div class="header">
+            <div class="tabs">
+                <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+                    Start New Calculation
+                </button>
+                <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="@(()=> MyRoutes())">
+                    My Calculation Results
+                </button>
+            </div>
+            <button class="close-btn" @onclick="CloseOverlay">×</button>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="form-container">
+            @if (selectedTab == 1)
+            {
+                @if (selectedForm == 0)
+                {
+                    <!-- Show Selection Options -->
+                    <div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
+                        <label class="cls_main_label">
+                            Select your calculation option below:
+                        </label>
+                    </div>
+
+                    <div class="calculation-options">
+                        <div class="option-card" @onclick="() => ShowForm(1)">
+                            <img src="img/Reduction_Factor_Calculation_Ship.svg" alt="Reduction Factor">
+                            <h4>Route Reduction Factor Calculation</h4>
+                        </div>
+                        <div class="option-card" @onclick="() => ShowForm(2)">
+                            <img src="img/Limited short voyage-icon@1x.png" alt="Limited Short">
+                            <h4>Limited Short Voyage Calculation</h4>
+                        </div>
+                    </div>
+                }
+                @if (selectedForm == 1)
+                {
+                    <ReductionFactorCalculation OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
+                    OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
+                    OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData"
+                    OnLegsDataReady="HandleReductionLegsReportData" />
+
+                }
+
+                else if (selectedForm == 2)
+                {
+
+                    <ShortVoyageReductionFactor OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" OnReportDataReady="HandleReportData" />
+                }
+            }
+            else if (selectedTab == 2)
+            {
+                <p>My Routes content here...</p>  
+
+                <MyRoutes></MyRoutes>
+            }
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+    function toggleRow(button) {
+    const row = button.parentElement.parentElement.nextElementSibling;
+    const isVisible = row.style.display === 'table-row';
+    row.style.display = isVisible ? 'none' : 'table-row';
+    button.textContent = isVisible ? '+' : '−';
+    }
+
+</script>
+
+
+<style>
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    td {
+        border: 1px solid #ddd;
+        padding: 10px;
+    }
+
+    th {
+        /* background-color: #f4f4f4; */
+        padding: 10px;
+    }
+
+    .parent-row td {
+        padding-top: 30px;
+        padding-bottom: 30px;
+        border-top: 1px solid black;
+        border-bottom: 1px solid black;
+        border-right: none;
+        border-left: none;
+        text-align: left;
+    }
+
+    .child-row {
+        /* display: none; */
+        background-color: #f9f9f9;
+    }
+
+        .child-row td {
+            padding-left: 10px;
+            border-top: 1px solid black;
+            border-bottom: 1px solid black;
+            border-right: none;
+            border-left: none;
+        }
+
+    /* .action-icons {
+            cursor: pointer;
+            margin: 0 5px;
+            } */
+
+    .expand-btn {
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 18px;
+    }
+
+</style>
+
+
+
+@code{
+    void MyRoutes()
+    {
+        navigationManager.NavigateTo("MyRoutes");
+    }
+
+   
+} *@

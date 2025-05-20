@@ -9,12 +9,13 @@
 @using SeaRouteBlazorServerApp.Components.Services
 @using SeaRouteModel.Models
 @inject IPdfService PdfService
+@inject NavigationManager navigationManager;
 <div class="map-container">
     <!-- Map -->
     <div id="map" style="margin-top:42px;"></div>
 
 
-    <div class="cls_floating_outline">
+    <div id="divRF" class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
 
         @* added cls_floating_content*@
     <!-- Floating UI -->
@@ -65,7 +66,7 @@
                 }
                 @if (selectedForm == 1)
                 {
-                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+                <div class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
                     <!-- Header with Tabs and Close Button -->
 
                     <div class="header">
@@ -92,7 +93,7 @@
 
                 else if (selectedForm == 2)
                 {
-                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+                <div class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
                     <!-- Header with Tabs and Close Button -->
 
                     <div class="header">
@@ -116,7 +117,7 @@
             }
             else if (selectedTab == 2)
             {
-            <div class="cls_myfloating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+            <div class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
                 <!-- Header with Tabs and Close Button -->
 
                 <div class="header">
@@ -651,3 +652,78 @@
     </div>
 </div>
 
+<script>
+    function toggleRow(button) {
+    const row = button.parentElement.parentElement.nextElementSibling;
+    const isVisible = row.style.display === 'table-row';
+    row.style.display = isVisible ? 'none' : 'table-row';
+    button.textContent = isVisible ? '+' : '−';
+    }
+
+</script>
+
+
+<style>
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    td {
+        border: 1px solid #ddd;
+        padding: 10px;
+    }
+
+    th {
+        /* background-color: #f4f4f4; */
+        padding: 10px;
+    }
+
+    .parent-row td {
+        padding-top: 30px;
+        padding-bottom: 30px;
+        border-top: 1px solid black;
+        border-bottom: 1px solid black;
+        border-right: none;
+        border-left: none;
+        text-align: left;
+    }
+
+    .child-row {
+        /* display: none; */
+        background-color: #f9f9f9;
+    }
+
+        .child-row td {
+            padding-left: 10px;
+            border-top: 1px solid black;
+            border-bottom: 1px solid black;
+            border-right: none;
+            border-left: none;
+        }
+
+    /* .action-icons {
+            cursor: pointer;
+            margin: 0 5px;
+            } */
+
+    .expand-btn {
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 18px;
+    }
+
+</style>
+
+
+
+@code{
+    void MyRoutes()
+    {
+        navigationManager.NavigateTo("MyRoutes");
+    }
+
+   
+}
