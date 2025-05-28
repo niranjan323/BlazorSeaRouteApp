@@ -8,6 +8,17 @@
 <button class="back-btn" @onclick="GoBack">⬅ Back</button>
 
 <div class="cls_block">
+    <div class="cls_flex cls_flex_gap_2 cls_padding_14px_22px">
+        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W50 cls_flex_justify_end">
+            <span class="content_div_label">Route Name</span>
+            <input type="text" class="content_div_input" style="flex: 1;" placeholder="Enter route name"  />
+        </div>
+        <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W50 cls_flex_justify_end">
+            <span class="content_div_label">Note</span>
+            <input type="text" class="content_div_input" style="flex: 1;" placeholder="Enter note"  />
+        </div>
+    </div>
+
 
     <div class="cls_flex cls_flex_gap_2 cls_padding_14px_22px">
         <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
@@ -65,7 +76,7 @@
             <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
                 <span class="content_div_label">Date of Departure</span>
                 <div class="cls_input_outline cls_flex_gap_8px">
-                    <input type="date" @bind="reductionFactor.DateOfDeparture">
+                    <input type="date" @bind="reductionFactor.DateOfDeparture" >
                 </div>
             </div>
 
@@ -111,9 +122,13 @@
             </div>
 
             <div class="cls_flex cls_flex_column cls_flex_gap_4px cls_flex_div_W33 cls_flex_justify_end">
-                <span class="content_div_label">Date of Arrival</span>
-                <div class="cls_input_outline cls_flex_gap_8px">
-                    <input type="date" @bind="reductionFactor.DateOfArrival">
+                <span class="content_div_label">Date of Departure</span>
+                <div class="cls_input_outline cls_flex_gap_8px" style="@GetDateInputStyle(reductionFactor.DateOfDeparture)">
+                    <input type="date"
+                           @bind="reductionFactor.DateOfDeparture"
+                           @bind:after="OnDepartureDateChanged"
+                           min="@DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")"
+                           style="@GetDateInputStyle(reductionFactor.DateOfDeparture)">
                 </div>
             </div>
 

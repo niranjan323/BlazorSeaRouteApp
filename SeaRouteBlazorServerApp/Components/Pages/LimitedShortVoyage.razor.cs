@@ -46,6 +46,40 @@ namespace SeaRouteBlazorServerApp.Components.Pages
         private bool AddEditVessalReport = false;
 
         // changes 
+        private string GetDateInputStyle(DateOnly date)
+        {
+            if (date != default && date < DateOnly.FromDateTime(DateTime.Now))
+            {
+                return "background-color:#E5E5E5;";
+            }
+            return "";
+        }
+
+        private string GetMinArrivalDate()
+        {
+            // Arrival date should be at least the departure date or today, whichever is later
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            var minDate = today;
+
+            if (reductionFactor.DateOfDeparture != default && reductionFactor.DateOfDeparture > today)
+            {
+                minDate = reductionFactor.DateOfDeparture;
+            }
+            return minDate.ToString("yyyy-MM-dd");
+        }
+
+        private void OnDepartureDateChanged()
+        {
+            // If departure date is changed and arrival date is earlier than departure date,
+            // reset arrival date
+            if (reductionFactor.DateOfDeparture != default &&
+                reductionFactor.DateOfArrival != default &&
+                reductionFactor.DateOfArrival < reductionFactor.DateOfDeparture)
+            {
+                reductionFactor.DateOfArrival = default;
+            }
+            StateHasChanged();
+        }
         public PortSelectionModel LimitedDeparturePortSelection { get; set; } = new();
         public PortSelectionModel LimitedArrivalPortSelection { get; set; } = new();
         protected async override Task OnInitializedAsync()
