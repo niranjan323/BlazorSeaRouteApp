@@ -341,6 +341,98 @@ Longitude = 103.8198
             return reportData;
         }
 
+        //For reduction factor
+        private async Task DownloadReductionFactorReport()
+        {
+            try
+            {
+                // Create report data 
+                var reportData = CreateReductionFactorReportData();
+
+                // Generate file name
+                string fileName = $"ReductionFactorReport_{DateTime.Now:yyyyMMdd}_{routeModel?.RouteName?.Replace(" ", "_") ?? "Route"}.pdf";
+
+                // Call the PDF service
+                await PdfService.DownloadPdfAsync(reportData, fileName);
+            }
+            catch (Exception ex)
+            {
+                // Handle exception
+                Console.Error.WriteLine($"Error downloading reduction factor report: {ex.Message}");
+            }
+        }
+
+        private ReportData CreateReductionFactorReportData()
+        {
+            var reportData = new ReportData
+            {
+                ReportName = "Route Reduction Factor Report",
+                Title = HeadingText,
+                AttentionText = $"Mr. Alan Bond, Mani Industries (WCN: 123456)"
+            };
+
+            // User Inputs Section
+            var userInputsSection = new ReportSection
+            {
+                Title = "User Inputs",
+                Type = "table",
+                TableData = new List<ReportTableRow>
+        {
+            // Header row
+            new ReportTableRow { Cells = new List<string> { "Parameter", "Value", "Code" } },
+            // Data rows
+            new ReportTableRow { Cells = new List<string> { "Route Name", routeModel?.RouteName ?? "Marseille - Shanghai", "" } },
+            new ReportTableRow { Cells = new List<string> { "Port of Departure", routeModel?.MainDeparturePortSelection?.Port?.Name ?? "Marseille, France", routeModel?.DeparturePorts?.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS" } },
+            new ReportTableRow { Cells = new List<string> { "Loading Port", routeModel?.DeparturePorts?.FirstOrDefault()?.Port?.Name ?? "Singapore", routeModel?.DeparturePorts?.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN" } },
+            new ReportTableRow { Cells = new List<string> { "Port of Arrival", routeModel?.MainArrivalPortSelection?.Port?.Name ?? "Shanghai, China", routeModel?.ArrivalPorts?.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH" } }
+        }
+            };
+            reportData.Sections.Add(userInputsSection);
+
+            // Output Section
+            var outputSection = new ReportSection
+            {
+                Title = "Output",
+                Type = "table"
+            };
+
+            if (isCLPVChecked)
+            {
+                // Single reduction factor for CLP-V
+                outputSection.TableData = new List<ReportTableRow>
+        {
+            new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
+            new ReportTableRow { Cells = new List<string> { "Reduction Factor", routeReductionFactor?.ToString("0.00") ?? "0.82" } }
+        };
+            }
+            else if (isCLPVParrChecked)
+            {
+                // Seasonal reduction factors for CLP-VP(XR)
+                outputSection.TableData = new List<ReportTableRow>
+        {
+            new ReportTableRow { Cells = new List<string> { "Season", "Reduction Factor" } }
+        };
+
+                foreach (var season in seasonalOptions)
+                {
+                    outputSection.TableData.Add(new ReportTableRow
+                    {
+                        Cells = new List<string> { season, GetReductionFactorForSeason(season) }
+                    });
+                }
+            }
+
+            reportData.Sections.Add(outputSection);
+
+            // Add notes
+            reportData.Notes = new List<string>
+    {
+        "The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.",
+        "ABS Container Securing Guide 6.2.4"
+    };
+
+            return reportData;
+        }
         private async Task PrintReport()
         {
             await JS.InvokeVoidAsync("window.print");
