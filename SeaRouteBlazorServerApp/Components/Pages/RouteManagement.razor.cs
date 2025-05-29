@@ -691,6 +691,8 @@ Longitude = 103.8198
         }
 
         // Create the complex route analysis table matching the UI
+
+        //new
         private ComplexTableData CreateRouteAnalysisTable()
         {
             var complexTable = new ComplexTableData();
@@ -852,7 +854,99 @@ Longitude = 103.8198
         }
 
 
+        //added
+        private async Task<byte[]> CaptureMapWithRoutesAsBytes(string mapElementId = "reportMapContainer", string displayElementId = null)
+        {
+            try
+            {
+                // Use the enhanced map capture function
+                var base64String = await JS.InvokeAsync<string>("captureMapWithRoutes", mapElementId, displayElementId);
 
+                if (!string.IsNullOrEmpty(base64String))
+                {
+                    // Remove data URL prefix if present
+                    if (base64String.StartsWith("data:image"))
+                    {
+                        base64String = base64String.Substring(base64String.IndexOf(",") + 1);
+                    }
+                    return Convert.FromBase64String(base64String);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error capturing map with routes: {ex.Message}");
+                Console.WriteLine($"Full exception: {ex}");
+            }
+            return null;
+        }
+
+
+        private async Task<bool> EnsureChartsReady()
+        {
+            try
+            {
+                // Check if Chart.js is loaded
+                var chartJsLoaded = await JS.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
+                if (!chartJsLoaded)
+                {
+                    Console.WriteLine("Chart.js is not loaded");
+                    return false;
+                }
+
+                // You can add more checks here if needed
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking chart readiness: {ex.Message}");
+                return false;
+            }
+        }
+        private async Task<byte[]> CaptureChartDirectAsBytes(string canvasId)
+        {
+            try
+            {
+                // Use the Chart.js canvas directly
+                var base64String = await JS.InvokeAsync<string>("getChartAsBase64", canvasId);
+
+                if (!string.IsNullOrEmpty(base64String))
+                {
+                    if (base64String.StartsWith("data:image"))
+                    {
+                        base64String = base64String.Substring(base64String.IndexOf(",") + 1);
+                    }
+                    return Convert.FromBase64String(base64String);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error capturing chart directly {canvasId}: {ex.Message}");
+                Console.WriteLine($"Full exception: {ex}");
+            }
+            return null;
+        }
+
+        private async Task<bool> EnsureChartsReady()
+        {
+            try
+            {
+                // Check if Chart.js is loaded
+                var chartJsLoaded = await JS.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
+                if (!chartJsLoaded)
+                {
+                    Console.WriteLine("Chart.js is not loaded");
+                    return false;
+                }
+
+                // You can add more checks here if needed
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking chart readiness: {ex.Message}");
+                return false;
+            }
+        }
 
     }
 }
