@@ -207,9 +207,12 @@ public class PdfService : IPdfService
     {
         if (tableData == null || tableData.Count == 0)
             return y;
-
+        // Validate inputs
+        if (width <= 0 || font == null || headerFont == null)
+            return y;
         int colCount = tableData[0].Cells.Count;
-        double[] colWidths = CalculateColumnWidths(tableData, width - 4, colCount); // Account for table borders
+        double availableWidth = Math.Max(width - 4, 100);
+        double[] colWidths = CalculateColumnWidths(tableData, availableWidth, colCount); // Account for table borders
         double baseRowHeight = Math.Max(font.Height * 1.8, 24);
         double cellPadding = 6;
 
@@ -311,7 +314,7 @@ public class PdfService : IPdfService
 
         return currentY + 15;
     }
-
+    
     // *** NEW HELPER METHOD - CALCULATE TABLE HEIGHT ***
     private double CalculateTableHeight(List<ReportTableRow> tableData, double[] colWidths,
         XFont font, XFont headerFont, double cellPadding, double baseRowHeight)
@@ -341,16 +344,20 @@ public class PdfService : IPdfService
 
     // *** UPDATED METHOD - IMPROVED COMPLEX TABLE ALIGNMENT ***
     private double DrawComplexTable(XGraphics gfx, ComplexTableData complexTable, double x, double y,
-    double width, XFont font, XFont boldFont)
+      double width, XFont font, XFont boldFont)
     {
         if (complexTable == null || complexTable.Rows.Count == 0)
+            return y;
+
+        // Validate inputs
+        if (width <= 0 || font == null || boldFont == null)
             return y;
 
         double cellPadding = 6;
         double minRowHeight = Math.Max(font.Height * 2, 28);
 
         // Improved column width calculation for Route Analysis table
-        double availableWidth = width - 4; // Account for borders
+        double availableWidth = Math.Max(width - 4, 100); // Ensure minimum width
         double[] columnWidths;
 
         // Check if this is a Route Analysis table (has seasonal columns)
@@ -400,6 +407,8 @@ public class PdfService : IPdfService
                 {
                     cellWidth += columnWidths[colIndex + span];
                 }
+                cellWidth = Math.Max(cellWidth, 20); // Ensure minimum cell width
+                cellWidth = Math.Max(cellWidth, 20); // Ensure minimum cell width
 
                 var cellText = cell.Text ?? "";
                 if (cell.SubItems?.Count > 0)
@@ -491,8 +500,10 @@ public class PdfService : IPdfService
 
                         if (row.IsHeaderRow)
                         {
-                            // Center all header text
-                            var textRect = new XRect(xPos + cellPadding, textY, cellWidth - (cellPadding * 2), currentFont.Height);
+                            // Center all header text with validation
+                            double rectWidth = Math.Max(cellWidth - (cellPadding * 2), 10);
+                            double rectHeight = Math.Max(currentFont.Height, 10);
+                            var textRect = new XRect(xPos + cellPadding, textY, rectWidth, rectHeight);
                             gfx.DrawString(line, currentFont, XBrushes.Black, textRect, XStringFormats.TopCenter);
                         }
                         else
@@ -503,7 +514,9 @@ public class PdfService : IPdfService
 
                             if (isNumeric)
                             {
-                                var textRect = new XRect(xPos + cellPadding, textY, cellWidth - (cellPadding * 2), currentFont.Height);
+                                double rectWidth = Math.Max(cellWidth - (cellPadding * 2), 10);
+                                double rectHeight = Math.Max(currentFont.Height, 10);
+                                var textRect = new XRect(xPos + cellPadding, textY, rectWidth, rectHeight);
                                 gfx.DrawString(line, currentFont, XBrushes.Black, textRect, XStringFormats.TopCenter);
                             }
                             else
@@ -640,12 +653,15 @@ public class PdfService : IPdfService
     {
         var widths = new double[columnCount];
 
+        // Ensure minimum total width
+        totalWidth = Math.Max(totalWidth, columnCount * 20);
+
         if (tableData.Count == 0)
         {
             double baseWidth = totalWidth / columnCount;
             for (int i = 0; i < columnCount; i++)
             {
-                widths[i] = baseWidth;
+                widths[i] = Math.Max(baseWidth, 20);
             }
             return widths;
         }
@@ -685,7 +701,7 @@ public class PdfService : IPdfService
             for (int i = 0; i < columnCount; i++)
             {
                 double proportion = (double)totalChars[i] / totalAllChars;
-                double minWidth = totalWidth * 0.10; // Minimum 10%
+                double minWidth = Math.Max(totalWidth * 0.10, 20); // Minimum 10% or 20 units
                 double maxWidth = totalWidth * 0.50; // Maximum 50%
 
                 widths[i] = Math.Max(minWidth, Math.Min(maxWidth, totalWidth * proportion));
@@ -704,12 +720,18 @@ public class PdfService : IPdfService
         }
         else
         {
-            // Fallback to equal distribution
-            double baseWidth = totalWidth / columnCount;
+            // Fallback to equal distribution with minimum widths
+            double baseWidth = Math.Max(totalWidth / columnCount, 20);
             for (int i = 0; i < columnCount; i++)
             {
                 widths[i] = baseWidth;
             }
+        }
+
+        // Final validation - ensure no width is too small
+        for (int i = 0; i < columnCount; i++)
+        {
+            widths[i] = Math.Max(widths[i], 20);
         }
 
         return widths;
