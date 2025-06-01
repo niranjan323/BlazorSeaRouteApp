@@ -478,7 +478,7 @@ Longitude = 103.8198
             var reportData = new ReportData
             {
                 ReportName = "Short Voyage Reduction Factor Report",
-                Title = HeadingTextShortVoyage,
+               // Title = HeadingTextShortVoyage,
                 AttentionText = "Mr. Alan Bond, Mani Industries (WCN: 123456)",
                 Description = $"Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is {reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"}. More details can be found below.",
                 ContactInfo = "For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (HWright@eagle.org)."
@@ -654,7 +654,7 @@ Longitude = 103.8198
                 {
                     Title = "Results",
                     Type = "text",
-                    Content = $"Reduction Factor: {decimal.Round(decimal.Max((decimal)routeModel?.ReductionFactor, 0.80m), 2)}"
+                    //Content = $"Reduction Factor: {decimal.Round(decimal.Max((decimal)routeModel?.ReductionFactor, 0.80m), 2)}"
                 };
                 reportData.Sections.Add(simpleResultSection);
             }
@@ -735,57 +735,62 @@ Longitude = 103.8198
             new ComplexTableCell { Text = "Entire Route", IsBold = true },
             new ComplexTableCell { Text = $"{routeModel?.MainDeparturePortSelection?.Port?.Name} - {routeModel?.MainArrivalPortSelection?.Port?.Name}" },
             new ComplexTableCell { Text = $"{Math.Round(routeModel?.TotalDistance ?? 0)} nm" },
-            new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Annual"), IsBold = true },
-            new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Spring") },
-            new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Summer") },
-            new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Fall") },
-            new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Winter") }
+           // new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Annual"), IsBold = true },
+            //new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Spring") },
+            //new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Summer") },
+            //new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Fall") },
+            //new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)(routeModel?.ReductionFactor ?? 0), "Winter") }
         }
             };
             complexTable.Rows.Add(entireRouteRow);
 
             // Route Splitting Rows
-            if (routeLegs != null && routeLegs.Any())
-            {
-                bool isFirst = true;
-                foreach (var leg in routeLegs)
-                {
-                    var legRow = new ComplexTableRow
-                    {
-                        Cells = new List<ComplexTableCell>()
-                    };
+            //if (routeLegs != null && routeLegs.Any())
+            //{
+            //    bool isFirst = true;
+            //    foreach (var leg in routeLegs)
+            //    {
+            //        var legRow = new ComplexTableRow
+            //        {
+            //            Cells = new List<ComplexTableCell>()
+            //        };
 
-                    if (isFirst)
-                    {
-                        legRow.Cells.Add(new ComplexTableCell { Text = "Route Splitting", RowSpan = routeLegs.Count, IsBold = true });
-                        isFirst = false;
-                    }
+            //        if (isFirst)
+            //        {
+            //            legRow.Cells.Add(new ComplexTableCell { Text = "Route Splitting", RowSpan = routeLegs.Count, IsBold = true });
+            //            isFirst = false;
+            //        }
 
-                    legRow.Cells.AddRange(new List<ComplexTableCell>
-            {
-                new ComplexTableCell { Text = $"{leg.DeparturePort} - {leg.ArrivalPort}" },
-                new ComplexTableCell { Text = $"{Math.Round(leg.Distance)} nm" },
-                new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Annual"), IsBold = true },
-                new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Spring") },
-                new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Summer") },
-                new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Fall") },
-                new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Winter") }
-            });
+            //        legRow.Cells.AddRange(new List<ComplexTableCell>
+            //{
+            //    new ComplexTableCell { Text = $"{leg.DeparturePort} - {leg.ArrivalPort}" },
+            //    new ComplexTableCell { Text = $"{Math.Round(leg.Distance)} nm" },
+            //    new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Annual"), IsBold = true },
+            //    new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Spring") },
+            //    new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Summer") },
+            //    new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Fall") },
+            //    new ComplexTableCell { Text = GetCorrectedReductionFactor((decimal)leg.ReductionFactor, "Winter") }
+            //});
 
-                    complexTable.Rows.Add(legRow);
-                }
-            }
+            //        complexTable.Rows.Add(legRow);
+            //    }
+            //}
 
             return complexTable;
         }
 
-        // Helper methods for capturing images
+        // Improved C# methods with better error handling and timeout management
+
         private async Task<byte[]> CaptureMapAsBytes()
         {
             try
             {
-                // Capture map as base64 string
-                var base64String = await JS.InvokeAsync<string>("captureMapAsBase64", "reportMapContainer");
+                // Add timeout to prevent TaskCanceledException
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+                // Get the existing captured image (from captureMapWithRoutes)
+                var base64String = await JS.InvokeAsync<string>("getLatestMapImage", cts.Token);
+
                 if (!string.IsNullOrEmpty(base64String))
                 {
                     // Remove data URL prefix if present
@@ -793,15 +798,63 @@ Longitude = 103.8198
                     {
                         base64String = base64String.Substring(base64String.IndexOf(",") + 1);
                     }
-                    return Convert.FromBase64String(base64String);
+
+                    // Validate base64 string before conversion
+                    if (IsValidBase64String(base64String))
+                    {
+                        return Convert.FromBase64String(base64String);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid base64 string received from JavaScript");
+                        return null;
+                    }
                 }
+                else
+                {
+                    Console.WriteLine("No map image available. Please capture screenshot first.");
+                    return null;
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                Console.WriteLine("Map image capture timed out. Please try again.");
+                return null;
+            }
+            catch (JSException jsEx)
+            {
+                Console.WriteLine($"JavaScript error getting map image: {jsEx.Message}");
+                return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error capturing map: {ex.Message}");
+                Console.WriteLine($"Error getting map image: {ex.Message}");
+                return null;
             }
-            return null;
         }
+
+        private bool IsValidBase64String(string base64)
+        {
+            if (string.IsNullOrEmpty(base64))
+                return false;
+
+            try
+            {
+                // Check if string length is multiple of 4
+                if (base64.Length % 4 != 0)
+                    return false;
+
+                // Try to convert to test validity
+                Convert.FromBase64String(base64);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        } 
+
+
 
         private async Task<byte[]> CaptureChartAsBytes(string chartId)
         {
@@ -926,27 +979,27 @@ Longitude = 103.8198
             return null;
         }
 
-        private async Task<bool> EnsureChartsReady()
-        {
-            try
-            {
-                // Check if Chart.js is loaded
-                var chartJsLoaded = await JS.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
-                if (!chartJsLoaded)
-                {
-                    Console.WriteLine("Chart.js is not loaded");
-                    return false;
-                }
+        //private async Task<bool> EnsureChartsReady()
+        //{
+        //    try
+        //    {
+        //        // Check if Chart.js is loaded
+        //        var chartJsLoaded = await JS.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
+        //        if (!chartJsLoaded)
+        //        {
+        //            Console.WriteLine("Chart.js is not loaded");
+        //            return false;
+        //        }
 
-                // You can add more checks here if needed
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error checking chart readiness: {ex.Message}");
-                return false;
-            }
-        }
+        //        // You can add more checks here if needed
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Error checking chart readiness: {ex.Message}");
+        //        return false;
+        //    }
+        //}
 
     }
 }

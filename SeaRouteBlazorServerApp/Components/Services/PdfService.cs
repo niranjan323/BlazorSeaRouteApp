@@ -158,7 +158,7 @@ public class PdfService : IPdfService
         try
         {
             var pdfBytes = await GenerateReportPdfAsync(reportData);
-            await _jsRuntime.InvokeVoidAsync("downloadFile", fileName, Convert.ToBase64String(pdfBytes));
+            await _jsRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, Convert.ToBase64String(pdfBytes));
         }
         catch (Exception ex)
         {
@@ -201,16 +201,41 @@ public class PdfService : IPdfService
         return y + 20; // Add spacing after section
     }
 
+    // *** UPDATED METHOD - IMPROVED TABLE ALIGNMENT ***
     private double DrawTable(XGraphics gfx, List<ReportTableRow> tableData, double x, double y,
-        double width, XFont font, XFont headerFont)
+    double width, XFont font, XFont headerFont)
     {
         if (tableData == null || tableData.Count == 0)
             return y;
 
         int colCount = tableData[0].Cells.Count;
-        double[] colWidths = CalculateColumnWidths(tableData, width, colCount);
-        double rowHeight = font.Height * 1.8;
-        double cellPadding = 5;
+        double[] colWidths = CalculateColumnWidths(tableData, width - 4, colCount); // Account for table borders
+        double baseRowHeight = Math.Max(font.Height * 1.8, 24);
+        double cellPadding = 6;
+
+        // Calculate total table height first
+        double tableHeight = 0;
+        for (int i = 0; i < tableData.Count; i++)
+        {
+            var row = tableData[i];
+            bool isHeader = i == 0;
+            XFont currentFont = isHeader ? headerFont : font;
+
+            double maxCellHeight = baseRowHeight;
+            for (int j = 0; j < Math.Min(row.Cells.Count, colCount); j++)
+            {
+                var cellText = row.Cells[j] ?? "";
+                var wrappedLines = WrapText(cellText, currentFont, colWidths[j] - (cellPadding * 2), gfx);
+                double cellHeight = Math.Max(wrappedLines.Count * (currentFont.Height * 1.2) + (cellPadding * 2), baseRowHeight);
+                maxCellHeight = Math.Max(maxCellHeight, cellHeight);
+            }
+            tableHeight += maxCellHeight;
+        }
+
+        // Draw outer table border
+        gfx.DrawRectangle(XPens.Black, x, y, width, tableHeight);
+
+        double currentY = y;
 
         for (int i = 0; i < tableData.Count; i++)
         {
@@ -219,107 +244,315 @@ public class PdfService : IPdfService
             XFont currentFont = isHeader ? headerFont : font;
             XBrush bgBrush = isHeader ? XBrushes.LightGray : XBrushes.White;
 
-            double xPos = x;
-            double maxCellHeight = rowHeight;
-
-            // Calculate actual row height based on content
+            // Calculate actual row height
+            double maxCellHeight = baseRowHeight;
             for (int j = 0; j < Math.Min(row.Cells.Count, colCount); j++)
             {
                 var cellText = row.Cells[j] ?? "";
                 var wrappedLines = WrapText(cellText, currentFont, colWidths[j] - (cellPadding * 2), gfx);
-                double cellHeight = wrappedLines.Count * font.Height + (cellPadding * 2);
+                double cellHeight = Math.Max(wrappedLines.Count * (currentFont.Height * 1.2) + (cellPadding * 2), baseRowHeight);
                 maxCellHeight = Math.Max(maxCellHeight, cellHeight);
             }
 
-            // Draw cells
-            xPos = x;
+            // Draw cells for this row
+            double xPos = x;
             for (int j = 0; j < Math.Min(row.Cells.Count, colCount); j++)
             {
                 // Draw cell background and border
-                gfx.DrawRectangle(XPens.Black, bgBrush, xPos, y, colWidths[j], maxCellHeight);
+                gfx.DrawRectangle(XPens.Black, isHeader ? bgBrush : XBrushes.White, xPos, currentY, colWidths[j], maxCellHeight);
 
                 // Draw cell text
                 var cellText = row.Cells[j] ?? "";
-                var wrappedLines = WrapText(cellText, currentFont, colWidths[j] - (cellPadding * 2), gfx);
-
-                double textY = y + cellPadding;
-                foreach (var line in wrappedLines)
+                if (!string.IsNullOrWhiteSpace(cellText))
                 {
-                    gfx.DrawString(line, currentFont, XBrushes.Black, xPos + cellPadding, textY);
-                    textY += font.Height;
+                    var wrappedLines = WrapText(cellText, currentFont, colWidths[j] - (cellPadding * 2), gfx);
+
+                    // Calculate vertical centering
+                    double totalTextHeight = wrappedLines.Count * (currentFont.Height * 1.2);
+                    double textStartY = currentY + (maxCellHeight - totalTextHeight) / 2 + cellPadding;
+
+                    // Draw each line of text
+                    for (int lineIndex = 0; lineIndex < wrappedLines.Count; lineIndex++)
+                    {
+                        var line = wrappedLines[lineIndex];
+                        double textY = textStartY + (lineIndex * (currentFont.Height * 1.2));
+
+                        // Determine text alignment
+                        if (isHeader)
+                        {
+                            // Center all header text
+                            var textRect = new XRect(xPos + cellPadding, textY, colWidths[j] - (cellPadding * 2), currentFont.Height);
+                            gfx.DrawString(line, currentFont, XBrushes.Black, textRect, XStringFormats.TopCenter);
+                        }
+                        else
+                        {
+                            // For data: first column left-aligned, others center-aligned if numeric
+                            bool isNumeric = (j > 0) && (double.TryParse(line.Trim(), out _) ||
+                                           line.Contains("N/A") || line.Contains("nm") || line.Contains("0."));
+
+                            if (isNumeric)
+                            {
+                                var textRect = new XRect(xPos + cellPadding, textY, colWidths[j] - (cellPadding * 2), currentFont.Height);
+                                gfx.DrawString(line, currentFont, XBrushes.Black, textRect, XStringFormats.TopCenter);
+                            }
+                            else
+                            {
+                                gfx.DrawString(line, currentFont, XBrushes.Black, xPos + cellPadding, textY);
+                            }
+                        }
+                    }
                 }
 
                 xPos += colWidths[j];
             }
 
-            y += maxCellHeight;
+            currentY += maxCellHeight;
         }
 
-        return y + 10; // Add spacing after table
+        return currentY + 15;
     }
 
+    // *** NEW HELPER METHOD - CALCULATE TABLE HEIGHT ***
+    private double CalculateTableHeight(List<ReportTableRow> tableData, double[] colWidths,
+        XFont font, XFont headerFont, double cellPadding, double baseRowHeight)
+    {
+        double totalHeight = 0;
+
+        for (int i = 0; i < tableData.Count; i++)
+        {
+            var row = tableData[i];
+            bool isHeader = i == 0;
+            XFont currentFont = isHeader ? headerFont : font;
+
+            double maxCellHeight = baseRowHeight;
+            for (int j = 0; j < Math.Min(row.Cells.Count, colWidths.Length); j++)
+            {
+                var cellText = row.Cells[j] ?? "";
+                var wrappedLines = WrapText(cellText, currentFont, colWidths[j] - (cellPadding * 2), null);
+                double cellHeight = Math.Max(wrappedLines.Count * (currentFont.Height * 1.3) + (cellPadding * 2), baseRowHeight);
+                maxCellHeight = Math.Max(maxCellHeight, cellHeight);
+            }
+
+            totalHeight += maxCellHeight;
+        }
+
+        return totalHeight;
+    }
+
+    // *** UPDATED METHOD - IMPROVED COMPLEX TABLE ALIGNMENT ***
     private double DrawComplexTable(XGraphics gfx, ComplexTableData complexTable, double x, double y,
-        double width, XFont font, XFont boldFont)
+    double width, XFont font, XFont boldFont)
     {
         if (complexTable == null || complexTable.Rows.Count == 0)
             return y;
 
-        double cellPadding = 5;
-        double minRowHeight = font.Height * 1.8;
+        double cellPadding = 6;
+        double minRowHeight = Math.Max(font.Height * 2, 28);
 
-        // Calculate column widths - simplified approach for complex table
-        int maxCols = complexTable.Rows.Max(row => row.Cells.Count);
-        double baseColWidth = width / maxCols;
+        // Improved column width calculation for Route Analysis table
+        double availableWidth = width - 4; // Account for borders
+        double[] columnWidths;
 
+        // Check if this is a Route Analysis table (has seasonal columns)
+        bool hasSeasonalColumns = complexTable.Rows.Any(r =>
+            r.Cells.Any(c => c.Text?.Contains("Spring") == true ||
+                            c.Text?.Contains("Summer") == true ||
+                            c.Text?.Contains("Fall") == true ||
+                            c.Text?.Contains("Winter") == true));
+
+        if (hasSeasonalColumns)
+        {
+            // Route Analysis table with 7 columns
+            columnWidths = new double[]
+            {
+            availableWidth * 0.14,  // Routes
+            availableWidth * 0.12,  // Distance  
+            availableWidth * 0.20,  // Annual Reduction Factor
+            availableWidth * 0.135, // Spring
+            availableWidth * 0.135, // Summer
+            availableWidth * 0.135, // Fall
+            availableWidth * 0.135  // Winter
+            };
+        }
+        else
+        {
+            // Default equal distribution
+            int maxColumns = complexTable.Rows.Max(r => r.Cells.Sum(c => c.ColumnSpan));
+            columnWidths = new double[maxColumns];
+            double equalWidth = availableWidth / maxColumns;
+            for (int i = 0; i < maxColumns; i++)
+            {
+                columnWidths[i] = equalWidth;
+            }
+        }
+
+        // Calculate total table height
+        double tableHeight = 0;
         foreach (var row in complexTable.Rows)
         {
             double maxCellHeight = minRowHeight;
-            double xPos = x;
+            int colIndex = 0;
 
-            // Calculate row height
             foreach (var cell in row.Cells)
             {
-                double cellWidth = baseColWidth * cell.ColumnSpan;
-                var wrappedLines = WrapText(cell.Text ?? "", row.IsHeaderRow ? boldFont : font,
-                    cellWidth - (cellPadding * 2), gfx);
-                double cellHeight = wrappedLines.Count * font.Height + (cellPadding * 2);
-                maxCellHeight = Math.Max(maxCellHeight, cellHeight);
-            }
+                double cellWidth = 0;
+                for (int span = 0; span < cell.ColumnSpan && (colIndex + span) < columnWidths.Length; span++)
+                {
+                    cellWidth += columnWidths[colIndex + span];
+                }
 
-            // Draw cells
-            xPos = x;
-            foreach (var cell in row.Cells)
-            {
-                double cellWidth = baseColWidth * cell.ColumnSpan;
-                XFont currentFont = (row.IsHeaderRow || cell.IsBold) ? boldFont : font;
-                XBrush bgBrush = row.IsHeaderRow ? XBrushes.LightGray : XBrushes.White;
-
-                // Draw cell background and border
-                gfx.DrawRectangle(XPens.Black, bgBrush, xPos, y, cellWidth, maxCellHeight);
-
-                // Draw cell text
                 var cellText = cell.Text ?? "";
                 if (cell.SubItems?.Count > 0)
                 {
                     cellText += "\n" + string.Join("\n", cell.SubItems);
                 }
 
+                XFont currentFont = (row.IsHeaderRow || cell.IsBold) ? boldFont : font;
                 var wrappedLines = WrapText(cellText, currentFont, cellWidth - (cellPadding * 2), gfx);
-                double textY = y + cellPadding;
+                double cellHeight = Math.Max(wrappedLines.Count * (currentFont.Height * 1.2) + (cellPadding * 2), minRowHeight);
+                maxCellHeight = Math.Max(maxCellHeight, cellHeight);
 
-                foreach (var line in wrappedLines)
+                colIndex += cell.ColumnSpan;
+            }
+            tableHeight += maxCellHeight;
+        }
+
+        // Draw outer table border
+        gfx.DrawRectangle(XPens.Black, x, y, width, tableHeight);
+
+        double currentY = y;
+
+        foreach (var row in complexTable.Rows)
+        {
+            double maxCellHeight = minRowHeight;
+            int colIndex = 0;
+
+            // Calculate row height first
+            foreach (var cell in row.Cells)
+            {
+                double cellWidth = 0;
+                for (int span = 0; span < cell.ColumnSpan && (colIndex + span) < columnWidths.Length; span++)
                 {
-                    gfx.DrawString(line, currentFont, XBrushes.Black, xPos + cellPadding, textY);
-                    textY += font.Height;
+                    cellWidth += columnWidths[colIndex + span];
+                }
+
+                var cellText = cell.Text ?? "";
+                if (cell.SubItems?.Count > 0)
+                {
+                    cellText += "\n" + string.Join("\n", cell.SubItems);
+                }
+
+                XFont currentFont = (row.IsHeaderRow || cell.IsBold) ? boldFont : font;
+                var wrappedLines = WrapText(cellText, currentFont, cellWidth - (cellPadding * 2), gfx);
+                double cellHeight = Math.Max(wrappedLines.Count * (currentFont.Height * 1.2) + (cellPadding * 2), minRowHeight);
+                maxCellHeight = Math.Max(maxCellHeight, cellHeight);
+
+                colIndex += cell.ColumnSpan;
+            }
+
+            // Draw cells
+            colIndex = 0;
+            double xPos = x;
+
+            foreach (var cell in row.Cells)
+            {
+                double cellWidth = 0;
+                for (int span = 0; span < cell.ColumnSpan && (colIndex + span) < columnWidths.Length; span++)
+                {
+                    cellWidth += columnWidths[colIndex + span];
+                }
+
+                XFont currentFont = (row.IsHeaderRow || cell.IsBold) ? boldFont : font;
+                XBrush bgBrush = row.IsHeaderRow ? XBrushes.LightGray : XBrushes.White;
+
+                // Draw cell background and border
+                gfx.DrawRectangle(XPens.Black, bgBrush, xPos, currentY, cellWidth, maxCellHeight);
+
+                // Prepare cell text
+                var cellText = cell.Text ?? "";
+                if (cell.SubItems?.Count > 0)
+                {
+                    cellText += "\n" + string.Join("\n", cell.SubItems);
+                }
+
+                if (!string.IsNullOrWhiteSpace(cellText))
+                {
+                    var wrappedLines = WrapText(cellText, currentFont, cellWidth - (cellPadding * 2), gfx);
+
+                    // Calculate vertical centering
+                    double totalTextHeight = wrappedLines.Count * (currentFont.Height * 1.2);
+                    double textStartY = currentY + (maxCellHeight - totalTextHeight) / 2 + cellPadding;
+
+                    // Draw text lines
+                    for (int lineIndex = 0; lineIndex < wrappedLines.Count; lineIndex++)
+                    {
+                        var line = wrappedLines[lineIndex];
+                        double textY = textStartY + (lineIndex * (currentFont.Height * 1.2));
+
+                        if (row.IsHeaderRow)
+                        {
+                            // Center all header text
+                            var textRect = new XRect(xPos + cellPadding, textY, cellWidth - (cellPadding * 2), currentFont.Height);
+                            gfx.DrawString(line, currentFont, XBrushes.Black, textRect, XStringFormats.TopCenter);
+                        }
+                        else
+                        {
+                            // For data: center numeric values, left-align text
+                            bool isNumeric = double.TryParse(line.Trim(), out _) ||
+                                           line.Contains("nm") || line.Contains("0.") || line.Contains("N/A");
+
+                            if (isNumeric)
+                            {
+                                var textRect = new XRect(xPos + cellPadding, textY, cellWidth - (cellPadding * 2), currentFont.Height);
+                                gfx.DrawString(line, currentFont, XBrushes.Black, textRect, XStringFormats.TopCenter);
+                            }
+                            else
+                            {
+                                gfx.DrawString(line, currentFont, XBrushes.Black, xPos + cellPadding, textY);
+                            }
+                        }
+                    }
                 }
 
                 xPos += cellWidth;
+                colIndex += cell.ColumnSpan;
             }
 
-            y += maxCellHeight;
+            currentY += maxCellHeight;
         }
 
-        return y + 10; // Add spacing after table
+        return currentY + 15;
+    }
+
+    // *** NEW HELPER METHOD - CALCULATE COMPLEX TABLE HEIGHT ***
+    private double CalculateComplexTableHeight(ComplexTableData complexTable, double[] baseColWidths,
+        XFont font, XFont boldFont, double cellPadding, double minRowHeight)
+    {
+        double totalHeight = 0;
+
+        foreach (var row in complexTable.Rows)
+        {
+            double maxCellHeight = minRowHeight;
+
+            foreach (var cell in row.Cells)
+            {
+                double cellWidth = baseColWidths[0] * cell.ColumnSpan;
+                var cellText = cell.Text ?? "";
+                if (cell.SubItems?.Count > 0)
+                {
+                    cellText += "\n" + string.Join("\n", cell.SubItems);
+                }
+
+                var wrappedLines = WrapText(cellText, row.IsHeaderRow ? boldFont : font,
+                    cellWidth - (cellPadding * 2), null);
+                double cellHeight = Math.Max(wrappedLines.Count * font.Height + (cellPadding * 2), minRowHeight);
+                maxCellHeight = Math.Max(maxCellHeight, cellHeight);
+            }
+
+            totalHeight += maxCellHeight;
+        }
+
+        return totalHeight;
     }
 
     private async Task<double> DrawImage(XGraphics gfx, ReportSection section, double x, double y,
@@ -402,114 +635,197 @@ public class PdfService : IPdfService
         return y + 10;
     }
 
+    // *** UPDATED METHOD - IMPROVED COLUMN WIDTH CALCULATION ***
     private double[] CalculateColumnWidths(List<ReportTableRow> tableData, double totalWidth, int columnCount)
     {
         var widths = new double[columnCount];
 
-        // Simple equal distribution for now
-        double baseWidth = totalWidth / columnCount;
-
-        for (int i = 0; i < columnCount; i++)
+        if (tableData.Count == 0)
         {
-            widths[i] = baseWidth;
-        }
-
-        // Adjust for content if needed (simplified approach)
-        if (tableData.Count > 0)
-        {
-            var headerRow = tableData[0];
-            for (int i = 0; i < Math.Min(headerRow.Cells.Count, columnCount); i++)
-            {
-                var headerText = headerRow.Cells[i] ?? "";
-                if (headerText.Length > 20) // Long header
-                {
-                    widths[i] = baseWidth * 1.2;
-                }
-                else if (headerText.Length < 8) // Short header
-                {
-                    widths[i] = baseWidth * 0.8;
-                }
-            }
-
-            // Normalize to fit total width
-            double totalCalculated = widths.Sum();
-            double ratio = totalWidth / totalCalculated;
+            double baseWidth = totalWidth / columnCount;
             for (int i = 0; i < columnCount; i++)
             {
-                widths[i] *= ratio;
+                widths[i] = baseWidth;
+            }
+            return widths;
+        }
+
+        // Check for User Inputs table (3 columns with Parameter, Value, Code)
+        if (columnCount == 3)
+        {
+            var headerRow = tableData.FirstOrDefault();
+            if (headerRow?.Cells.Any(c => c?.Contains("Parameter") == true || c?.Contains("Param") == true) == true)
+            {
+                widths[0] = totalWidth * 0.45; // Parameter column - wider
+                widths[1] = totalWidth * 0.35; // Value column
+                widths[2] = totalWidth * 0.20; // Code column
+                return widths;
+            }
+        }
+
+        // For other tables, analyze content to determine optimal widths
+        var maxLengths = new int[columnCount];
+        var totalChars = new int[columnCount];
+
+        // Analyze content in all rows
+        foreach (var row in tableData)
+        {
+            for (int i = 0; i < Math.Min(row.Cells.Count, columnCount); i++)
+            {
+                var cellText = row.Cells[i] ?? "";
+                maxLengths[i] = Math.Max(maxLengths[i], cellText.Length);
+                totalChars[i] += cellText.Length;
+            }
+        }
+
+        // Calculate proportional widths
+        int totalAllChars = totalChars.Sum();
+        if (totalAllChars > 0)
+        {
+            for (int i = 0; i < columnCount; i++)
+            {
+                double proportion = (double)totalChars[i] / totalAllChars;
+                double minWidth = totalWidth * 0.10; // Minimum 10%
+                double maxWidth = totalWidth * 0.50; // Maximum 50%
+
+                widths[i] = Math.Max(minWidth, Math.Min(maxWidth, totalWidth * proportion));
+            }
+
+            // Normalize to ensure total equals available width
+            double totalCalculated = widths.Sum();
+            if (totalCalculated > 0)
+            {
+                double ratio = totalWidth / totalCalculated;
+                for (int i = 0; i < columnCount; i++)
+                {
+                    widths[i] *= ratio;
+                }
+            }
+        }
+        else
+        {
+            // Fallback to equal distribution
+            double baseWidth = totalWidth / columnCount;
+            for (int i = 0; i < columnCount; i++)
+            {
+                widths[i] = baseWidth;
             }
         }
 
         return widths;
     }
 
+    // *** UPDATED METHOD - IMPROVED TEXT WRAPPING ***
     private List<string> WrapText(string text, XFont font, double maxWidth, XGraphics gfx)
     {
         if (string.IsNullOrEmpty(text))
-            return new List<string>();
+            return new List<string> { "" };
 
-        var lines = new List<string>();
-        var words = text.Split(' ');
-        var currentLine = new StringBuilder();
-
-        foreach (var word in words)
+        // Handle null graphics context (used for height calculations)
+        if (gfx == null)
         {
-            var testLine = currentLine.Length == 0 ? word : currentLine.ToString() + " " + word;
-            var size = gfx.MeasureString(testLine, font);
+            // Simple word-count based estimation when graphics context is not available
+            int estimatedCharsPerLine = Math.Max(1, (int)(maxWidth / (font.Height * 0.6))); // Rough estimation
+            var words = text.Split(' ');
+            var lines = new List<string>();
+            var currentLine = new StringBuilder();
 
-            if (size.Width <= maxWidth)
+            foreach (var word in words)
             {
-                if (currentLine.Length > 0)
-                    currentLine.Append(" ");
-                currentLine.Append(word);
-            }
-            else
-            {
-                if (currentLine.Length > 0)
+                if (currentLine.Length + word.Length + 1 <= estimatedCharsPerLine)
                 {
-                    lines.Add(currentLine.ToString());
-                    currentLine.Clear();
-                }
-
-                // Handle very long words
-                if (gfx.MeasureString(word, font).Width > maxWidth)
-                {
-                    // Break long word
-                    var chars = word.ToCharArray();
-                    var partialWord = new StringBuilder();
-
-                    foreach (var ch in chars)
-                    {
-                        var testPartial = partialWord.ToString() + ch; // Fix: Convert StringBuilder to string before concatenation
-                        if (gfx.MeasureString(testPartial, font).Width <= maxWidth)
-                        {
-                            partialWord.Append(ch);
-                        }
-                        else
-                        {
-                            if (partialWord.Length > 0)
-                            {
-                                lines.Add(partialWord.ToString());
-                                partialWord.Clear();
-                            }
-                            partialWord.Append(ch);
-                        }
-                    }
-
-                    if (partialWord.Length > 0)
-                        currentLine.Append(partialWord);
+                    if (currentLine.Length > 0) currentLine.Append(" ");
+                    currentLine.Append(word);
                 }
                 else
                 {
+                    if (currentLine.Length > 0)
+                    {
+                        lines.Add(currentLine.ToString());
+                        currentLine.Clear();
+                    }
                     currentLine.Append(word);
                 }
             }
+
+            if (currentLine.Length > 0)
+                lines.Add(currentLine.ToString());
+
+            return lines.Count > 0 ? lines : new List<string> { "" };
         }
 
-        if (currentLine.Length > 0)
-            lines.Add(currentLine.ToString());
+        var resultLines = new List<string>();
+        var paragraphs = text.Split('\n');
 
-        return lines.Count > 0 ? lines : new List<string> { "" };
+        foreach (var paragraph in paragraphs)
+        {
+            if (string.IsNullOrEmpty(paragraph))
+            {
+                resultLines.Add("");
+                continue;
+            }
+
+            var words = paragraph.Split(' ');
+            var currentLine = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                var testLine = currentLine.Length == 0 ? word : currentLine.ToString() + " " + word;
+                var size = gfx.MeasureString(testLine, font);
+
+                if (size.Width <= maxWidth)
+                {
+                    if (currentLine.Length > 0)
+                        currentLine.Append(" ");
+                    currentLine.Append(word);
+                }
+                else
+                {
+                    if (currentLine.Length > 0)
+                    {
+                        resultLines.Add(currentLine.ToString());
+                        currentLine.Clear();
+                    }
+
+                    // Handle very long words that exceed maxWidth
+                    if (gfx.MeasureString(word, font).Width > maxWidth)
+                    {
+                        // Break long word character by character
+                        var chars = word.ToCharArray();
+                        var partialWord = new StringBuilder();
+
+                        foreach (var ch in chars)
+                        {
+                            var testPartial = partialWord.ToString() + ch;
+                            if (gfx.MeasureString(testPartial, font).Width <= maxWidth)
+                            {
+                                partialWord.Append(ch);
+                            }
+                            else
+                            {
+                                if (partialWord.Length > 0)
+                                {
+                                    resultLines.Add(partialWord.ToString());
+                                    partialWord.Clear();
+                                }
+                                partialWord.Append(ch);
+                            }
+                        }
+
+                        if (partialWord.Length > 0)
+                            currentLine.Append(partialWord.ToString());
+                    }
+                    else
+                    {
+                        currentLine.Append(word);
+                    }
+                }
+            }
+
+            if (currentLine.Length > 0)
+                resultLines.Add(currentLine.ToString());
+        }
+
+        return resultLines.Count > 0 ? resultLines : new List<string> { "" };
     }
 }
-

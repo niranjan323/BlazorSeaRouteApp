@@ -16,7 +16,12 @@ builder.Services.AddScoped<RouteService>();
 builder.Services.AddScoped<DebounceService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IApiService, ApiService>();
-
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 1024; // 1MB limit
+    options.StreamBufferCapacity = 15;
+    options.EnableDetailedErrors = true;
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
