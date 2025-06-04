@@ -283,10 +283,19 @@ namespace SeaRouteModel.Models
         [Column("record_id")]
         public Guid RecordId { get; set; }
 
-        // Add other properties as needed
+        [Column("route_name")]
+        [StringLength(100)]
+        public string? RouteName { get; set; }
+
+        [Column("route_distance")]
+        public double? RouteDistance { get; set; }
+
+        [Column("submitted")]
+        public bool Submitted { get; set; }
 
         // Navigation properties
         public virtual ShortVoyageRecord ShortVoyageRecord { get; set; }
+
         public virtual ICollection<RecordReductionFactor> RecordReductionFactors { get; set; } = new List<RecordReductionFactor>();
         public virtual ICollection<RouteVersion> RouteVersions { get; set; } = new List<RouteVersion>();
         public virtual ICollection<RecordUser> RecordUsers { get; set; } = new List<RecordUser>();
