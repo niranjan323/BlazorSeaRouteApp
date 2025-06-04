@@ -341,7 +341,22 @@ namespace SeaRouteModel.Models
         [Column("vessel_id")]
         public Guid VesselId { get; set; }
 
-        // Add other properties as needed
+        [Required]
+        [Column("vessel_imo")]
+        [StringLength(10)]
+        public string VesselImo { get; set; }
+
+        [Column("vessel_name")]
+        [StringLength(50)]
+        public string? VesselName { get; set; }
+
+        [Required]
+        [Column("vessel_breadth")]
+        public float VesselBreadth { get; set; }
+
+        [Column("flag")]
+        [StringLength(100)]
+        public string? Flag { get; set; }
 
         // Navigation properties
         public virtual ICollection<RecordVessel> RecordVessels { get; set; } = new List<RecordVessel>();
