@@ -1,286 +1,177 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Azure;
-using NextGenEngApps.DigitalRules.CRoute.API.Dtos;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.Json;
+using Microsoft.Extensions.Logging;
 using NextGenEngApps.DigitalRules.CRoute.API.Models;
-using NextGenEngApps.DigitalRules.CRoute.API.Services.Interfaces;
 using NextGenEngApps.DigitalRules.CRoute.DAL.Context;
 using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
-using NextGenEngApps.DigitalRules.CRoute.DAL.Repositories;
-using SeaRouteModel.Models;
-using System.Data.Entity.ModelConfiguration.Conventions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace NextGenEngApps.DigitalRules.CRoute.API.Services
+namespace NextGenEngApps.DigitalRules.CRoute.DAL.Repositories
 {
-    public class RecordService : IRecordService
+    public class RecordRepository : IRecordRepository
     {
-        private readonly IRecordRepository _recordRepository;
-        private readonly ILogger<RecordService> _logger;
+        private readonly ApplicationDbContext _dbContext;
+        private readonly ILogger<RecordRepository> _logger;
 
-        public RecordService(IRecordRepository recordRepository, ILogger<RecordService> logger)
+        public RecordRepository(ApplicationDbContext dbContext, ILogger<RecordRepository> logger)
         {
-            _recordRepository = recordRepository ?? throw new ArgumentNullException(nameof(recordRepository));
+            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<List<RecordDto>> GetRecordListAsync(string userId)
+        public async Task<List<RecordInfo>> GetRecordListAsync(string userId)
         {
             try
             {
-                var records = await _recordRepository.GetRecordListAsync(userId);
-                if (records == null)
-                    return new List<RecordDto>();
+                var routeList = new List<RecordInfo>();
 
-                return records.Select(x => new RecordDto()
+                // Convert userId to appropriate type if needed
+                if (!Guid.TryParse(userId, out Guid userGuid))
                 {
-                    RecordId = x.RecordId.ToString(),
-                    RecordName = x.RouteName ?? string.Empty,
-                    UserId = userId, // Pass from parameter since not in model
-                    RouteDistance = x.RouteDistance ?? 0,
-                    // Note: These properties need to be retrieved from related entities or calculated
-                    ReductionFactor = 0, // Will need to get from RecordReductionFactors
-                    DeparturePort = string.Empty, // Will need to get from navigation
-                    ArrivalPort = string.Empty, // Will need to get from navigation
-                    SeasonType = string.Empty, // Will need to get from RecordReductionFactors
-                    VesselIMO = string.Empty, // Will need to get from RecordVessels
-                    VesselName = string.Empty, // Will need to get from RecordVessels
-                    VoyageDate = string.Empty, // Will need to get from ShortVoyageRecord
-                    CalcType = string.Empty, // Add this property to model if needed
-                    CreatedDate = x.CreatedDate
-                }).OrderByDescending(x => x.CreatedDate).ToList();
+                    return routeList;
+                }
+
+                routeList = await (from rec in _dbContext.Records
+                                   join rf in _dbContext.RecordReductionFactors on rec.RecordId equals rf.RecordId
+                                   join ru in _dbContext.RecordUsers on rec.RecordId equals ru.RecordId
+                                   join rv in _dbContext.RecordVessels on rec.RecordId equals rv.RecordId into vessels
+                                   from ve in vessels.DefaultIfEmpty()
+                                   join vessel in _dbContext.Vessels on ve.VesselId equals vessel.VesselId into vesselDetails
+                                   from vd in vesselDetails.DefaultIfEmpty()
+                                   where rec.IsActive == true && ru.UserId == userGuid
+                                   select new RecordInfo()
+                                   {
+                                       RecordId = rec.RecordId,
+                                       RecordName = rec.RouteName,
+                                       UserId = ru.UserId,
+                                       ReductionFactor = rf.ReductionFactor,
+                                       // Note: You'll need to add departure/arrival port logic based on your model
+                                       // DeparturePort = dpo.PortName,
+                                       // ArrivalPort = apo.PortName,
+                                       RouteDistance = rec.RouteDistance ?? 0,
+                                       SeasonType = rf.SeasonType.ToString(),
+                                       VesselIMO = vd != null ? vd.VesselName : string.Empty, // Adjust based on your Vessel model
+                                       VesselName = vd != null ? vd.VesselName : string.Empty,
+                                       VoyageDate = rec.ShortVoyageRecord != null ? rec.CreatedDate : null,
+                                       CalcType = "Reduction Factor", // Adjust logic as needed
+                                       CreatedDate = rec.CreatedDate
+                                   }).ToListAsync();
+
+                return routeList;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, $"An error occurred while fetching records: {ex.Message}");
                 throw;
             }
         }
 
-        public async Task<string> AddRecordAsync(AddRecordDto addRecordDto)
+        public async Task<string> AddRecordAsync(Record record, List<VoyageLeg> voyageLegs, List<RoutePoint> wayPoints)
         {
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
             try
             {
-                Guid recordId = Guid.NewGuid();
-                Guid routeVersionId = Guid.NewGuid();
+                _dbContext.Records.Add(record);
 
-                // Create RouteVersion
-                RouteVersion routeVersion = new RouteVersion()
-                {
-                    RouteVersionId = routeVersionId,
-                    RecordId = recordId,
-                    RecordRouteVersion = 1, // Start with version 1
-                    CreatedBy = Guid.Parse(addRecordDto.UserId),
-                    CreatedDate = DateTime.Now,
-                    IsActive = true,
-                };
+                if (voyageLegs.Count > 0)
+                    _dbContext.VoyageLegs.AddRange(voyageLegs);
 
-                // Create VoyageLegs
-                List<VoyageLeg> voyageLegs = [];
-                if (addRecordDto.VoyageLegs?.Count > 0)
-                {
-                    for (int i = 0; i < addRecordDto.VoyageLegs.Count; i++)
-                    {
-                        var vl = addRecordDto.VoyageLegs[i];
-                        voyageLegs.Add(new VoyageLeg()
-                        {
-                            VoyageLegId = Guid.NewGuid(),
-                            RouteVersionId = routeVersionId,
-                            VoyageLegOrder = i + 1,
-                            DeparturePort = vl.DeparturePort,
-                            ArrivalPort = vl.ArrivalPort,
-                            Distance = (float?)vl.Distance,
-                            CreatedBy = Guid.Parse(vl.UserId),
-                            CreatedDate = DateTime.Now,
-                            IsActive = true,
-                        });
-                    }
-                }
+                if (wayPoints.Count > 0)
+                    _dbContext.RoutePoints.AddRange(wayPoints);
 
-                // Create RoutePoints
-                List<RoutePoint> routePoints = [];
-                if (addRecordDto.Waypoints?.Count > 0)
-                {
-                    for (int i = 0; i < addRecordDto.Waypoints.Count; i++)
-                    {
-                        var wp = addRecordDto.Waypoints[i];
-                        routePoints.Add(new RoutePoint()
-                        {
-                            RoutePointId = Guid.NewGuid(),
-                            RouteVersionId = routeVersionId,
-                            RoutePointOrder = i + 1,
-                            GeoPointId = wp.GeoPointId,
-                            SegDistance = (float)wp.SegDistance,
-                            CreatedBy = Guid.Parse(wp.UserId),
-                            CreatedDate = DateTime.Now,
-                            IsActive = true
-                        });
-                    }
-                }
-
-                // Create Record
-                Record record = new Record()
-                {
-                    RecordId = recordId,
-                    RouteName = addRecordDto.RouteName,
-                    RouteDistance = addRecordDto.RouteDistance,
-                    Submitted = true,
-                    CreatedBy = Guid.Parse(addRecordDto.UserId),
-                    CreatedDate = DateTime.Now,
-                    IsActive = true,
-                };
-
-                // Create RecordReductionFactor if SeasonType is provided
-                List<RecordReductionFactor> reductionFactors = [];
-                if (!string.IsNullOrEmpty(addRecordDto.SeasonType) && byte.TryParse(addRecordDto.SeasonType, out byte seasonType))
-                {
-                    reductionFactors.Add(new RecordReductionFactor()
-                    {
-                        RecordId = recordId,
-                        SeasonType = seasonType,
-                        ReductionFactor = (float)addRecordDto.ReductionFactor,
-                        CreatedBy = Guid.Parse(addRecordDto.UserId),
-                        CreatedDate = DateTime.Now,
-                        IsActive = true
-                    });
-                }
-
-                var result = await _recordRepository.AddRecordAsync(record, routeVersion, voyageLegs, routePoints, reductionFactors);
-                return result ? recordId.ToString() : string.Empty;
+                int recCount = await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return record.RecordId.ToString();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 throw;
             }
         }
 
-        public async Task<bool> UpdateRecordAsync(AddRecordDto addRecordDto)
+        public async Task<bool> UpdateRecordAsync(Record record, List<VoyageLeg> voyageLegs, List<RoutePoint> wayPoints)
         {
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
             try
             {
-                Guid recordId = Guid.Parse(addRecordDto.RecordId);
+                var exRecord = await _dbContext.Records.FirstOrDefaultAsync(x => x.RecordId == record.RecordId);
 
-                // Get next version number
-                int nextVersion = await _recordRepository.GetNextRouteVersionAsync(recordId);
-                Guid routeVersionId = Guid.NewGuid();
-
-                // Create new RouteVersion
-                RouteVersion routeVersion = new RouteVersion()
+                if (exRecord != null)
                 {
-                    RouteVersionId = routeVersionId,
-                    RecordId = recordId,
-                    RecordRouteVersion = nextVersion,
-                    CreatedBy = Guid.Parse(addRecordDto.UserId),
-                    CreatedDate = DateTime.Now,
-                    IsActive = true,
-                };
+                    // Remove existing reduction factors
+                    var exRFR = await _dbContext.RecordReductionFactors
+                        .Where(rf => rf.RecordId == record.RecordId)
+                        .ToListAsync();
+                    if (exRFR.Count > 0)
+                        _dbContext.RecordReductionFactors.RemoveRange(exRFR);
 
-                // Create VoyageLegs
-                List<VoyageLeg> voyageLegs = [];
-                if (addRecordDto.VoyageLegs?.Count > 0)
-                {
-                    for (int i = 0; i < addRecordDto.VoyageLegs.Count; i++)
-                    {
-                        var vl = addRecordDto.VoyageLegs[i];
-                        voyageLegs.Add(new VoyageLeg()
-                        {
-                            VoyageLegId = Guid.NewGuid(),
-                            RouteVersionId = routeVersionId,
-                            VoyageLegOrder = i + 1,
-                            DeparturePort = vl.DeparturePort,
-                            ArrivalPort = vl.ArrivalPort,
-                            Distance = (float?)vl.Distance,
-                            CreatedBy = Guid.Parse(vl.UserId),
-                            CreatedDate = DateTime.Now,
-                            IsActive = true,
-                        });
-                    }
+                    // Remove existing voyage legs
+                    var exLegs = await _dbContext.VoyageLegs
+                        .Where(vl => vl.RouteVersion.RecordId == record.RecordId)
+                        .ToListAsync();
+                    if (exLegs.Count > 0)
+                        _dbContext.VoyageLegs.RemoveRange(exLegs);
+
+                    // Remove existing route points (waypoints)
+                    var exWayPoints = await _dbContext.RoutePoints
+                        .Where(rp => rp.RouteVersion.RecordId == record.RecordId)
+                        .ToListAsync();
+                    if (exWayPoints.Count > 0)
+                        _dbContext.RoutePoints.RemoveRange(exWayPoints);
+
+                    // Update record properties
+                    exRecord.RouteName = record.RouteName;
+                    exRecord.RouteDistance = record.RouteDistance;
+                    exRecord.Submitted = true;
+                    exRecord.ModifiedBy = record.ModifiedBy;
+                    exRecord.ModifiedDate = DateTime.Now;
+
+                    _dbContext.Records.Update(exRecord);
+
+                    if (voyageLegs.Count > 0)
+                        _dbContext.VoyageLegs.AddRange(voyageLegs);
+
+                    if (wayPoints.Count > 0)
+                        _dbContext.RoutePoints.AddRange(wayPoints);
                 }
 
-                // Create RoutePoints
-                List<RoutePoint> routePoints = [];
-                if (addRecordDto.Waypoints?.Count > 0)
-                {
-                    for (int i = 0; i < addRecordDto.Waypoints.Count; i++)
-                    {
-                        var wp = addRecordDto.Waypoints[i];
-                        routePoints.Add(new RoutePoint()
-                        {
-                            RoutePointId = Guid.NewGuid(),
-                            RouteVersionId = routeVersionId,
-                            RoutePointOrder = i + 1,
-                            GeoPointId = wp.GeoPointId,
-                            SegDistance = (float)wp.SegDistance,
-                            CreatedBy = Guid.Parse(wp.UserId),
-                            CreatedDate = DateTime.Now,
-                            IsActive = true
-                        });
-                    }
-                }
-
-                // Update Record
-                Record record = new Record()
-                {
-                    RecordId = recordId,
-                    RouteName = addRecordDto.RouteName,
-                    RouteDistance = addRecordDto.RouteDistance,
-                    Submitted = true,
-                    ModifiedBy = Guid.Parse(addRecordDto.UserId),
-                    ModifiedDate = DateTime.Now,
-                    IsActive = true,
-                };
-
-                return await _recordRepository.UpdateRecordAsync(record, routeVersion, voyageLegs, routePoints);
+                int recCount = await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return recCount > 0;
             }
             catch (Exception)
             {
+                await transaction.RollbackAsync();
                 throw;
             }
         }
 
-        public async Task<List<RecordDetailsDto>> GetRecordByIdAsync(string[] recordIds)
+        public async Task<List<Record>> GetRecordByIdAsync(string[] recordIds)
         {
             try
             {
-                var records = await _recordRepository.GetRecordByIdAsync(recordIds);
-                var routePoints = await _recordRepository.GetWaypointsAsync(recordIds);
-                List<RecordDetailsDto> lst = [];
+                // Convert string array to Guid array
+                var guidRecordIds = recordIds.Select(id => Guid.Parse(id)).ToArray();
 
-                for (int i = 0; i < records.Count; i++)
-                {
-                    var record = records[i];
-                    var recordRoutePoints = routePoints.Where(x => x.RouteVersionId.ToString() == record.RecordId.ToString())
-                        .Select(x => new RoutePointInfo()
-                        {
-                            RecordId = x.RouteVersionId.ToString(),
-                            WaypointId = x.RoutePointOrder,
-                            GeoPointId = x.GeoPointId.ToString(),
-                            Latitude = 0, // Get from GeoPoint navigation
-                            Longitude = 0, // Get from GeoPoint navigation
-                            SegDistance = x.SegDistance,
-                            RoutePointType = "waypoint" // Default value
-                        }).ToList();
+                List<Record> records = await _dbContext.Records
+                    .Where(x => guidRecordIds.Contains(x.RecordId))
+                    .Include(x => x.RouteVersions)
+                        .ThenInclude(rv => rv.VoyageLegs)
+                            .ThenInclude(vl => vl.DeparturePortNavigation)
+                                .ThenInclude(p => p.GeoPoint)
+                    .Include(x => x.RouteVersions)
+                        .ThenInclude(rv => rv.VoyageLegs)
+                            .ThenInclude(vl => vl.ArrivalPortNavigation)
+                                .ThenInclude(p => p.GeoPoint)
+                    .ToListAsync();
 
-                    lst.Add(new RecordDetailsDto()
-                    {
-                        RecordId = record.RecordId.ToString(),
-                        RouteName = record.RouteName ?? string.Empty,
-                        ReductionFactor = 0, // Get from RecordReductionFactors
-                        DeparturePort = new PortModel()
-                        {
-                            Port_Id = string.Empty, // Get from first VoyageLeg
-                            Name = string.Empty,
-                            Latitude = 0,
-                            Longitude = 0,
-                        },
-                        ArrivalPort = new PortModel()
-                        {
-                            Port_Id = string.Empty, // Get from last VoyageLeg
-                            Name = string.Empty,
-                            Latitude = 0,
-                            Longitude = 0,
-                        },
-                        RoutePoints = recordRoutePoints
-                    });
-                }
-                return lst;
+                return records;
             }
             catch (Exception)
             {
@@ -290,39 +181,67 @@ namespace NextGenEngApps.DigitalRules.CRoute.API.Services
 
         public async Task<bool> DeleteRecordAsync(string userId, string recordId)
         {
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
             try
             {
-                return await _recordRepository.DeleteRecordAsync(userId, recordId);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
+                if (!Guid.TryParse(recordId, out Guid recordGuid))
+                    return false;
 
-        public async Task<bool> AddVoyageLegsAsync(List<VoyageLegDto> voyageLegDtos)
-        {
-            try
-            {
-                List<VoyageLeg> voyageLegs = [];
-                for (int i = 0; i < voyageLegDtos.Count; i++)
+                Record? record = await _dbContext.Records.FirstOrDefaultAsync(x => x.RecordId == recordGuid);
+
+                if (record != null)
                 {
-                    var x = voyageLegDtos[i];
-                    voyageLegs.Add(new VoyageLeg()
-                    {
-                        VoyageLegId = Guid.NewGuid(),
-                        RouteVersionId = Guid.Parse(x.RouteVersionId),
-                        VoyageLegOrder = i + 1,
-                        DeparturePort = x.DeparturePort,
-                        ArrivalPort = x.ArrivalPort,
-                        Distance = (float?)x.Distance,
-                        CreatedBy = Guid.Parse(x.UserId),
-                        CreatedDate = DateTime.Now,
-                        IsActive = true
-                    });
+                    record.IsActive = false;
+
+                    // Inactive reduction factor records
+                    var reductionFactorRecords = await _dbContext.RecordReductionFactors
+                        .Where(x => x.RecordId == recordGuid)
+                        .ToListAsync();
+                    _dbContext.RecordReductionFactors.RemoveRange(reductionFactorRecords);
+
+                    // Inactive voyage legs
+                    var voyageLegs = await _dbContext.VoyageLegs
+                        .Where(x => x.RouteVersion.RecordId == recordGuid)
+                        .ToListAsync();
+                    if (voyageLegs.Count > 0)
+                        _dbContext.VoyageLegs.RemoveRange(voyageLegs);
+
+                    // Inactive route points (waypoints)
+                    var wayPoints = await _dbContext.RoutePoints
+                        .Where(x => x.RouteVersion.RecordId == recordGuid)
+                        .ToListAsync();
+                    if (wayPoints.Count > 0)
+                        _dbContext.RoutePoints.RemoveRange(wayPoints);
+
+                    // Inactive vessels relationships
+                    var recordVessels = await _dbContext.RecordVessels
+                        .Where(x => x.RecordId == recordGuid)
+                        .ToListAsync();
+                    if (recordVessels.Count > 0)
+                        _dbContext.RecordVessels.RemoveRange(recordVessels);
+
+                    int result = await _dbContext.SaveChangesAsync();
+                    if (result > 0)
+                        await transaction.CommitAsync();
+
+                    return result > 0;
                 }
 
-                return await _recordRepository.AddVoyageLegsAsync(voyageLegs);
+                return false;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public int GetRecordIdAsync()
+        {
+            try
+            {
+                return _dbContext.Records.Any() ?
+                    _dbContext.Records.Count() + 1 : 1;
             }
             catch (Exception)
             {
@@ -330,29 +249,19 @@ namespace NextGenEngApps.DigitalRules.CRoute.API.Services
             }
         }
 
-        public async Task<bool> UpdateVoyageLegsAsync(List<VoyageLegDto> voyageLegDtos)
+        public int GetWaypointVersionAsync(string userId, string recordId)
         {
             try
             {
-                List<VoyageLeg> voyageLegs = [];
-                for (int i = 0; i < voyageLegDtos.Count; i++)
-                {
-                    var x = voyageLegDtos[i];
-                    voyageLegs.Add(new VoyageLeg()
-                    {
-                        VoyageLegId = Guid.NewGuid(),
-                        RouteVersionId = Guid.Parse(x.RouteVersionId),
-                        VoyageLegOrder = i + 1,
-                        DeparturePort = x.DeparturePort,
-                        ArrivalPort = x.ArrivalPort,
-                        Distance = (float?)x.Distance,
-                        CreatedBy = Guid.Parse(x.UserId),
-                        CreatedDate = DateTime.Now,
-                        IsActive = true
-                    });
-                }
+                if (!Guid.TryParse(recordId, out Guid recordGuid))
+                    return 1;
 
-                return await _recordRepository.UpdateVoyageLegsAsync(voyageLegs);
+                var routeVersions = _dbContext.RouteVersions
+                    .Where(rv => rv.RecordId == recordGuid)
+                    .Select(rv => rv.RecordRouteVersion)
+                    .ToList();
+
+                return routeVersions.Any() ? routeVersions.Max() + 1 : 1;
             }
             catch (Exception)
             {
@@ -360,30 +269,13 @@ namespace NextGenEngApps.DigitalRules.CRoute.API.Services
             }
         }
 
-        public async Task<List<RouteLegInfo>> GetVoyageLegsAsync(string recordId, string userId)
+        public async Task<bool> AddVoyageLegsAsync(List<VoyageLeg> voyageLegs)
         {
             try
             {
-                List<RouteLegInfo> routeLegs = [];
-                var legs = await _recordRepository.GetVoyageLegsAsync(recordId, userId);
-
-                foreach (var le in legs)
-                {
-                    routeLegs.Add(new RouteLegInfo()
-                    {
-                        RecordId = recordId,
-                        VoyageLegId = le.VoyageLegOrder,
-                        RecordLegId = le.VoyageLegOrder,
-                        RecordLegName = $"Leg {le.VoyageLegOrder}",
-                        ArrivalPort = string.Empty, // Get from Port navigation
-                        ArrivalPortId = le.ArrivalPort?.ToString() ?? string.Empty,
-                        DeparturePort = string.Empty, // Get from Port navigation
-                        DeparturePortId = le.DeparturePort?.ToString() ?? string.Empty,
-                        Distance = le.Distance ?? 0,
-                        ReductionFactor = 0, // Get from VoyageLegReductionFactors
-                    });
-                }
-                return routeLegs.OrderBy(x => x.RecordLegId).ToList();
+                await _dbContext.VoyageLegs.AddRangeAsync(voyageLegs);
+                int result = await _dbContext.SaveChangesAsync();
+                return result > 0;
             }
             catch (Exception)
             {
@@ -391,21 +283,113 @@ namespace NextGenEngApps.DigitalRules.CRoute.API.Services
             }
         }
 
-        public async Task<List<VesselDto>> GetVesselsByRecordIdAsync(string recordId)
+        public async Task<bool> UpdateVoyageLegsAsync(List<VoyageLeg> voyageLegs)
         {
             try
             {
-                List<Vessel> vesselList = await _recordRepository.GetVesselsByRecordIdAsync(recordId);
-                List<VesselDto> vessels = new List<VesselDto>();
-                vesselList.ForEach(v =>
-                {
-                    vessels.Add(new VesselDto()
-                    {
-                        VesselIMO = v.VesselImo,
-                        VesselName = v.VesselName ?? string.Empty
-                    });
-                });
-                return vessels;
+                var routeVersionIds = voyageLegs.Select(vl => vl.RouteVersionId).Distinct().ToList();
+
+                var existing = await _dbContext.VoyageLegs
+                    .Where(vl => routeVersionIds.Contains(vl.RouteVersionId))
+                    .ToListAsync();
+
+                if (existing.Any())
+                    _dbContext.VoyageLegs.RemoveRange(existing);
+
+                await _dbContext.VoyageLegs.AddRangeAsync(voyageLegs);
+                int result = await _dbContext.SaveChangesAsync();
+                return result > 0;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<List<RecordLegInfo>> GetVoyageLegsAsync(string recordId, string userId)
+        {
+            try
+            {
+                if (!Guid.TryParse(recordId, out Guid recordGuid))
+                    return new List<RecordLegInfo>();
+
+                var legs = await (from rec in _dbContext.Records
+                                  join rv in _dbContext.RouteVersions on rec.RecordId equals rv.RecordId
+                                  join leg in _dbContext.VoyageLegs on rv.RouteVersionId equals leg.RouteVersionId
+                                  join apo in _dbContext.Ports on leg.ArrivalPort equals apo.GeoPointId
+                                  join dpo in _dbContext.Ports on leg.DeparturePort equals dpo.GeoPointId
+                                  join recVessel in _dbContext.RecordVessels on rec.RecordId equals recVessel.RecordId into vessels
+                                  from rv_vessel in vessels.DefaultIfEmpty()
+                                  join vessel in _dbContext.Vessels on rv_vessel.VesselId equals vessel.VesselId into vesselDetails
+                                  from vd in vesselDetails.DefaultIfEmpty()
+                                  where rec.IsActive == true && rec.RecordId == recordGuid
+                                  select new RecordLegInfo()
+                                  {
+                                      RecordId = rec.RecordId.ToString(),
+                                      RecordLegId = leg.VoyageLegId.ToString(),
+                                      RecordLegName = string.Empty,
+                                      ReductionFactor = 0, // You'll need to get this from VoyageLegReductionFactors
+                                      DeparturePort = dpo.PortName,
+                                      DeparturePortId = dpo.GeoPointId.ToString(),
+                                      ArrivalPort = apo.PortName,
+                                      ArrivalPortId = apo.GeoPointId.ToString(),
+                                      RouteDistance = leg.Distance ?? 0,
+                                      VesselIMO = vd != null ? vd.VesselName : string.Empty, // Adjust based on your Vessel model
+                                      VesselName = vd != null ? vd.VesselName : string.Empty,
+                                  }).ToListAsync();
+
+                return legs;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<List<RoutePointInfo>> GetWaypointsAsync(string[] recordIds)
+        {
+            try
+            {
+                var guidRecordIds = recordIds.Select(id => Guid.Parse(id)).ToArray();
+
+                var waypoints = await (from rec in _dbContext.Records
+                                       join rv in _dbContext.RouteVersions on rec.RecordId equals rv.RecordId
+                                       join rp in _dbContext.RoutePoints on rv.RouteVersionId equals rp.RouteVersionId
+                                       join gp in _dbContext.GeoPoints on rp.GeoPointId equals gp.GeoPointId
+                                       join po in _dbContext.Ports on rp.GeoPointId equals po.GeoPointId into ports
+                                       from port in ports.DefaultIfEmpty()
+                                       where guidRecordIds.Contains(rec.RecordId)
+                                       select new RoutePointInfo
+                                       {
+                                           RecordId = rec.RecordId.ToString(),
+                                           WaypointId = rp.RoutePointId.ToString(),
+                                           GeoPointId = rp.GeoPointId.ToString(),
+                                           Latitude = gp.Latitude,
+                                           Longitude = gp.Longitude,
+                                           SegDistance = rp.SegDistance,
+                                           RoutePointType = port != null ? "P" : "W"
+                                       }).Distinct().OrderBy(x => x.WaypointId).ToListAsync();
+
+                return waypoints;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<List<Vessel>> GetVesselsByRecordIdAsync(string recordId)
+        {
+            try
+            {
+                if (!Guid.TryParse(recordId, out Guid recordGuid))
+                    return new List<Vessel>();
+
+                return await (from rv in _dbContext.RecordVessels
+                              join v in _dbContext.Vessels on rv.VesselId equals v.VesselId
+                              join r in _dbContext.Records on rv.RecordId equals r.RecordId
+                              where r.IsActive == true && rv.RecordId == recordGuid
+                              select v).ToListAsync();
             }
             catch (Exception)
             {
