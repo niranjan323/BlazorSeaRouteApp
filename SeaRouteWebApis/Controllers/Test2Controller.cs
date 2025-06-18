@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
 using SeaRouteModel.Models;
 using SeaRouteWebApis.Controllers;
 using SeaRouteWebApis.Interfaces;
@@ -82,12 +83,13 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             }
         }
 
+        // Task Two: Segment reduction factors calculation
+        // Endpoint matches task specification: "/calculations/reduction-factors/segment"
         [HttpPost("segment")]
         public async Task<IActionResult> CalculateSegmentReductionFactors([FromBody] SegmentReductionFactorRequest request)
         {
             try
             {
-                //Modified By Sireesha - Refactored to use helper method instead of duplicating logic
                 var result = await CalculateReductionFactorsForSegment(request.Coordinates, request.ExceedanceProbability, request.Correction);
                 if (result == null)
                 {
@@ -106,30 +108,17 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             }
         }
 
+        // Task One: Route and voyage leg reduction factors calculation
+        // Note: Task specification mentions "/segment" endpoint, but this is logically a route-level operation
+        // Using "/route" endpoint for clarity and to avoid conflicts with segment endpoint
         [HttpPost("route")]
-        public async Task<IActionResult> CalculateVoyageLegReductionFactors([FromBody] VoyageLegReductionFactorRequest request)
+        public async Task<IActionResult> ApplyVoyageLegCorrection([FromBody] VoyageLegReductionFactorRequest request)
         {
             try
             {
                 // Step 1: Calculate route reduction factors
-                // Combine all coordinates from voyage legs and remove duplicates
-                var allCoordinates = new List<Coordinate>();
-                var coordinateSet = new HashSet<string>();
-
-                foreach (var leg in request.VoyageLegs)
-                {
-                    foreach (var coord in leg.Coordinates)
-                    {
-                        var coordKey = $"{coord.Latitude},{coord.Longitude}";
-                        if (coordinateSet.Add(coordKey))
-                        {
-                            allCoordinates.Add(coord);
-                        }
-                    }
-                }
-
-                // Call segment calculation for the entire route
-                var routeResult = await CalculateReductionFactorsForSegment(allCoordinates, request.ExceedanceProbability, request.Correction);
+                var routeCoordinates = CreateRouteCoordinates(request.VoyageLegs);
+                var routeResult = await CalculateReductionFactorsForSegment(routeCoordinates, request.ExceedanceProbability, request.Correction);
                 if (routeResult == null)
                 {
                     return BadRequest("Failed to calculate route reduction factors.");
@@ -147,8 +136,8 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     }
 
                     // Step 3: Apply correction to voyage leg reduction factors
-                    //Modified By Sireesha - Separated correction logic into dedicated method
-                    var correctedFactors = ApplySeasonalCorrection(legResult, routeResult, request.Correction);
+                    // Modified by Niranjan: Added proper upper bound correction on annual RF and voyage leg correction implementation
+                    var correctedFactors = ApplyVoyageLegCorrection(legResult, routeResult);
 
                     voyageLegResults.Add(new VoyageLegReductionFactors
                     {
@@ -176,12 +165,70 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             }
         }
 
+        // Modified by Niranjan: Abstracted route coordinate creation as requested in feedback point 5.1
+        private List<Coordinate> CreateRouteCoordinates(List<VoyageLeg> voyageLegs)
+        {
+            var allCoordinates = new List<Coordinate>();
+            var coordinateSet = new HashSet<string>();
+
+            foreach (var leg in voyageLegs)
+            {
+                foreach (var coord in leg.Coordinates)
+                {
+                    var coordKey = $"{coord.Latitude},{coord.Longitude}";
+                    if (coordinateSet.Add(coordKey))
+                    {
+                        allCoordinates.Add(coord);
+                    }
+                }
+            }
+
+            return allCoordinates;
+        }
+
         // Helper method to calculate reduction factors for a segment
         private async Task<ReductionFactors> CalculateReductionFactorsForSegment(List<Coordinate> coordinates, double exceedanceProbability, bool? applyCorrection)
         {
             try
             {
-                // Step 1: Get annual reduction factor (ABS)
+                // Step 1: Calculate ABS annual reduction factor
+                var absAnnualRF = await CalculateABSAnnualReductionFactor(coordinates, exceedanceProbability, applyCorrection);
+                if (!absAnnualRF.HasValue)
+                {
+                    return null;
+                }
+
+                // Step 2: Calculate BMT seasonal factors
+                var bmtSeasonalFactors = await CalculateBMTSeasonalFactors(coordinates, exceedanceProbability);
+                if (bmtSeasonalFactors == null)
+                {
+                    return null;
+                }
+
+                // Step 3: Calculate seasonal reduction factors
+                var seasonalRFs = CalculateSeasonalReductionFactors(absAnnualRF.Value, bmtSeasonalFactors);
+
+                return new ReductionFactors
+                {
+                    Annual = absAnnualRF.Value,
+                    Spring = seasonalRFs["spring"],
+                    Summer = seasonalRFs["summer"],
+                    Fall = seasonalRFs["fall"],
+                    Winter = seasonalRFs["winter"]
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating reduction factors for segment.");
+                return null;
+            }
+        }
+
+        // Modified by Niranjan: Abstracted ABS annual reduction factor calculation as requested in feedback point 5.2
+        private async Task<double?> CalculateABSAnnualReductionFactor(List<Coordinate> coordinates, double exceedanceProbability, bool? applyCorrection)
+        {
+            try
+            {
                 var annualRequest = new RawReductionFactorRequest
                 {
                     DataSource = "ABS",
@@ -198,14 +245,27 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
                 double annualRF = annualResult.RawReductionFactor;
 
-                // Apply annual correction if requested
+                // Modified by Niranjan: Implemented upper bound correction on annual RF as requested in feedback point 1
                 if (applyCorrection.HasValue && applyCorrection.Value)
                 {
                     annualRF = ApplyAnnualCorrection(annualRF);
                 }
 
-                // Step 2: Get BMT annual wave height for seasonal factor calculation
-                //Modified By Sireesha - Changed to use BMT annual wave height instead of ABS for seasonal calculations
+                return annualRF;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating ABS annual reduction factor.");
+                return null;
+            }
+        }
+
+        // Modified by Niranjan: Abstracted BMT seasonal factors calculation as requested in feedback point 5.2
+        private async Task<Dictionary<string, double>> CalculateBMTSeasonalFactors(List<Coordinate> coordinates, double exceedanceProbability)
+        {
+            try
+            {
+                // Get BMT annual wave height
                 var bmtAnnualRequest = new RawReductionFactorRequest
                 {
                     DataSource = "BMT",
@@ -222,9 +282,9 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
                 double bmtAnnualHs = bmtAnnualResult.SignificantWaveHeight;
 
-                // Step 3: Get seasonal significant wave heights (BMT)
+                // Get seasonal significant wave heights and calculate factors
                 var seasons = new[] { "spring", "summer", "fall", "winter" };
-                var seasonalRFs = new Dictionary<string, double>();
+                var seasonalFactors = new Dictionary<string, double>();
 
                 foreach (var season in seasons)
                 {
@@ -242,48 +302,73 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                         return null;
                     }
 
-                    // Calculate seasonal factor using BMT annual wave height
-                    double seasonalFactor = seasonalResult.SignificantWaveHeight / bmtAnnualHs;
+                    // Calculate uncorrected seasonal factor
+                    double uncorrectedSeasonalFactor = seasonalResult.SignificantWaveHeight / bmtAnnualHs;
 
-                    // Calculate seasonal RF
-                    seasonalRFs[season] = seasonalFactor * annualRF;
+                    // Modified by Niranjan: Implemented correction on seasonal factor as requested in feedback point 2
+                    double correctedSeasonalFactor = ApplySeasonalFactorCorrection(uncorrectedSeasonalFactor);
+
+                    seasonalFactors[season] = correctedSeasonalFactor;
                 }
 
-                return new ReductionFactors
-                {
-                    Annual = annualRF,
-                    Spring = seasonalRFs["spring"],
-                    Summer = seasonalRFs["summer"],
-                    Fall = seasonalRFs["fall"],
-                    Winter = seasonalRFs["winter"]
-                };
+                return seasonalFactors;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calculating reduction factors for segment.");
+                _logger.LogError(ex, "Error calculating BMT seasonal factors.");
                 return null;
             }
         }
 
-        // Helper method to apply annual correction
-        //Modified By Sireesha - Extracted annual correction logic into separate method
-        private double ApplyAnnualCorrection(double annualRF)
+        // Modified by Niranjan: Abstracted seasonal reduction factors calculation as requested in feedback point 5.2
+        private Dictionary<string, double> CalculateSeasonalReductionFactors(double absAnnualRF, Dictionary<string, double> bmtSeasonalFactors)
         {
-            return Math.Max(annualRF, 0.80d);
+            var seasonalRFs = new Dictionary<string, double>();
+
+            foreach (var season in bmtSeasonalFactors.Keys)
+            {
+                // Calculate uncorrected seasonal RF
+                double uncorrectedSeasonalRF = absAnnualRF * bmtSeasonalFactors[season];
+
+                // Modified by Niranjan: Implemented correction on seasonal RF as requested in feedback point 3
+                double correctedSeasonalRF = ApplySeasonalRFCorrection(uncorrectedSeasonalRF);
+
+                seasonalRFs[season] = correctedSeasonalRF;
+            }
+
+            return seasonalRFs;
         }
 
-        // Helper method to apply seasonal correction
-        //Modified By Sireesha - Extracted seasonal correction logic into separate method
-        private ReductionFactors ApplySeasonalCorrection(ReductionFactors legResult, ReductionFactors routeResult, bool applyCorrection)
+        // Modified by Niranjan: Implemented upper bound correction on annual RF as requested in feedback point 1
+        private double ApplyAnnualCorrection(double annualRF)
         {
-            //if (!applyCorrection)
-            //{
-            //    return legResult;
-            //}
+            // Apply upper bound correction: no less than 0.8 but no greater than 1
+            return Math.Min(Math.Max(annualRF, 0.8), 1.0);
+        }
 
+        // Modified by Niranjan: Implemented correction on seasonal factor as requested in feedback point 2
+        private double ApplySeasonalFactorCorrection(double seasonalFactor)
+        {
+            // Apply correction: no less than 0.8 and no greater than 1
+            return Math.Min(Math.Max(seasonalFactor, 0.8), 1.0);
+        }
+
+        // Modified by Niranjan: Implemented correction on seasonal RF as requested in feedback point 3
+        private double ApplySeasonalRFCorrection(double seasonalRF)
+        {
+            // Apply correction: no less than 0.65 but no greater than 1.0
+            return Math.Min(Math.Max(seasonalRF, 0.65), 1.0);
+        }
+
+        // Modified by Niranjan: Renamed from ApplySeasonalCorrection to ApplyVoyageLegCorrection as requested in feedback point 4
+        // Also added proper voyage leg correction implementation and remember to apply correction on voyage leg annual RF
+        private ReductionFactors ApplyVoyageLegCorrection(ReductionFactors legResult, ReductionFactors routeResult)
+        {
             return new ReductionFactors
             {
-                Annual = legResult.Annual, // Annual correction already applied in CalculateReductionFactorsForSegment
+                // Modified by Niranjan: Apply voyage leg correction on annual RF - ensure leg annual RF is not greater than route annual RF
+                Annual = Math.Min(legResult.Annual, routeResult.Annual),
+                // Modified by Niranjan: Apply voyage leg correction on seasonal RFs - ensure leg seasonal RF is not greater than route seasonal RF of same season
                 Spring = Math.Min(legResult.Spring, routeResult.Spring),
                 Summer = Math.Min(legResult.Summer, routeResult.Summer),
                 Fall = Math.Min(legResult.Fall, routeResult.Fall),
