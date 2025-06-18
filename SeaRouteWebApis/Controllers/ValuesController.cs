@@ -156,7 +156,25 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             }
         }
 
+        private List<Coordinate> ExtractRouteCoordinates(List<VoyageLeg> voyageLegs)
+        {
+            var allCoordinates = new List<Coordinate>();
+            var coordinateSet = new HashSet<string>();
 
+            foreach (var leg in voyageLegs)
+            {
+                foreach (var coord in leg.Coordinates)
+                {
+                    var coordKey = $"{coord.Latitude},{coord.Longitude}";
+                    if (coordinateSet.Add(coordKey))
+                    {
+                        allCoordinates.Add(coord);
+                    }
+                }
+            }
+
+            return allCoordinates;
+        }
         private async Task<List<VoyageLegReductionFactors>> CalculateVoyageLegReductionFactors(List<VoyageLeg> voyageLegs,double exceedanceProbability,ReductionFactors routeResult,bool applyCorrection)
         {
             var voyageLegResults = new List<VoyageLegReductionFactors>();
