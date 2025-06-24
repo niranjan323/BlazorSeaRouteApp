@@ -75,10 +75,9 @@ namespace NextGenEngApps.DigitalRules.CRoute.Components.Pages
         private List<RouteLegModel> routeLegs = new List<RouteLegModel>();
         private List<GeoPointCoordinate> AllCoordinates = new List<GeoPointCoordinate>();
         private List<Coordinate> extractedCoordinates = new List<Coordinate>();
-
         // Add a field to store the split voyage legs
         private List<VoyageLeg> voyageLegs = new List<VoyageLeg>();
-
+        private VoyageLegReductionFactorResponse reductionFactorResponse;
         protected async override Task OnInitializedAsync()
         {
             if (!string.IsNullOrEmpty(EditRouteId))
@@ -874,16 +873,6 @@ Longitude = 103.8198
             routeModel.ArrivalWaypoints.Remove(waypoint);
 
         }
-
-        //private void CalculateRouteReductionFactor()
-        //{
-        //    // For demo purposes, just showing the results
-        //    showResultsForReductionFactor = true;
-
-        //    // In a real implementation, you would calculate the reduction factor here
-        //    routeReductionFactor = 0.82M;
-        //    routeDistance = 5952;
-        //}
         private async Task CheckAndCalculateRoute()
         {
             // Check if both departure and arrival ports are selected
@@ -1271,19 +1260,17 @@ Longitude = 103.8198
                 routeModel.TotalDistance = totalDistance;
                 routeModel.TotalDurationHours = totalDuration;
 
-                // After segment calculation, build RoutePointInput list for splitting
                 var routePointInputs = new List<RoutePointInput>();
                 for (int i = 0; i < orderedPoints.Count; i++)
                 {
                     var point = orderedPoints[i];
-                    // Find the segment info for this point (if not last point)
                     double segmentDistance = 0;
                     List<double[]> segmentCoordinates = new List<double[]>();
                     if (i < routeSegments.Count)
                     {
                         var seg = routeSegments[i];
                         segmentDistance = seg.Distance;
-                        // Use extractedCoordinates for this segment if available
+
                         if (extractedCoordinates != null && extractedCoordinates.Count > 0)
                         {
                             segmentCoordinates = extractedCoordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToList();
@@ -1291,15 +1278,15 @@ Longitude = 103.8198
                     }
                     routePointInputs.Add(new RoutePointInput
                     {
-                        Type = point.Type == "departure" ? "port" : point.Type, // treat departure as port
+                        Type = point.Type == "departure" ? "port" : point.Type,
                         Name = point.Name,
                         LatLng = new double[] { point.Latitude, point.Longitude },
                         SegmentDistance = segmentDistance,
                         SegmentCoordinates = segmentCoordinates
                     });
                 }
-                // Split the route into voyage legs using the new logic
                 voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
+
             }
             catch (Exception ex)
             {
@@ -1415,34 +1402,124 @@ Longitude = 103.8198
                     Console.WriteLine("Please complete all required route information");
                     return;
                 }
-                // Use voyageLegs for reduction factor calculation if available
+
+                // --- Build routePointInputs for voyageLegs splitting ---
+                var routePointInputs = new List<RoutePointInput>();
+
+                // Add main departure port
+                if (routeModel.MainDeparturePortSelection?.Port != null)
+                {
+                    routePointInputs.Add(new RoutePointInput
+                    {
+                        Type = "port",
+                        Name = routeModel.MainDeparturePortSelection.Port.Name,
+                        LatLng = new double[] { routeModel.MainDeparturePortSelection.Port.Latitude, routeModel.MainDeparturePortSelection.Port.Longitude },
+                        SegmentDistance = 0, // Will be set below
+                        SegmentCoordinates = new List<double[]>()
+                    });
+                }
+
+                // Add departure items (ports and waypoints)
+                if (routeModel.DepartureItems != null)
+                {
+                    foreach (var item in routeModel.DepartureItems)
+                    {
+                        if (item.ItemType == "P")
+                        {
+                            routePointInputs.Add(new RoutePointInput
+                            {
+                                Type = "port",
+                                Name = item.Port.Port.Name,
+                                LatLng = new double[] { item.Port.Port.Latitude, item.Port.Port.Longitude },
+                                SegmentDistance = 0, // Will be set below
+                                SegmentCoordinates = new List<double[]>()
+                            });
+                        }
+                        else if (item.ItemType == "W")
+                        {
+                            if (double.TryParse(item.Waypoint.Latitude, out double lat) && double.TryParse(item.Waypoint.Longitude, out double lng))
+                            {
+                                routePointInputs.Add(new RoutePointInput
+                                {
+                                    Type = "waypoint",
+                                    Name = $"Waypoint {item.SequenceNumber}",
+                                    LatLng = new double[] { lat, lng },
+                                    SegmentDistance = 0, // Will be set below
+                                    SegmentCoordinates = new List<double[]>()
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Add arrival items (ports and waypoints)
+                if (routeModel.ArrivalItems != null)
+                {
+                    foreach (var item in routeModel.ArrivalItems)
+                    {
+                        if (item.ItemType == "P")
+                        {
+                            routePointInputs.Add(new RoutePointInput
+                            {
+                                Type = "port",
+                                Name = item.Port.Port.Name,
+                                LatLng = new double[] { item.Port.Port.Latitude, item.Port.Port.Longitude },
+                                SegmentDistance = 0, // Will be set below
+                                SegmentCoordinates = new List<double[]>()
+                            });
+                        }
+                        else if (item.ItemType == "W")
+                        {
+                            if (double.TryParse(item.Waypoint.Latitude, out double lat) && double.TryParse(item.Waypoint.Longitude, out double lng))
+                            {
+                                routePointInputs.Add(new RoutePointInput
+                                {
+                                    Type = "waypoint",
+                                    Name = $"Waypoint {item.SequenceNumber}",
+                                    LatLng = new double[] { lat, lng },
+                                    SegmentDistance = 0, // Will be set below
+                                    SegmentCoordinates = new List<double[]>()
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Add main arrival port
+                if (routeModel.MainArrivalPortSelection?.Port != null)
+                {
+                    routePointInputs.Add(new RoutePointInput
+                    {
+                        Type = "port",
+                        Name = routeModel.MainArrivalPortSelection.Port.Name,
+                        LatLng = new double[] { routeModel.MainArrivalPortSelection.Port.Latitude, routeModel.MainArrivalPortSelection.Port.Longitude },
+                        SegmentDistance = 0, // Will be set below
+                        SegmentCoordinates = new List<double[]>()
+                    });
+                }
+
+                // Set SegmentDistance and SegmentCoordinates for each segment (between consecutive points)
+                for (int i = 0; i < routePointInputs.Count - 1; i++)
+                {
+                    // Find the segment in routeModel.RouteSegments that matches this pair
+                    if (routeModel.RouteSegments != null && routeModel.RouteSegments.Count > i)
+                    {
+                        var seg = routeModel.RouteSegments[i];
+                        routePointInputs[i].SegmentDistance = seg.Distance;
+                        if (extractedCoordinates != null && extractedCoordinates.Count > 0)
+                        {
+                            routePointInputs[i].SegmentCoordinates = extractedCoordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToList();
+                        }
+                    }
+                }
+
+                // --- Split into voyageLegs ---
+                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
+
+                // --- Now call CalculateUsingVoyageLegs as before ---
                 if (voyageLegs != null && voyageLegs.Count > 0)
                 {
-                    // Example: Call the reduction factor API for the full route and for each leg
-                    using var httpClient = new HttpClient();
-                    httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
-                    // Prepare the request body for the API (adjust as needed for your backend)
-                    var apiRequest = new
-                    {
-                        VoyageLegs = voyageLegs.Select(leg => new {
-                            DeparturePort = leg.DeparturePort,
-                            ArrivalPort = leg.ArrivalPort,
-                            Distance = leg.Distance,
-                            Coordinates = leg.Coordinates.Select(c => new { Longitude = c[0], Latitude = c[1] }).ToList()
-                        }).ToList()
-                    };
-                    var result = await httpClient.PostAsJsonAsync("calculate/reduction-factor/route", apiRequest);
-                    if (result.IsSuccessStatusCode)
-                    {
-                        // Handle the response as needed
-                        // For example, update UI with reduction factors for each leg
-                        // (You may want to parse the response and update routeLegs or another field)
-                        showResultsForReductionFactor = true;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error calling reduction factor API: {result.StatusCode}");
-                    }
+                    await CalculateUsingVoyageLegs();
                 }
                 else if (extractedCoordinates != null && extractedCoordinates.Any())
                 {
@@ -1473,6 +1550,184 @@ Longitude = 103.8198
                 await JS.InvokeVoidAsync("console.log", $"Total execution time: {totalTimeTaken} s");
             }
         }
+        private async Task CalculateUsingVoyageLegs()
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
+
+                // Prepare the request body matching the API expectations
+                // Convert your VoyageLeg to the API's VoyageLegs format
+                var apiRequest = new RouteReductionFactorsRequest
+                {
+                    Correction = true, // You can make this configurable
+                    ExceedanceProbability = 0.00001, // You can make this configurable
+                    VoyageLegs = voyageLegs.Select((leg, index) => new VoyageLegs
+                    {
+                        VoyageLegOrder = index + 1, // Generate order since your VoyageLeg doesn't have it
+                        Coordinates = leg.Coordinates.Select(coord => new Coordinates
+                        {
+                            Latitude = (float)coord[1], // coord[1] is latitude in double[] format
+                            Longitude = (float)coord[0] // coord[0] is longitude in double[] format
+                        }).ToList()
+                    }).ToList()
+                };
+
+                var result = await httpClient.PostAsJsonAsync("calculations/reduction-factors/route", apiRequest);
+
+                if (result.IsSuccessStatusCode)
+                {
+                    var responseContent = await result.Content.ReadAsStringAsync();
+                    var reductionFactorResponse = JsonSerializer.Deserialize<VoyageLegReductionFactorResponse>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    // Process the response
+                    await ProcessReductionFactorResponse(reductionFactorResponse);
+                    showResultsForReductionFactor = true;
+                }
+                else
+                {
+                    var errorContent = await result.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error calling reduction factor API: {result.StatusCode} - {errorContent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CalculateUsingVoyageLegs: {ex.Message}");
+                throw;
+            }
+        }
+        private async Task ProcessReductionFactorResponse(VoyageLegReductionFactorResponse response)
+        {
+            try
+            {
+                if (response?.Route?.ReductionFactors != null)
+                {
+                    // Store the overall route reduction factor in routeModel
+                    if (routeModel != null)
+                    {
+                        routeModel.ReductionFactor = response.Route.ReductionFactors.Annual;
+                    }
+
+                    // Store the complete response for detailed UI display
+                    this.reductionFactorResponse = response;
+
+                    // Update route legs with reduction factors if they exist
+                    if (response.VoyageLegs != null && response.VoyageLegs.Any() && routeLegs != null)
+                    {
+                        for (int i = 0; i < Math.Min(routeLegs.Count, response.VoyageLegs.Count); i++)
+                        {
+                            var apiLeg = response.VoyageLegs.FirstOrDefault(vl => vl.VoyageLegOrder == i + 1);
+                            if (apiLeg != null)
+                            {
+                                routeLegs[i].ReductionFactor = apiLeg.ReductionFactors.Annual;
+                            }
+                        }
+                    }
+
+                    Console.WriteLine($"Route Reduction Factors processed successfully. Annual: {response.Route.ReductionFactors.Annual}");
+                }
+
+                // Trigger UI update
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing reduction factor response: {ex.Message}");
+                throw;
+            }
+        }
+
+        // 3. Helper method to get seasonal reduction factor values
+        private double GetSeasonalReductionFactor(string season, bool isRoute = true, int legOrder = 0)
+        {
+            if (reductionFactorResponse == null) return 0.0;
+
+            ReductionFactors factors = null;
+
+            if (isRoute)
+            {
+                factors = reductionFactorResponse.Route?.ReductionFactors;
+            }
+            else
+            {
+                var leg = reductionFactorResponse.VoyageLegs?.FirstOrDefault(vl => vl.VoyageLegOrder == legOrder);
+                factors = leg?.ReductionFactors;
+            }
+
+            if (factors == null) return 0.0;
+
+            return season.ToLower() switch
+            {
+                "annual" => factors.Annual,
+                "spring" => factors.Spring,
+                "summer" => factors.Summer,
+                "fall" => factors.Fall,
+                "winter" => factors.Winter,
+                _ => 0.0
+            };
+        }
+        //private async Task CalculateRouteReductionFactor()
+        //{
+        //    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        //    try
+        //    {
+        //        // Validate necessary data is available
+        //        if (!ValidateRouteData())
+        //        {
+        //            // Show error message to user
+        //            // You can implement this using a toast/notification system
+        //            Console.WriteLine("Please complete all required route information");
+        //            return;
+        //        }
+        //        if (extractedCoordinates != null && extractedCoordinates.Any())
+        //        {
+        //            await ShowRouteItems(extractedCoordinates);
+        //            showResultsForReductionFactor = true;
+        //        }
+        //        else
+        //        {
+        //            // Prepare the RouteRequest object
+        //            var routeRequest = PrepareRouteRequest();
+
+
+        //            // Call the API
+        //            using var httpClient = new HttpClient();
+        //            httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
+        //            // httpClient.BaseAddress = new Uri("https://localhost:7155/");
+        //            var result = await httpClient.PostAsJsonAsync("api/v1/searoutes/calculate-route", routeRequest);
+        //            await ProcessRouteCalculationResult(result);
+        //            // await ShowRouteItems();
+        //            await ShowRouteItems(extractedCoordinates);
+        //            // var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, result);
+        //            showResultsForReductionFactor = true;
+        //        }
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Handle exceptions
+        //        Console.WriteLine($"Error calculating route reduction factor: {ex.Message}");
+        //        // You can add additional error handling or user notification here
+        //    }
+        //    finally
+        //    {
+        //        stopwatch.Stop();
+        //        isLoading = false;
+
+        //        var totalTimeTaken = stopwatch.Elapsed.TotalSeconds;
+
+        //        // Log total execution time to console
+        //        await JS.InvokeVoidAsync("console.log", $"Total execution time: {totalTimeTaken} s");
+        //    }
+        //}
+
+
+
+
         private async Task ProcessRouteCalculationResult(HttpResponseMessage response)
         {
             try
@@ -1541,7 +1796,7 @@ Longitude = 103.8198
             }
         }
 
-      ublic List<PortModel> SearchPorts(string searchTerm)
+        public List<PortModel> SearchPorts(string searchTerm)
         {
 
             if (string.IsNullOrWhiteSpace(searchTerm) || _ports == null)
@@ -1557,7 +1812,7 @@ Longitude = 103.8198
             p.Country.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
             p.Unlocode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
             ).ToList();
-        }  p
+        }
 
         private double GetDistanceFromRouteSegment(string pointId)
         {
@@ -1679,60 +1934,18 @@ Longitude = 103.8198
         {
             try
             {
-                // --- New logic: Use voyageLegs for per-leg reduction factors and display ---
-                if (voyageLegs != null && voyageLegs.Count > 0)
-                {
-                    routeLegs.Clear();
-                    using var httpClient = new HttpClient();
-                    httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
-
-                    foreach (var leg in voyageLegs)
-                    {
-                        // Prepare API request for this leg (if you want to get reduction factor per leg)
-                        var legApiRequest = new
-                        {
-                            Coordinates = leg.Coordinates.Select(c => new { Longitude = c[0], Latitude = c[1] }).ToList()
-                        };
-                        double reductionFactor = 0;
-                        try
-                        {
-                            var response = await httpClient.PostAsJsonAsync("calculate/reduction-factor/segment", legApiRequest);
-                            if (response.IsSuccessStatusCode)
-                            {
-                                var jsonString = await response.Content.ReadAsStringAsync();
-                                using var jsonDoc = JsonDocument.Parse(jsonString);
-                                var root = jsonDoc.RootElement;
-                                if (root.TryGetProperty("reductionFactor", out var rfElement))
-                                {
-                                    reductionFactor = rfElement.GetDouble();
-                                }
-                                // Optionally, parse other properties as needed
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error fetching reduction factor for leg {leg.DeparturePort} -> {leg.ArrivalPort}: {ex.Message}");
-                        }
-                        // Add to UI model
-                        routeLegs.Add(new RouteLegModel
-                        {
-                            DeparturePort = leg.DeparturePort,
-                            ArrivalPort = leg.ArrivalPort,
-                            Distance = leg.Distance,
-                            ReductionFactor = reductionFactor
-                        });
-                    }
-                    // Optionally, update the UI or notify the user
-                    StateHasChanged();
-                    return;
-                }
-                // --- Fallback: Old logic ---
+                // Get overall reduction factor using provided coordinates from API if available
                 if (coordinates != null && coordinates.Count > 0)
                 {
                     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                    // List<Coordinate> filteredCoordinats = RemoveDuplicateCoordinates(coordinates);
                     var rf = await GetReductionFactor(coordinates);
                     stopwatch.Stop();
+
+
                     var totalTimeTaken = stopwatch.Elapsed.TotalSeconds;
+
+                    // Log total execution time to console
                     await JS.InvokeVoidAsync("console.log", $"Total execution time overall reductionfactor: {totalTimeTaken} s");
                     routeModel.ReductionFactor = rf;
                 }
@@ -1789,8 +2002,12 @@ Longitude = 103.8198
                         return;
                     }
                 }
+
+            }
             catch (Exception ex)
             {
+
+
                 Console.WriteLine($"Error in ShowRouteItems: {ex.Message}");
                 throw;
             }
@@ -1818,14 +2035,12 @@ Longitude = 103.8198
                     var currentOrigin = origin;
                     var currentDestination = destination;
 
-                    //tasks.Add(CalculateSingleLegAsync(httpClient, currentOrigin, currentDestination));
-                    var result = await CalculateSingleLegAsync(httpClient, currentOrigin, currentDestination);
-                    routeLegs.Add(result);
+                    tasks.Add(CalculateSingleLegAsync(httpClient, currentOrigin, currentDestination));
                 }
 
                 // Wait for all tasks to complete and add results to routeLegs
-                //var results = await Task.WhenAll(tasks);
-                //routeLegs.AddRange(results.Where(leg => leg != null));
+                var results = await Task.WhenAll(tasks);
+                routeLegs.AddRange(results.Where(leg => leg != null));
             }
             catch (Exception ex)
             {
@@ -2061,6 +2276,53 @@ Longitude = 103.8198
             }
         }
 
+        //private async Task<double> GetRouteItemReductionFactor(string arrPortId, string depPortId)
+        //{
+        //    try
+        //    {
+        //        List<Coordinate> lst = new List<Coordinate>();
+        //        // arrival location coords
+        //        double arrLat = AllCoordinates.Where(x => x.GeoPointId == arrPortId).FirstOrDefault()!.Latitude;
+        //        double arrLon = AllCoordinates.Where(x => x.GeoPointId == arrPortId).FirstOrDefault()!.Longitude;
+        //        lst.Add(new Coordinate() { Latitude = arrLat, Longitude = arrLon });
+
+        //        // departure location coords
+        //        double depLat = AllCoordinates.Where(x => x.GeoPointId == depPortId).FirstOrDefault()!.Latitude;
+        //        double depLon = AllCoordinates.Where(x => x.GeoPointId == depPortId).FirstOrDefault()!.Longitude;
+        //        lst.Add(new Coordinate() { Latitude = depLat, Longitude = depLon });
+
+        //        double result = await GetReductionFactor(lst);
+        //        return result;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw ex;
+
+        //    }
+        //}
+        //private async Task<double> GetReductionFactor(List<Coordinate> lstCoOrdinates)
+        //{
+        //    double result = 0;
+        //    try
+        //    {
+        //        var request = new RFCalculationRequest()
+        //        {
+        //            PointNumber = lstCoOrdinates.Count,
+        //            Coordinates = lstCoOrdinates,
+        //            ExceedanceProbability = routeModel.ExceedanceProbability ?? 0,
+        //            WaveType = "ABS"
+        //        };
+        //        var response = await routeAPIService.GetReductionFactor(request);
+        //        if (response != null)
+        //            result = response.ReductionFactor;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return 0;
+        //    }
+        //    return result;
+        //}
+
         private async Task<double> GetReductionFactor(List<Coordinate> lstCoOrdinates)
         {
             double result = 0;
@@ -2119,6 +2381,15 @@ Longitude = 103.8198
                 }
             }
 
+            //if (routeModel.DepartureWaypoints.Count > 0)
+            //{
+            //    foreach (var item in routeModel.DepartureWaypoints)
+            //    {
+            //        double distance = GetDistanceFromRouteSegment(item.PointId);
+            //        _ = Guid.TryParse(item.PointId, out Guid pointId);
+            //        wayPoints.Add(new Services.API.Request.WayPoint(0, userId, string.Empty, string.Empty, pointId, distance));
+            //    }
+            //}
 
             if (routeModel.RouteSegments.Count > 0)
             {
@@ -2178,8 +2449,23 @@ Longitude = 103.8198
                 routeModel.RouteName = details.RouteName;
 
                 var mainDep = details.RoutePoints.First();
-                departureLocationQuery = mainDep.PortData.PortName;
-                await SearchDepartureLocation();
+                //await SearchDepartureLocation();
+
+                var tempPortSelection = new PortSelectionModel
+                {
+                    SearchTerm = mainDep.PortData.PortName,
+                    SearchResults = new List<PortModel>() {new PortModel()
+                    {
+                        Unlocode = mainDep.PortData.PortCode,
+                        Name = mainDep.PortData.PortName,
+                        Latitude = mainDep.Latitude,
+                        Longitude = mainDep.Longitude,
+                        Port_Id = mainDep.GeoPointId,
+                        Country = mainDep.PortData.CountryName
+                    }}
+                };
+                routeModel.MainDeparturePortSelection = tempPortSelection;
+
                 await UpdateDeparturePortSearchDepartureLocation(routeModel.MainDeparturePortSelection,
                     routeModel.MainDeparturePortSelection.SearchResults[0]);
 
@@ -2190,18 +2476,35 @@ Longitude = 103.8198
                         var portItem = details.RoutePoints[i];
                         if (portItem.RoutePointType == "port")
                         {
-                            AddDeparturePort();
-                            foreach (var dpItem in routeModel.DepartureItems)
+                            var portModel = new PortModel()
                             {
-                                await UpdateDeparturePort(dpItem.Port, new PortModel()
-                                {
-                                    Unlocode = portItem.PortData.PortCode,
-                                    Name = portItem.PortData.PortName,
-                                    Latitude = portItem.Latitude,
-                                    Longitude = portItem.Longitude,
-                                    Port_Id = portItem.GeoPointId
-                                });
-                            }
+                                Unlocode = portItem.PortData.PortCode,
+                                Name = portItem.PortData.PortName,
+                                Latitude = portItem.Latitude,
+                                Longitude = portItem.Longitude,
+                                Port_Id = portItem.GeoPointId,
+                                Country = portItem.PortData.CountryName
+                            };
+
+                            var portSelectionModel = new PortSelectionModel
+                            {
+                                SequenceNumber = routeModel.DepartureItems.Count + 1,
+                                Port = portModel
+                            };
+
+                            // Add to combined list
+                            routeModel.DepartureItems.Add(new RouteItemModel
+                            {
+                                SequenceNumber = routeModel.DepartureItems.Count + 1,
+                                ItemType = "P",
+                                Port = portSelectionModel
+                            });
+
+
+                            routeModel.DeparturePorts.Add(portSelectionModel);
+
+                            await UpdateDeparturePort(portSelectionModel, portModel);
+
                         }
                         else
                         {
@@ -2230,34 +2533,32 @@ Longitude = 103.8198
                 var mainArr = details.RoutePoints.Last();
                 if (mainArr.PortData != null)
                 {
-                    arrivalLocationQuery = mainArr.PortData.PortName;
-                    await SearchArrivalLocation();
+                    //await SearchArrivalLocation();
+
+                    var tempArrPortSelection = new PortSelectionModel
+                    {
+                        SearchTerm = mainArr.PortData.PortName,
+                        SearchResults = new List<PortModel>() {new PortModel()
+                            {
+                                Unlocode = mainArr.PortData.PortCode,
+                                Name = mainArr.PortData.PortName,
+                                Latitude = mainArr.Latitude,
+                                Longitude = mainArr.Longitude,
+                                Port_Id = mainArr.GeoPointId,
+                                Country = mainArr.PortData.CountryName
+                            }}
+                    };
+
+                    routeModel.MainArrivalPortSelection = tempArrPortSelection;
+
                     await UpdateArrivalPortSearchArrivalLocation(routeModel.MainArrivalPortSelection,
-                        routeModel.MainArrivalPortSelection.SearchResults[0]);
+                    routeModel.MainArrivalPortSelection.SearchResults[0]);
                 }
             }
             catch (Exception)
             {
                 throw;
             }
-        }
-
-        // --- Route Splitting and Longitude Normalization Utilities (copied from model for local use) ---
-        public class RoutePointInput
-        {
-            public string Type { get; set; } // "port" or "waypoint"
-            public string Name { get; set; }
-            public double[] LatLng { get; set; } // [lat, lng]
-            public double SegmentDistance { get; set; } // distance to next point
-            public List<double[]> SegmentCoordinates { get; set; } // list of [lng, lat] pairs to next point
-        }
-
-        public class VoyageLeg
-        {
-            public string DeparturePort { get; set; }
-            public string ArrivalPort { get; set; }
-            public double Distance { get; set; }
-            public List<double[]> Coordinates { get; set; } = new List<double[]>();
         }
 
         public static List<VoyageLeg> SplitRouteIntoVoyageLegs(List<RoutePointInput> routePoints)
