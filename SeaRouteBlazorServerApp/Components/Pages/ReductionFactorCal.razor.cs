@@ -1287,6 +1287,22 @@ Longitude = 103.8198
                 }
                 voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
 
+                // --- Populate routeLegs for the UI ---
+                routeLegs.Clear();
+                if (voyageLegs != null && voyageLegs.Count > 0)
+                {
+                    foreach (var leg in voyageLegs)
+                    {
+                        routeLegs.Add(new RouteLegModel
+                        {
+                            DeparturePort = leg.DeparturePort,
+                            ArrivalPort = leg.ArrivalPort,
+                            Distance = leg.Distance
+                            // ReductionFactor will be set after the API call
+                        });
+                    }
+                }
+
             }
             catch (Exception ex)
             {
@@ -1402,121 +1418,7 @@ Longitude = 103.8198
                     Console.WriteLine("Please complete all required route information");
                     return;
                 }
-
-                // --- Build routePointInputs for voyageLegs splitting ---
-                var routePointInputs = new List<RoutePointInput>();
-
-                // Add main departure port
-                if (routeModel.MainDeparturePortSelection?.Port != null)
-                {
-                    routePointInputs.Add(new RoutePointInput
-                    {
-                        Type = "port",
-                        Name = routeModel.MainDeparturePortSelection.Port.Name,
-                        LatLng = new double[] { routeModel.MainDeparturePortSelection.Port.Latitude, routeModel.MainDeparturePortSelection.Port.Longitude },
-                        SegmentDistance = 0, // Will be set below
-                        SegmentCoordinates = new List<double[]>()
-                    });
-                }
-
-                // Add departure items (ports and waypoints)
-                if (routeModel.DepartureItems != null)
-                {
-                    foreach (var item in routeModel.DepartureItems)
-                    {
-                        if (item.ItemType == "P")
-                        {
-                            routePointInputs.Add(new RoutePointInput
-                            {
-                                Type = "port",
-                                Name = item.Port.Port.Name,
-                                LatLng = new double[] { item.Port.Port.Latitude, item.Port.Port.Longitude },
-                                SegmentDistance = 0, // Will be set below
-                                SegmentCoordinates = new List<double[]>()
-                            });
-                        }
-                        else if (item.ItemType == "W")
-                        {
-                            if (double.TryParse(item.Waypoint.Latitude, out double lat) && double.TryParse(item.Waypoint.Longitude, out double lng))
-                            {
-                                routePointInputs.Add(new RoutePointInput
-                                {
-                                    Type = "waypoint",
-                                    Name = $"Waypoint {item.SequenceNumber}",
-                                    LatLng = new double[] { lat, lng },
-                                    SegmentDistance = 0, // Will be set below
-                                    SegmentCoordinates = new List<double[]>()
-                                });
-                            }
-                        }
-                    }
-                }
-
-                // Add arrival items (ports and waypoints)
-                if (routeModel.ArrivalItems != null)
-                {
-                    foreach (var item in routeModel.ArrivalItems)
-                    {
-                        if (item.ItemType == "P")
-                        {
-                            routePointInputs.Add(new RoutePointInput
-                            {
-                                Type = "port",
-                                Name = item.Port.Port.Name,
-                                LatLng = new double[] { item.Port.Port.Latitude, item.Port.Port.Longitude },
-                                SegmentDistance = 0, // Will be set below
-                                SegmentCoordinates = new List<double[]>()
-                            });
-                        }
-                        else if (item.ItemType == "W")
-                        {
-                            if (double.TryParse(item.Waypoint.Latitude, out double lat) && double.TryParse(item.Waypoint.Longitude, out double lng))
-                            {
-                                routePointInputs.Add(new RoutePointInput
-                                {
-                                    Type = "waypoint",
-                                    Name = $"Waypoint {item.SequenceNumber}",
-                                    LatLng = new double[] { lat, lng },
-                                    SegmentDistance = 0, // Will be set below
-                                    SegmentCoordinates = new List<double[]>()
-                                });
-                            }
-                        }
-                    }
-                }
-
-                // Add main arrival port
-                if (routeModel.MainArrivalPortSelection?.Port != null)
-                {
-                    routePointInputs.Add(new RoutePointInput
-                    {
-                        Type = "port",
-                        Name = routeModel.MainArrivalPortSelection.Port.Name,
-                        LatLng = new double[] { routeModel.MainArrivalPortSelection.Port.Latitude, routeModel.MainArrivalPortSelection.Port.Longitude },
-                        SegmentDistance = 0, // Will be set below
-                        SegmentCoordinates = new List<double[]>()
-                    });
-                }
-
-                // Set SegmentDistance and SegmentCoordinates for each segment (between consecutive points)
-                for (int i = 0; i < routePointInputs.Count - 1; i++)
-                {
-                    // Find the segment in routeModel.RouteSegments that matches this pair
-                    if (routeModel.RouteSegments != null && routeModel.RouteSegments.Count > i)
-                    {
-                        var seg = routeModel.RouteSegments[i];
-                        routePointInputs[i].SegmentDistance = seg.Distance;
-                        if (extractedCoordinates != null && extractedCoordinates.Count > 0)
-                        {
-                            routePointInputs[i].SegmentCoordinates = extractedCoordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToList();
-                        }
-                    }
-                }
-
-                // --- Split into voyageLegs ---
-                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
-
-                // --- Now call CalculateUsingVoyageLegs as before ---
+                
                 if (voyageLegs != null && voyageLegs.Count > 0)
                 {
                     await CalculateUsingVoyageLegs();
