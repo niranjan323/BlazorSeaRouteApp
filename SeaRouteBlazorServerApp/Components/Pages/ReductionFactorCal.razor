@@ -499,7 +499,7 @@
                                         </div>
 
                                         <div class="cls_table_div cls_width33">
-                                            @GetSeasonalReductionFactor("Annual")
+                                            @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual"))
                                         </div>
                                     </div>
                                 </td>
@@ -508,7 +508,7 @@
                                         @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
                                         {
                                             <div class="cls_table_div cls_width25">
-                                                @GetSeasonalReductionFactor(season)
+                                                @string.Format("{0:0.00}", GetSeasonalReductionFactor(season))
                                             </div>
                                         }
                                     </div>
@@ -535,7 +535,7 @@
                                             </div>
 
                                             <div class="cls_table_div cls_width33">
-                                                @GetSeasonalReductionFactor("Annual", false, 1)
+                                                @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual", false, 1))
                                             </div>
                                         </div>
                                     </td>
@@ -544,7 +544,7 @@
                                             @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
                                             {
                                                 <div class="cls_table_div cls_width25">
-                                                    @GetSeasonalReductionFactor(season, false, 1)
+                                                    @string.Format("{0:0.00}", GetSeasonalReductionFactor(season, false, 1))
                                                 </div>
                                             }
                                         </div>
@@ -566,7 +566,7 @@
                                                 </div>
 
                                                 <div class="cls_table_div cls_width33">
-                                                    @GetSeasonalReductionFactor("Annual", false, i + 1)
+                                                    @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual", false, i + 1))
                                                 </div>
                                             </div>
                                         </td>
@@ -575,13 +575,18 @@
                                                 @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
                                                 {
                                                     <div class="cls_table_div cls_width25">
-                                                        @GetSeasonalReductionFactor(season, false, i + 1)
+                                                        @string.Format("{0:0.00}", GetSeasonalReductionFactor(season, false, i + 1))
                                                     </div>
                                                 }
                                             </div>
                                         </td>
                                     </tr>
                                 }
+                            }
+                            else
+                            {
+                                <!-- Debug: routeLegs is null or empty -->
+                                <tr><td colspan="8" style="color:red;">No route legs found (routeLegs is null or empty)</td></tr>
                             }
                         </tbody>
                     </table>
