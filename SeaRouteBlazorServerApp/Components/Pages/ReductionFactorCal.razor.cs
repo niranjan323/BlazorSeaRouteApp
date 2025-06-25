@@ -1285,8 +1285,8 @@ Longitude = 103.8198
                         SegmentCoordinates = segmentCoordinates
                     });
                 }
-                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
-
+                //Modified by Niranjan: Use the new SplitRouteIntoVoyageLegs with fullRouteCoordinates
+                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs, extractedCoordinates);
                 // --- Populate routeLegs for the UI ---
                 routeLegs.Clear();
                 if (voyageLegs != null && voyageLegs.Count > 0)
@@ -2463,48 +2463,25 @@ Longitude = 103.8198
             }
         }
 
-        public static List<VoyageLeg> SplitRouteIntoVoyageLegs(List<RoutePointInput> routePoints)
+        //Modified by Niranjan
+        private static int FindClosestCoordinateIndex(List<double[]> coordinates, double lat, double lon)
         {
-            var voyageLegs = new List<VoyageLeg>();
-            VoyageLeg currentLeg = null;
-            for (int i = 0; i < routePoints.Count; i++)
+            int closestIndex = 0;
+            double minDist = double.MaxValue;
+            for (int i = 0; i < coordinates.Count; i++)
             {
-                var point = routePoints[i];
-                if (point.Type.ToLower() == "port")
+                double dLat = coordinates[i][1] - lat;
+                double dLon = coordinates[i][0] - lon;
+                double dist = dLat * dLat + dLon * dLon;
+                if (dist < minDist)
                 {
-                    if (currentLeg != null)
-                    {
-                        currentLeg.ArrivalPort = point.Name;
-                    }
-                    currentLeg = new VoyageLeg
-                    {
-                        DeparturePort = point.Name,
-                        Distance = point.SegmentDistance,
-                        Coordinates = point.SegmentCoordinates != null ? new List<double[]>(point.SegmentCoordinates) : new List<double[]>()
-                    };
-                    voyageLegs.Add(currentLeg);
-                }
-                else if (point.Type.ToLower() == "waypoint")
-                {
-                    if (currentLeg != null)
-                    {
-                        currentLeg.Distance += point.SegmentDistance;
-                        if (point.SegmentCoordinates != null)
-                            currentLeg.Coordinates.AddRange(point.SegmentCoordinates);
-                    }
-                }
-                if (i == routePoints.Count - 1 && currentLeg != null)
-                {
-                    currentLeg.ArrivalPort = point.Name;
+                    minDist = dist;
+                    closestIndex = i;
                 }
             }
-            foreach (var leg in voyageLegs)
-            {
-                leg.Coordinates = NormalizeLongitudesAndRemoveDuplicates(leg.Coordinates);
-            }
-            return voyageLegs;
+            return closestIndex;
         }
-
+        //Modified by Niranjan - Restored
         public static List<double[]> NormalizeLongitudesAndRemoveDuplicates(List<double[]> coordinates)
         {
             var seen = new HashSet<string>();
@@ -2523,7 +2500,7 @@ Longitude = 103.8198
             }
             return result;
         }
-
+        //Modified by Niranjan - Restored
         public static double NormalizeLongitude(double longitude)
         {
             double T = 360.0;
@@ -2533,5 +2510,40 @@ Longitude = 103.8198
             if (alpha0 >= 180.0) alpha0 -= T;
             return alpha0;
         }
+        //Modified by Niranjan
+        public static List<VoyageLeg> SplitRouteIntoVoyageLegs(List<RoutePointInput> routePoints, List<double[]> fullRouteCoordinates)
+        {
+            var voyageLegs = new List<VoyageLeg>();
+            var indices = new List<int>();
+            foreach (var point in routePoints)
+            {
+                int idx = FindClosestCoordinateIndex(fullRouteCoordinates, point.LatLng[1], point.LatLng[0]);
+                indices.Add(idx);
+            }
+            for (int i = 0; i < indices.Count - 1; i++)
+            {
+                int startIdx = indices[i];
+                int endIdx = indices[i + 1];
+                if (startIdx > endIdx)
+                {
+                    var temp = startIdx;
+                    startIdx = endIdx;
+                    endIdx = temp;
+                }
+                var legCoords = fullRouteCoordinates.GetRange(startIdx, endIdx - startIdx + 1);
+                //Modified by Niranjan - Clean up coordinates
+                legCoords = NormalizeLongitudesAndRemoveDuplicates(legCoords);
+                var leg = new VoyageLeg
+                {
+                    DeparturePort = routePoints[i].Name,
+                    ArrivalPort = routePoints[i + 1].Name,
+                    Distance = routePoints[i + 1].SegmentDistance, // or calculate as needed
+                    Coordinates = legCoords
+                };
+                voyageLegs.Add(leg);
+            }
+            return voyageLegs;
+        }
+        //Modified by Niranjan
     }
 }
