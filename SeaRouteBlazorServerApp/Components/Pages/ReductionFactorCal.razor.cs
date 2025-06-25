@@ -1286,7 +1286,8 @@ Longitude = 103.8198
                     });
                 }
                 //Modified by Niranjan: Use the new SplitRouteIntoVoyageLegs with fullRouteCoordinates
-                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs, extractedCoordinates);
+                var fullRouteCoordinates = ConvertCoordinatesToDoubleArray(extractedCoordinates);
+                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs, fullRouteCoordinates);
                 // --- Populate routeLegs for the UI ---
                 routeLegs.Clear();
                 if (voyageLegs != null && voyageLegs.Count > 0)
@@ -1309,7 +1310,15 @@ Longitude = 103.8198
                 Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
             }
         }
-
+        private static List<double[]> ConvertCoordinatesToDoubleArray(List<Coordinate> coordinates)
+        {
+            var result = new List<double[]>();
+            foreach (var coord in coordinates)
+            {
+                result.Add(new double[] { coord.Longitude, coord.Latitude });
+            }
+            return result;
+        }
 
 
         private class RoutePointRef
