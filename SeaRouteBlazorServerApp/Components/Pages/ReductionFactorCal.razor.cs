@@ -5,8 +5,10 @@ using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
 using NextGenEngApps.DigitalRules.CRoute.Models;
 using NextGenEngApps.DigitalRules.CRoute.Services.API.Request;
 using PdfSharpCore.Pdf;
+using SeaRouteModel.Models;
 using System.Text.Json;
 using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
+using static SeaRouteModel.Models.ReductionFactor;
 using ReductionFactor = NextGenEngApps.DigitalRules.CRoute.DAL.Models.ReductionFactor;
 
 namespace NextGenEngApps.DigitalRules.CRoute.Components.Pages
@@ -937,7 +939,7 @@ Longitude = 103.8198
 
 
 
-
+        //NNN
         public async Task CalculateMultiSegmentRoute()
         {
             try
@@ -958,8 +960,6 @@ Longitude = 103.8198
                 List<RouteSegmentInfo> routeSegments = new List<RouteSegmentInfo>();
                 double totalDistance = 0;
                 double totalDuration = 0;
-                // modified Sireesha: Store each segment's coordinates
-                var segmentCoordinatesList = new List<List<double[]>>();
 
                 // Add departure port
                 if (routeModel.MainDeparturePortSelection?.Port != null)
@@ -1037,8 +1037,6 @@ Longitude = 103.8198
                             Name = $"Waypoint {i + 1}",
                             PointId = waypoint.PointId
                         };
-                        //need to add waypoint to geo_points table as we need to maintain in waypoints table
-                        //await routeAPIService.AddGeoPointAsync(waypoint.PointId, lat, lng);
                     }
                 }
 
@@ -1133,8 +1131,13 @@ Longitude = 103.8198
                         orderedPoints.Add(point);
                     }
                 }
+
                 bool hasDeparture = orderedPoints.Count > 0 &&
                          (orderedPoints[0].Type == "departure" || routePoints[0].Type == "departure");
+
+                // Store all segment coordinates separately
+                List<List<Coordinate>> allSegmentCoordinates = new List<List<Coordinate>>();
+
                 if (hasDeparture && orderedPoints.Count >= 2)
                 {
                     // Process each segment sequentially using our ordered C# data
@@ -1143,8 +1146,10 @@ Longitude = 103.8198
                         var origin = orderedPoints[i];
                         var destination = orderedPoints[i + 1];
 
+                        // Create route request for this segment
                         var segmentRequest = new RouteRequest
                         {
+                            // Use coordinates from C# model
                             Origin = new double[] { origin.Longitude, origin.Latitude },
                             Destination = new double[] { destination.Longitude, destination.Latitude },
                             Restrictions = new string[] { "northwest" },
@@ -1153,19 +1158,25 @@ Longitude = 103.8198
                             only_terminals = true
                         };
 
+                        // Call API for this segment
                         using var httpClient = new HttpClient();
                         httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
                         var result = await httpClient.PostAsJsonAsync("api/v1/searoutes/calculate-route", segmentRequest);
+
                         if (result.IsSuccessStatusCode)
                         {
                             var jsonString = await result.Content.ReadAsStringAsync();
                             using var jsonDoc = JsonDocument.Parse(jsonString);
                             var root = jsonDoc.RootElement;
-                            // modified Sireesha: Use a local variable for this segment's coordinates
-                            var segmentCoords = new List<double[]>();
+
+                            // Create separate coordinate list for this segment
+                            var segmentCoordinates = new List<Coordinate>();
+
+                            // Check if route object exists
                             if (root.TryGetProperty("route", out var routeElement) &&
                                 routeElement.TryGetProperty("properties", out var propertiesElement))
                             {
+                                // Extract segment distance and duration
                                 double segmentDistance = 0;
                                 double segmentDuration = 0;
                                 string units = "km";
@@ -1174,18 +1185,26 @@ Longitude = 103.8198
                                     geometryElement.TryGetProperty("coordinates", out var coordinatesElement) &&
                                     coordinatesElement.ValueKind == JsonValueKind.Array)
                                 {
+                                    // Process each coordinate in the array
                                     foreach (var coord in coordinatesElement.EnumerateArray())
                                     {
                                         if (coord.ValueKind == JsonValueKind.Array && coord.GetArrayLength() >= 2)
                                         {
+                                            // Note: GeoJSON format is [longitude, latitude]
                                             var longitude = coord[0].GetDouble();
                                             var latitude = coord[1].GetDouble();
-                                            segmentCoords.Add(new double[] { longitude, latitude }); // modified Sireesha
+
+                                            segmentCoordinates.Add(new Coordinate
+                                            {
+                                                Latitude = latitude,
+                                                Longitude = longitude
+                                            });
                                         }
                                     }
                                 }
-                                // modified Sireesha: Add this segment's coordinates to the list
-                                segmentCoordinatesList.Add(segmentCoords);
+
+                                // Store this segment's coordinates
+                                allSegmentCoordinates.Add(segmentCoordinates);
 
                                 if (propertiesElement.TryGetProperty("length", out var lengthElement))
                                 {
@@ -1204,6 +1223,7 @@ Longitude = 103.8198
                                     units = unitsElement.GetString();
                                 }
 
+                                // Store segment information
                                 var segmentInfo = new RouteSegmentInfo
                                 {
                                     SegmentIndex = i,
@@ -1220,15 +1240,18 @@ Longitude = 103.8198
 
                                 routeSegments.Add(segmentInfo);
 
+                                // Get the raw JSON for the route
                                 var routeJson = routeElement.GetRawText();
+
+                                // Pass segment info to JavaScript along with route data
                                 await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, orderedPoints.Count - 1);
                             }
                         }
                         else
                         {
                             Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
-                            // modified Sireesha: still add an empty segment to keep indices aligned
-                            segmentCoordinatesList.Add(new List<double[]>());
+                            // Add empty coordinates for failed segment
+                            allSegmentCoordinates.Add(new List<Coordinate>());
                         }
                     }
                 }
@@ -1237,19 +1260,30 @@ Longitude = 103.8198
                 routeModel.TotalDistance = totalDistance;
                 routeModel.TotalDurationHours = totalDuration;
 
+                // Create route point inputs with proper segment coordinate mapping
                 var routePointInputs = new List<RoutePointInput>();
                 for (int i = 0; i < orderedPoints.Count; i++)
                 {
                     var point = orderedPoints[i];
                     double segmentDistance = 0;
                     List<double[]> segmentCoordinates = new List<double[]>();
+
+                    // Get coordinates for this segment (if it's not the last point)
+                    if (i < allSegmentCoordinates.Count)
+                    {
+                        var coordinates = allSegmentCoordinates[i];
+                        if (coordinates != null && coordinates.Count > 0)
+                        {
+                            segmentCoordinates = coordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToList();
+                        }
+                    }
+
+                    // Get distance for this segment
                     if (i < routeSegments.Count)
                     {
-                        var seg = routeSegments[i];
-                        segmentDistance = seg.Distance;
-                        // modified Sireesha: Use the correct segment's coordinates
-                        segmentCoordinates = segmentCoordinatesList[i];
+                        segmentDistance = routeSegments[i].Distance;
                     }
+
                     routePointInputs.Add(new RoutePointInput
                     {
                         Type = point.Type == "departure" ? "port" : point.Type,
@@ -1259,9 +1293,9 @@ Longitude = 103.8198
                         SegmentCoordinates = segmentCoordinates
                     });
                 }
-                // modified Sireesha: Now call the split method with correct segment coordinates
+
                 voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
-                // --- Populate routeLegs for the UI ---
+
                 routeLegs.Clear();
                 if (voyageLegs != null && voyageLegs.Count > 0)
                 {
@@ -1272,26 +1306,17 @@ Longitude = 103.8198
                             DeparturePort = leg.DeparturePort,
                             ArrivalPort = leg.ArrivalPort,
                             Distance = leg.Distance
-                            // ReductionFactor will be set after the API call
                         });
                     }
                 }
-
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
             }
         }
-        private static List<double[]> ConvertCoordinatesToDoubleArray(List<Coordinate> coordinates)
-        {
-            var result = new List<double[]>();
-            foreach (var coord in coordinates)
-            {
-                result.Add(new double[] { coord.Longitude, coord.Latitude });
-            }
-            return result;
-        }
+
+
 
 
         private class RoutePointRef
@@ -1341,8 +1366,7 @@ Longitude = 103.8198
                 isLoading = true;
                 if (!ValidateRouteData())
                 {
-                    // Show error message to user
-                    // You can implement this using a toast/notification system
+
                     Console.WriteLine("Please complete all required route information");
                     isLoading = false;
                     return;
@@ -1394,13 +1418,13 @@ Longitude = 103.8198
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                // Validate necessary data is available
                 if (!ValidateRouteData())
                 {
                     Console.WriteLine("Please complete all required route information");
                     return;
                 }
-                
+
+
                 if (voyageLegs != null && voyageLegs.Count > 0)
                 {
                     await CalculateUsingVoyageLegs();
@@ -1412,7 +1436,7 @@ Longitude = 103.8198
                 }
                 else
                 {
-                    // Fallback: use the old logic
+
                     var routeRequest = PrepareRouteRequest();
                     using var httpClient = new HttpClient();
                     httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
@@ -1434,6 +1458,7 @@ Longitude = 103.8198
                 await JS.InvokeVoidAsync("console.log", $"Total execution time: {totalTimeTaken} s");
             }
         }
+        //NNN
         private async Task CalculateUsingVoyageLegs()
         {
             try
@@ -1441,19 +1466,17 @@ Longitude = 103.8198
                 using var httpClient = new HttpClient();
                 httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
 
-                // Prepare the request body matching the API expectations
-                // Convert your VoyageLeg to the API's VoyageLegs format
                 var apiRequest = new RouteReductionFactorsRequest
                 {
-                    Correction = true, // You can make this configurable
-                    ExceedanceProbability = 0.00001, // You can make this configurable
+                    Correction = true,
+                    ExceedanceProbability = 0.00001,
                     VoyageLegs = voyageLegs.Select((leg, index) => new VoyageLegs
                     {
-                        VoyageLegOrder = index + 1, // Generate order since your VoyageLeg doesn't have it
+                        VoyageLegOrder = index + 1,
                         Coordinates = leg.Coordinates.Select(coord => new Coordinates
                         {
-                            Latitude = (float)coord[1], // coord[1] is latitude in double[] format
-                            Longitude = (float)coord[0] // coord[0] is longitude in double[] format
+                            Latitude = (float)coord[1],
+                            Longitude = (float)coord[0]
                         }).ToList()
                     }).ToList()
                 };
@@ -1468,7 +1491,6 @@ Longitude = 103.8198
                         PropertyNameCaseInsensitive = true
                     });
 
-                    // Process the response
                     await ProcessReductionFactorResponse(reductionFactorResponse);
                     showResultsForReductionFactor = true;
                 }
@@ -1490,16 +1512,15 @@ Longitude = 103.8198
             {
                 if (response?.Route?.ReductionFactors != null)
                 {
-                    // Store the overall route reduction factor in routeModel
+
                     if (routeModel != null)
                     {
                         routeModel.ReductionFactor = response.Route.ReductionFactors.Annual;
                     }
 
-                    // Store the complete response for detailed UI display
                     this.reductionFactorResponse = response;
 
-                    // Update route legs with reduction factors if they exist
+
                     if (response.VoyageLegs != null && response.VoyageLegs.Any() && routeLegs != null)
                     {
                         for (int i = 0; i < Math.Min(routeLegs.Count, response.VoyageLegs.Count); i++)
@@ -1525,7 +1546,7 @@ Longitude = 103.8198
             }
         }
 
-        // 3. Helper method to get seasonal reduction factor values
+
         private double GetSeasonalReductionFactor(string season, bool isRoute = true, int legOrder = 0)
         {
             if (reductionFactorResponse == null) return 0.0;
@@ -1554,64 +1575,6 @@ Longitude = 103.8198
                 _ => 0.0
             };
         }
-        //private async Task CalculateRouteReductionFactor()
-        //{
-        //    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        //    try
-        //    {
-        //        // Validate necessary data is available
-        //        if (!ValidateRouteData())
-        //        {
-        //            // Show error message to user
-        //            // You can implement this using a toast/notification system
-        //            Console.WriteLine("Please complete all required route information");
-        //            return;
-        //        }
-        //        if (extractedCoordinates != null && extractedCoordinates.Any())
-        //        {
-        //            await ShowRouteItems(extractedCoordinates);
-        //            showResultsForReductionFactor = true;
-        //        }
-        //        else
-        //        {
-        //            // Prepare the RouteRequest object
-        //            var routeRequest = PrepareRouteRequest();
-
-
-        //            // Call the API
-        //            using var httpClient = new HttpClient();
-        //            httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
-        //            // httpClient.BaseAddress = new Uri("https://localhost:7155/");
-        //            var result = await httpClient.PostAsJsonAsync("api/v1/searoutes/calculate-route", routeRequest);
-        //            await ProcessRouteCalculationResult(result);
-        //            // await ShowRouteItems();
-        //            await ShowRouteItems(extractedCoordinates);
-        //            // var reductionFactor = CalculateReductionFactor(routeModel.WayType, routeModel.ExceedanceProbability ?? 0, result);
-        //            showResultsForReductionFactor = true;
-        //        }
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Handle exceptions
-        //        Console.WriteLine($"Error calculating route reduction factor: {ex.Message}");
-        //        // You can add additional error handling or user notification here
-        //    }
-        //    finally
-        //    {
-        //        stopwatch.Stop();
-        //        isLoading = false;
-
-        //        var totalTimeTaken = stopwatch.Elapsed.TotalSeconds;
-
-        //        // Log total execution time to console
-        //        await JS.InvokeVoidAsync("console.log", $"Total execution time: {totalTimeTaken} s");
-        //    }
-        //}
-
-
-
-
         private async Task ProcessRouteCalculationResult(HttpResponseMessage response)
         {
             try
@@ -1621,7 +1584,7 @@ Longitude = 103.8198
                 var root = jsonDoc.RootElement;
 
                 extractedCoordinates = new List<Coordinate>();
-                // Check if the route object exists
+
                 if (root.TryGetProperty("route", out var routeElement))
                 {
 
@@ -1630,12 +1593,12 @@ Longitude = 103.8198
                 geometryElement.TryGetProperty("coordinates", out var coordinatesElement) &&
                 coordinatesElement.ValueKind == JsonValueKind.Array)
                     {
-                        // Process each coordinate in the array
+
                         foreach (var coord in coordinatesElement.EnumerateArray())
                         {
                             if (coord.ValueKind == JsonValueKind.Array && coord.GetArrayLength() >= 2)
                             {
-                                // Note: GeoJSON format is [longitude, latitude]
+
                                 var longitude = coord[0].GetDouble();
                                 var latitude = coord[1].GetDouble();
 
@@ -2445,25 +2408,48 @@ Longitude = 103.8198
             }
         }
 
-        //Modified by Niranjan
-        private static int FindClosestCoordinateIndex(List<double[]> coordinates, double lat, double lon)
+        public static List<VoyageLeg> SplitRouteIntoVoyageLegs(List<RoutePointInput> routePoints)
         {
-            int closestIndex = 0;
-            double minDist = double.MaxValue;
-            for (int i = 0; i < coordinates.Count; i++)
+            var voyageLegs = new List<VoyageLeg>();
+            VoyageLeg currentLeg = null;
+            for (int i = 0; i < routePoints.Count; i++)
             {
-                double dLat = coordinates[i][1] - lat;
-                double dLon = coordinates[i][0] - lon;
-                double dist = dLat * dLat + dLon * dLon;
-                if (dist < minDist)
+                var point = routePoints[i];
+                if (point.Type.ToLower() == "port")
                 {
-                    minDist = dist;
-                    closestIndex = i;
+                    if (currentLeg != null)
+                    {
+                        currentLeg.ArrivalPort = point.Name;
+                    }
+                    currentLeg = new VoyageLeg
+                    {
+                        DeparturePort = point.Name,
+                        Distance = point.SegmentDistance,
+                        Coordinates = point.SegmentCoordinates != null ? new List<double[]>(point.SegmentCoordinates) : new List<double[]>()
+                    };
+                    voyageLegs.Add(currentLeg);
+                }
+                else if (point.Type.ToLower() == "waypoint")
+                {
+                    if (currentLeg != null)
+                    {
+                        currentLeg.Distance += point.SegmentDistance;
+                        if (point.SegmentCoordinates != null)
+                            currentLeg.Coordinates.AddRange(point.SegmentCoordinates);
+                    }
+                }
+                if (i == routePoints.Count - 1 && currentLeg != null)
+                {
+                    currentLeg.ArrivalPort = point.Name;
                 }
             }
-            return closestIndex;
+            foreach (var leg in voyageLegs)
+            {
+                leg.Coordinates = NormalizeLongitudesAndRemoveDuplicates(leg.Coordinates);
+            }
+            return voyageLegs;
         }
-        //Modified by Niranjan - Restored
+
         public static List<double[]> NormalizeLongitudesAndRemoveDuplicates(List<double[]> coordinates)
         {
             var seen = new HashSet<string>();
@@ -2482,7 +2468,7 @@ Longitude = 103.8198
             }
             return result;
         }
-        //Modified by Niranjan - Restored
+
         public static double NormalizeLongitude(double longitude)
         {
             double T = 360.0;
@@ -2492,40 +2478,5 @@ Longitude = 103.8198
             if (alpha0 >= 180.0) alpha0 -= T;
             return alpha0;
         }
-        //Modified by Niranjan
-        public static List<VoyageLeg> SplitRouteIntoVoyageLegs(List<RoutePointInput> routePoints, List<double[]> fullRouteCoordinates)
-        {
-            var voyageLegs = new List<VoyageLeg>();
-            var indices = new List<int>();
-            foreach (var point in routePoints)
-            {
-                int idx = FindClosestCoordinateIndex(fullRouteCoordinates, point.LatLng[1], point.LatLng[0]);
-                indices.Add(idx);
-            }
-            for (int i = 0; i < indices.Count - 1; i++)
-            {
-                int startIdx = indices[i];
-                int endIdx = indices[i + 1];
-                if (startIdx > endIdx)
-                {
-                    var temp = startIdx;
-                    startIdx = endIdx;
-                    endIdx = temp;
-                }
-                var legCoords = fullRouteCoordinates.GetRange(startIdx, endIdx - startIdx + 1);
-                //Modified by Niranjan - Clean up coordinates
-                legCoords = NormalizeLongitudesAndRemoveDuplicates(legCoords);
-                var leg = new VoyageLeg
-                {
-                    DeparturePort = routePoints[i].Name,
-                    ArrivalPort = routePoints[i + 1].Name,
-                    Distance = routePoints[i + 1].SegmentDistance, // or calculate as needed
-                    Coordinates = legCoords
-                };
-                voyageLegs.Add(leg);
-            }
-            return voyageLegs;
-        }
-        //Modified by Niranjan
     }
 }
