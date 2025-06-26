@@ -955,10 +955,11 @@ Longitude = 103.8198
                 // Create a mapping of all points for processing
                 Dictionary<string, RoutePointRef> pointMapping = new Dictionary<string, RoutePointRef>();
 
-
                 List<RouteSegmentInfo> routeSegments = new List<RouteSegmentInfo>();
                 double totalDistance = 0;
                 double totalDuration = 0;
+                // modified Sireesha: Store each segment's coordinates
+                var segmentCoordinatesList = new List<List<double[]>>();
 
                 // Add departure port
                 if (routeModel.MainDeparturePortSelection?.Port != null)
@@ -1142,10 +1143,8 @@ Longitude = 103.8198
                         var origin = orderedPoints[i];
                         var destination = orderedPoints[i + 1];
 
-                        // Create route request for this segment
                         var segmentRequest = new RouteRequest
                         {
-                            // Use coordinates from C# model
                             Origin = new double[] { origin.Longitude, origin.Latitude },
                             Destination = new double[] { destination.Longitude, destination.Latitude },
                             Restrictions = new string[] { "northwest" },
@@ -1154,23 +1153,19 @@ Longitude = 103.8198
                             only_terminals = true
                         };
 
-                        // Call API for this segment
-                        // Call the API
                         using var httpClient = new HttpClient();
                         httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
-                        // httpClient.BaseAddress = new Uri("https://localhost:7155/");
                         var result = await httpClient.PostAsJsonAsync("api/v1/searoutes/calculate-route", segmentRequest);
                         if (result.IsSuccessStatusCode)
                         {
                             var jsonString = await result.Content.ReadAsStringAsync();
                             using var jsonDoc = JsonDocument.Parse(jsonString);
                             var root = jsonDoc.RootElement;
-                            extractedCoordinates = new List<Coordinate>();
-                            // Check if route object exists
+                            // modified Sireesha: Use a local variable for this segment's coordinates
+                            var segmentCoords = new List<double[]>();
                             if (root.TryGetProperty("route", out var routeElement) &&
                                 routeElement.TryGetProperty("properties", out var propertiesElement))
                             {
-                                // Extract segment distance and duration
                                 double segmentDistance = 0;
                                 double segmentDuration = 0;
                                 string units = "km";
@@ -1179,23 +1174,18 @@ Longitude = 103.8198
                                     geometryElement.TryGetProperty("coordinates", out var coordinatesElement) &&
                                     coordinatesElement.ValueKind == JsonValueKind.Array)
                                 {
-                                    // Process each coordinate in the array
                                     foreach (var coord in coordinatesElement.EnumerateArray())
                                     {
                                         if (coord.ValueKind == JsonValueKind.Array && coord.GetArrayLength() >= 2)
                                         {
-                                            // Note: GeoJSON format is [longitude, latitude]
                                             var longitude = coord[0].GetDouble();
                                             var latitude = coord[1].GetDouble();
-
-                                            extractedCoordinates.Add(new Coordinate
-                                            {
-                                                Latitude = latitude,
-                                                Longitude = longitude
-                                            });
+                                            segmentCoords.Add(new double[] { longitude, latitude }); // modified Sireesha
                                         }
                                     }
                                 }
+                                // modified Sireesha: Add this segment's coordinates to the list
+                                segmentCoordinatesList.Add(segmentCoords);
 
                                 if (propertiesElement.TryGetProperty("length", out var lengthElement))
                                 {
@@ -1214,7 +1204,6 @@ Longitude = 103.8198
                                     units = unitsElement.GetString();
                                 }
 
-                                // Store segment information
                                 var segmentInfo = new RouteSegmentInfo
                                 {
                                     SegmentIndex = i,
@@ -1231,29 +1220,17 @@ Longitude = 103.8198
 
                                 routeSegments.Add(segmentInfo);
 
-                                // Get the raw JSON for the route
                                 var routeJson = routeElement.GetRawText();
-
-                                // Pass segment info to JavaScript along with route data
-                                // Send to JavaScript to process this segment
                                 await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, orderedPoints.Count - 1);
                             }
-                            // Check if route object exists
-                            //if (root.TryGetProperty("route", out var routeElement))
-                            //{
-                            //    // Get the raw JSON for the route
-                            //    var routeJson = routeElement.GetRawText();
-
-                            //    // Send to JavaScript to process this segment
-                            //    await JS.InvokeVoidAsync("processRouteSegment", routeJson, i, orderedPoints.Count - 1);
-                            //}
                         }
                         else
                         {
                             Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
+                            // modified Sireesha: still add an empty segment to keep indices aligned
+                            segmentCoordinatesList.Add(new List<double[]>());
                         }
                     }
-
                 }
 
                 routeModel.RouteSegments = routeSegments;
@@ -1270,11 +1247,8 @@ Longitude = 103.8198
                     {
                         var seg = routeSegments[i];
                         segmentDistance = seg.Distance;
-
-                        if (extractedCoordinates != null && extractedCoordinates.Count > 0)
-                        {
-                            segmentCoordinates = extractedCoordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToList();
-                        }
+                        // modified Sireesha: Use the correct segment's coordinates
+                        segmentCoordinates = segmentCoordinatesList[i];
                     }
                     routePointInputs.Add(new RoutePointInput
                     {
@@ -1285,9 +1259,8 @@ Longitude = 103.8198
                         SegmentCoordinates = segmentCoordinates
                     });
                 }
-                //Modified by Niranjan: Use the new SplitRouteIntoVoyageLegs with fullRouteCoordinates
-                var fullRouteCoordinates = ConvertCoordinatesToDoubleArray(extractedCoordinates);
-                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs, fullRouteCoordinates);
+                // modified Sireesha: Now call the split method with correct segment coordinates
+                voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
                 // --- Populate routeLegs for the UI ---
                 routeLegs.Clear();
                 if (voyageLegs != null && voyageLegs.Count > 0)
