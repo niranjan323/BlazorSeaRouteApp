@@ -153,9 +153,9 @@
                 <button class="close-btn" @onclick="CloseReport">×</button>
             </div>
 
-            <div class="report-content">
+            <div class="report-content" id="report-content-container">
                 <div class="report-actions">
-                    <button class="download-btn" @onclick="CreateCompleteReductionFactorReportData">
+                    <button class="download-btn" @onclick="DownloadReportHtmlAsPdf">
                         <img src="Images/path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
                     </button>
                     <button class="print-btn" @onclick="PrintReport">
@@ -650,4 +650,24 @@
 
     </div>
 </div>
+
+@code {
+    private async Task DownloadReportHtmlAsPdf()
+    {
+        try
+        {
+            // Get the HTML of the report container (e.g., the main report panel)
+            // The report container should have a unique id, e.g., "report-content-container"
+            var html = await JS.InvokeAsync<string>("getHtmlForPdf", "report-content-container");
+            // Optionally, add a <base> tag for relative URLs
+            var baseUrl = NavigationManager.BaseUri;
+            string fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            await PdfService.DownloadPdfAsync(html, fileName, baseUrl);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading PDF from HTML");
+        }
+    }
+}
 

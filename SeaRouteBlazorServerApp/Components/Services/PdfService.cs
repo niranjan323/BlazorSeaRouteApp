@@ -3,6 +3,8 @@ using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
 using SeaRouteModel.Models;
 using System.Text;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 
 namespace SeaRouteBlazorServerApp.Components.Services;
 
@@ -10,155 +12,74 @@ public class PdfService : IPdfService
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<PdfService> _logger;
+    private readonly IConverter _converter;
 
-    public PdfService(IJSRuntime jsRuntime, ILogger<PdfService> logger)
+    public PdfService(IJSRuntime jsRuntime, ILogger<PdfService> logger, IConverter converter)
     {
         _jsRuntime = jsRuntime;
         _logger = logger;
+        _converter = converter;
     }
 
-    public async Task<byte[]> GenerateReportPdfAsync(ReportData reportData)
+    public async Task<byte[]> GenerateReportPdfAsync(string html, string? baseUrl = null)
     {
         try
         {
-            _logger.LogInformation("Generating enhanced PDF report for: {ReportName}", reportData.ReportName);
-
-            var document = new PdfDocument();
-            document.Info.Title = reportData.Title;
-            document.Info.Author = "ABS Online Reduction Factor Tool";
-            document.Info.Subject = reportData.ReportName;
-            document.Info.Keywords = "Reduction Factor, ABS, Vessel";
-
-            var page = document.AddPage();
-            var gfx = XGraphics.FromPdfPage(page);
-
-            // Define fonts
-            var titleFont = new XFont("Arial", 18, XFontStyle.Bold);
-            var headerFont = new XFont("Arial", 14, XFontStyle.Bold);
-            var boldFont = new XFont("Arial", 12, XFontStyle.Bold);
-            var font = new XFont("Arial", 12, XFontStyle.Regular);
-            var smallFont = new XFont("Arial", 10, XFontStyle.Regular);
-            var italicFont = new XFont("Arial", 8, XFontStyle.Italic);
-
-            // Define layout constants
-            double margin = 50;
-            double contentWidth = page.Width - (margin * 2);
-            double lineHeight = 20;
-            double y = margin;
-
-            // Draw title
-            gfx.DrawString(reportData.Title, titleFont, XBrushes.Black,
-                new XRect(margin, y, contentWidth, titleFont.Height), XStringFormats.TopLeft);
-            y += titleFont.Height * 2;
-
-            // Draw generation date
-            gfx.DrawString($"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm}", font, XBrushes.Black, margin, y);
-            y += lineHeight * 1.5;
-
-            // Draw attention section
-            if (!string.IsNullOrEmpty(reportData.AttentionText))
+            var doc = new HtmlToPdfDocument()
             {
-                gfx.DrawString("Attention:", boldFont, XBrushes.Black, margin, y);
-                y += lineHeight;
-                gfx.DrawString(reportData.AttentionText, font, XBrushes.Black, margin + 10, y);
-                y += lineHeight;
-            }
-
-            // Draw description
-            if (!string.IsNullOrEmpty(reportData.Description))
-            {
-                var descLines = WrapText(reportData.Description, font, contentWidth, gfx);
-                foreach (var line in descLines)
+                GlobalSettings = new GlobalSettings
                 {
-                    gfx.DrawString(line, font, XBrushes.Black, margin, y);
-                    y += lineHeight;
-                }
-                y += lineHeight * 0.5;
-            }
-
-            // Draw contact info
-            if (!string.IsNullOrEmpty(reportData.ContactInfo))
-            {
-                var contactLines = WrapText(reportData.ContactInfo, font, contentWidth, gfx);
-                foreach (var line in contactLines)
+                    ColorMode = ColorMode.Color,
+                    Orientation = Orientation.Portrait,
+                    PaperSize = PaperKind.A4,
+                    Margins = new MarginSettings { Top = 20, Bottom = 20, Left = 15, Right = 15 },
+                    DPI = 300,
+                },
+                Objects =
                 {
-                    gfx.DrawString(line, font, XBrushes.Black, margin, y);
-                    y += lineHeight;
-                }
-                y += lineHeight;
-            }
-
-            // Process sections
-            foreach (var section in reportData.Sections)
-            {
-                // Check if we need a new page
-                if (y + 150 > page.Height - margin)
-                {
-                    page = document.AddPage();
-                    gfx = XGraphics.FromPdfPage(page);
-                    y = margin;
-                }
-
-                y = await DrawSection(gfx, section, margin, y, contentWidth, font, boldFont, headerFont, page, document);
-            }
-
-            // Add notes section
-            if (reportData.Notes?.Count > 0)
-            {
-                if (y + 100 > page.Height - margin)
-                {
-                    page = document.AddPage();
-                    gfx = XGraphics.FromPdfPage(page);
-                    y = margin;
-                }
-
-                gfx.DrawString("Notes:", headerFont, XBrushes.Black, margin, y);
-                y += lineHeight * 1.5;
-
-                foreach (var note in reportData.Notes)
-                {
-                    var noteLines = WrapText("• " + note, font, contentWidth, gfx);
-                    foreach (var line in noteLines)
+                    new ObjectSettings
                     {
-                        if (y + lineHeight > page.Height - margin - 50)
+                        HtmlContent = html,
+                        WebSettings = new WebSettings
                         {
-                            page = document.AddPage();
-                            gfx = XGraphics.FromPdfPage(page);
-                            y = margin;
+                            DefaultEncoding = "utf-8",
+                            LoadImages = true,
+                            UserStyleSheet = null,
+                            EnableIntelligentShrinking = true,
+                            PrintMediaType = true,
+                            BaseUrl = baseUrl
+                        },
+                        HeaderSettings = new HeaderSettings
+                        {
+                            FontSize = 9,
+                            Right = "Page [page] of [toPage]",
+                            Line = true
+                        },
+                        FooterSettings = new FooterSettings
+                        {
+                            FontSize = 9,
+                            Center = "Generated on [date] [time]",
+                            Line = true
                         }
-                        gfx.DrawString(line, font, XBrushes.Black, margin, y);
-                        y += lineHeight;
                     }
                 }
-                y += lineHeight;
-            }
-
-            // Add disclaimer at bottom
-            var disclaimer = "This report is generated by the ABS Online Reduction Factor Tool and is subject to the terms and conditions provided by ABS.";
-            double disclaimerY = page.Height - margin - lineHeight;
-            gfx.DrawString(disclaimer, italicFont, XBrushes.Black,
-                new XRect(margin, disclaimerY, contentWidth, lineHeight), XStringFormats.TopLeft);
-
-            // Save document
-            using (var stream = new MemoryStream())
-            {
-                document.Save(stream, false);
-                return stream.ToArray();
-            }
+            };
+            var pdf = _converter.Convert(doc);
+            return pdf;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating enhanced PDF report");
+            _logger.LogError(ex, "Error generating PDF with DinkToPdf");
             throw;
         }
     }
 
-    public async Task DownloadPdfAsync(ReportData reportData, string fileName)
+    public async Task DownloadPdfAsync(string html, string fileName, string? baseUrl = null)
     {
         try
         {
-            var pdfBytes = await GenerateReportPdfAsync(reportData);
-            await _jsRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, Convert.ToBase64String(pdfBytes));
+            var pdfBytes = await GenerateReportPdfAsync(html, baseUrl);
+            await _jsRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, Convert.ToBase64String(pdfBytes), "application/pdf");
         }
         catch (Exception ex)
         {
