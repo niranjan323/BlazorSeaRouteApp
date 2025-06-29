@@ -884,7 +884,7 @@ Longitude = 103.8198
             {
                 var reportData = await CreateCompleteShortVoyageReportData();
                 string fileName = $"ShortVoyageReport_{DateTime.Now:yyyyMMdd}_{reductionFactor.VesselName}.pdf";
-                await PdfService.DownloadPdfAsync(reportData, fileName);
+                //await PdfService.DownloadPdfAsync(reportData, fileName);
             }
             catch (Exception ex)
             {
@@ -898,7 +898,7 @@ Longitude = 103.8198
             {
                 var reportData = await CreateCompleteReductionFactorReportData();
                 string fileName = $"ReductionFactorReport_{DateTime.Now:yyyyMMdd}_{routeModel?.RouteName?.Replace(" ", "_") ?? "Route"}.pdf";
-                await PdfService.DownloadPdfAsync(reportData, fileName);
+               // await PdfService.DownloadPdfAsync(reportData, fileName);
             }
             catch (Exception ex)
             {

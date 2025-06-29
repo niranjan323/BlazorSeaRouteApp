@@ -593,12 +593,13 @@ namespace SeaRouteBlazorServerApp.Components.Pages
                 isLoading = true;
                 errorMessage = string.Empty;
                 isLoading = true;
-                if (!ValidateReductionFactor())
-                {
-                    isLoading = false;
-                    return;
-                }
-
+                //if (!ValidateReductionFactor())
+                //{
+                //    isLoading = false;
+                //    return;
+                //}
+                StateHasChanged();
+                await InitializeChart();
                 // Call the API
                 var response = await Http.PostAsJsonAsync("api/v1/short_voyage/short_voyage_reduction_factor", reductionFactor);
 
@@ -641,12 +642,12 @@ namespace SeaRouteBlazorServerApp.Components.Pages
             ShortVoyageRecord shortVoyage = new ShortVoyageRecord()
             {
                 UserId = "1",
-                RecordId = "1",
-                DepartureTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD),
-                ArrivalTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA),
-                ForecastTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime),
-                ForecastHswell = (double?)reductionFactor.WaveHeightHswell,
-                ForecastHwind = (double?)reductionFactor.WaveHeightHwind,
+               // RecordId = "1",
+                //DepartureTime = reductionFactor.DateOfDeparture.ToDateTime(reductionFactor.ETD),
+               // ArrivalTime = reductionFactor.DateOfArrival.ToDateTime(reductionFactor.ETA),
+                //ForecastTime = reductionFactor.WeatherForecastDate.ToDateTime(reductionFactor.WeatherForecasetTime),
+                //ForecastHswell = (double?)reductionFactor.WaveHeightHswell,
+               // ForecastHwind = (double?)reductionFactor.WaveHeightHwind,
                 ReductionFactor = (double?)reductionFactor.ShortVoyageReductionFactor,
                 ModifiedBy = "System",
                 ModifiedDate = new DateTime()
