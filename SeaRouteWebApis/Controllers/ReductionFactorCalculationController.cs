@@ -63,7 +63,9 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                 string sessionFolderPath = Path.Combine(contentRootPath, "temp", sessionId);
                 double targetHeight, reductionFactor;
 
-                // New logic for BMT seasonal
+                // Use Correction property, default to true if null
+                bool applyCorrection = request.Correction == null ? true : request.Correction.Value;
+
                 var isBmt = request.DataSource == "BMT";
                 var isSeasonal = request.SeasonType == "spring" || request.SeasonType == "summer" || request.SeasonType == "fall" || request.SeasonType == "winter";
                 if (isBmt && isSeasonal)
@@ -86,7 +88,10 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     double absAnnualHs, absAnnualRF;
                     _wsdService.CalculateReductionFactor(coordinatesProcessed, "ABS", "annual",
                         sessionFolderPath, request.ExceedanceProbability, out absAnnualHs, out absAnnualRF);
-                    absAnnualRF = ApplyAnnualCorrection(absAnnualRF);
+                    if (applyCorrection)
+                    {
+                        absAnnualRF = ApplyAnnualCorrection(absAnnualRF);
+                    }
 
                     // 5. Multiply and apply seasonal RF correction
                     double seasonalRF = absAnnualRF * bmtSeasonalFactor;
@@ -104,7 +109,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     sessionFolderPath, request.ExceedanceProbability, out targetHeight, out reductionFactor);
 
                 _logger.LogInformation("Raw reduction factor calculated successfully.");
-                if (request.DataSource == "ABS" && request.SeasonType == "annual")
+                if (request.DataSource == "ABS" && request.SeasonType == "annual" && applyCorrection)
                 {
                     reductionFactor = ApplyAnnualCorrection(reductionFactor);
                 }
