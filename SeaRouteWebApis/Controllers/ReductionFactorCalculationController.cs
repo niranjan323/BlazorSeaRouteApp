@@ -1,13 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using NextGenEngApps.DigitalRules.CRoute.API.Controllers;
 using NextGenEngApps.DigitalRules.CRoute.API.Models;
 using NextGenEngApps.DigitalRules.CRoute.API.Services;
 using NextGenEngApps.DigitalRules.CRoute.API.Services.Interfaces;
 using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
-using SeaRouteModel.Models;
-using SeaRouteWebApis.Controllers;
-using SeaRouteWebApis.Interfaces;
-using System.Linq;
 
 namespace NextGenEngApps.DigitalRules.API.Controllers
 {
@@ -28,9 +25,9 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             _routeSplitService = routeSplitService;
         }
 
-
+       
         [HttpPost("raw")]
-        public async Task<IActionResult> CalculateRawReductionFactorAsync([FromBody] RawReductionFactorRequest request)
+        public IActionResult CalculateRawReductionFactor([FromBody] RawReductionFactorRequest request)
         {
             if (request.ExceedanceProbability <= 0 || request.ExceedanceProbability >= 1)
             {
@@ -51,7 +48,6 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     Longitude = coord.Longitude,
                     Latitude = coord.Latitude
                 }).ToList();
-
                 var contentRootPath = HttpContext.Items["ContentRootPath"]?.ToString();
                 if (string.IsNullOrEmpty(contentRootPath))
                 {
@@ -65,23 +61,57 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                 }
 
                 string sessionFolderPath = Path.Combine(contentRootPath, "temp", sessionId);
+                double targetHeight, reductionFactor;
 
-                // Execute the synchronous operation in a background task
-                var result = await Task.Run(() =>
+                // New logic for BMT seasonal
+                var isBmt = request.DataSource == "BMT";
+                var isSeasonal = request.SeasonType == "spring" || request.SeasonType == "summer" || request.SeasonType == "fall" || request.SeasonType == "winter";
+                if (isBmt && isSeasonal)
                 {
-                    double targetHeight, reductionFactor;
-                    _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
-                        sessionFolderPath, request.ExceedanceProbability, out targetHeight, out reductionFactor);
+                    // 1. Get BMT annual Hs
+                    double bmtAnnualHs, _bmtAnnualRF;
+                    _wsdService.CalculateReductionFactor(coordinatesProcessed, "BMT", "annual",
+                        sessionFolderPath, request.ExceedanceProbability, out bmtAnnualHs, out _bmtAnnualRF);
 
-                    return new { TargetHeight = targetHeight, ReductionFactor = reductionFactor };
-                });
+                    // 2. Get BMT seasonal Hs
+                    double bmtSeasonalHs, _bmtSeasonalRF;
+                    _wsdService.CalculateReductionFactor(coordinatesProcessed, "BMT", request.SeasonType,
+                        sessionFolderPath, request.ExceedanceProbability, out bmtSeasonalHs, out _bmtSeasonalRF);
+
+                    // 3. Calculate BMT seasonal factor
+                    double bmtSeasonalFactor = bmtSeasonalHs / bmtAnnualHs;
+                    bmtSeasonalFactor = ApplySeasonalFactorCorrection(bmtSeasonalFactor);
+
+                    // 4. Get ABS annual reduction factor
+                    double absAnnualHs, absAnnualRF;
+                    _wsdService.CalculateReductionFactor(coordinatesProcessed, "ABS", "annual",
+                        sessionFolderPath, request.ExceedanceProbability, out absAnnualHs, out absAnnualRF);
+                    absAnnualRF = ApplyAnnualCorrection(absAnnualRF);
+
+                    // 5. Multiply and apply seasonal RF correction
+                    double seasonalRF = absAnnualRF * bmtSeasonalFactor;
+                    seasonalRF = ApplySeasonalRFCorrection(seasonalRF);
+
+                    return Ok(new RawReductionFactorResponse
+                    {
+                        SignificantWaveHeight = bmtSeasonalHs,
+                        RawReductionFactor = seasonalRF
+                    });
+                }
+
+                // Existing logic for other cases
+                _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
+                    sessionFolderPath, request.ExceedanceProbability, out targetHeight, out reductionFactor);
 
                 _logger.LogInformation("Raw reduction factor calculated successfully.");
-
+                if (request.DataSource == "ABS" && request.SeasonType == "annual")
+                {
+                    reductionFactor = ApplyAnnualCorrection(reductionFactor);
+                }
                 return Ok(new RawReductionFactorResponse
                 {
-                    SignificantWaveHeight = result.TargetHeight,
-                    RawReductionFactor = result.ReductionFactor
+                    SignificantWaveHeight = targetHeight,
+                    RawReductionFactor = reductionFactor
                 });
             }
             catch (Exception ex)
@@ -96,7 +126,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
         {
             try
             {
-
+               
                 var result = await CalculateReductionFactorsForSegment(request.Coordinates, request.ExceedanceProbability, request.Correction);
                 if (result == null)
                 {
@@ -116,16 +146,16 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
         }
 
 
-
+ 
         [HttpPost("route")]
         public async Task<IActionResult> CalculateRouteReductionFactors([FromBody] RouteReductionFactorsRequest request)
         {
             try
             {
-
+               
                 var allCoordinates = ExtractRouteCoordinates(request.VoyageLegs);
 
-
+               
                 var routeResult = await CalculateReductionFactorsForSegment(allCoordinates, request.ExceedanceProbability, request.Correction);
                 if (routeResult == null)
                 {
@@ -268,7 +298,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     {
                         return null;
                     }
-
+                   
                     double uncorrectedSeasonalFactor = seasonalResult.SignificantWaveHeight / bmtAnnualHs;
                     double correctedSeasonalFactor = ApplySeasonalFactorCorrection(uncorrectedSeasonalFactor);
                     double uncorrectedSeasonalRF = annualRF * correctedSeasonalFactor;
@@ -298,7 +328,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
         }
         private ReductionFactors ApplyVoyageLegCorrection(ReductionFactors legResult, ReductionFactors routeResult)
         {
-
+         
             return new ReductionFactors
             {
                 Annual = Math.Min(legResult.Annual, routeResult.Annual),
@@ -335,31 +365,19 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                 }
 
                 string sessionFolderPath = Path.Combine(contentRootPath, "temp", sessionId);
-                //(var targetHeight, var reductionFactor) = await Task.Run(() =>
-                //{
-                //    double localTargetHeight, localReductionFactor;
+                (var targetHeight, var reductionFactor) = await Task.Run(() =>
+                {
+                    double localTargetHeight, localReductionFactor;
 
-                //    _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
-                //        sessionFolderPath, request.ExceedanceProbability, out localTargetHeight, out localReductionFactor);
+                    _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
+                        sessionFolderPath, request.ExceedanceProbability, out localTargetHeight, out localReductionFactor);
 
-                //    return (localTargetHeight, localReductionFactor);
-                //});
-
-                //(var targetHeight, var reductionFactor) = await Task.Run(() =>
-                //{
-                double targetHeight, ReductionFactor;
-
-                _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
-                    sessionFolderPath, request.ExceedanceProbability, out targetHeight, out ReductionFactor);
-
-                //    return (localTargetHeight, localReductionFactor);
-                //});
-
-
+                    return (localTargetHeight, localReductionFactor);
+                });
                 return new RawReductionFactorResponse
                 {
                     SignificantWaveHeight = targetHeight,
-                    RawReductionFactor = ReductionFactor
+                    RawReductionFactor = reductionFactor
                 };
             }
             catch (Exception ex)
