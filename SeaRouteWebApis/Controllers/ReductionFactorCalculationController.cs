@@ -28,6 +28,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             _routeSplitService = routeSplitService;
         }
 
+
         [HttpPost("raw")]
         public IActionResult CalculateRawReductionFactor([FromBody] RawReductionFactorRequest request)
         {
@@ -50,7 +51,6 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     Longitude = coord.Longitude,
                     Latitude = coord.Latitude
                 }).ToList();
-
                 var contentRootPath = HttpContext.Items["ContentRootPath"]?.ToString();
                 if (string.IsNullOrEmpty(contentRootPath))
                 {
@@ -63,52 +63,26 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                     return BadRequest("Session ID is not available.");
                 }
 
+
                 string sessionFolderPath = Path.Combine(contentRootPath, "temp", sessionId);
+                double targetHeight, reductionFactor;
+                _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
+                    sessionFolderPath, request.ExceedanceProbability, out targetHeight, out reductionFactor);
 
-                // FIXED: For consistency with segment API, if requesting seasonal data, use the same calculation logic
-                if (request.DataSource == "BMT" && request.SeasonType != "annual")
+                _logger.LogInformation("Raw reduction factor calculated successfully.");
+
+                // Modified by Sireesha - Date: [Current Date]
+                // Handle zero reduction factor case - do not apply correction if reduction factor is zero
+                if (request.DataSource == "ABS" && request.SeasonType == "annual" && reductionFactor != 0)
                 {
-                    // Calculate using the same logic as segment API for consistency
-                    var segmentResult = CalculateReductionFactorsForSegmentSync(coordinatesProcessed, request.ExceedanceProbability, false);
-                    if (segmentResult == null)
-                    {
-                        return StatusCode(500, "Error calculating reduction factor using segment logic.");
-                    }
-
-                    double seasonalRF = GetSeasonalValue(segmentResult, request.SeasonType);
-
-                    // Get the BMT seasonal Hs for reference
-                    double bmtSeasonalHeight, bmtSeasonalRF;
-                    _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
-                        sessionFolderPath, request.ExceedanceProbability, out bmtSeasonalHeight, out bmtSeasonalRF);
-
-                    return Ok(new RawReductionFactorResponse
-                    {
-                        SignificantWaveHeight = bmtSeasonalHeight,
-                        RawReductionFactor = seasonalRF
-                    });
+                    reductionFactor = ApplyAnnualCorrection(reductionFactor);
                 }
-                else
+
+                return Ok(new RawReductionFactorResponse
                 {
-                    // Original calculation for ABS or BMT annual
-                    double targetHeight, reductionFactor;
-                    _wsdService.CalculateReductionFactor(coordinatesProcessed, request.DataSource, request.SeasonType,
-                        sessionFolderPath, request.ExceedanceProbability, out targetHeight, out reductionFactor);
-
-                    _logger.LogInformation("Raw reduction factor calculated successfully.");
-
-                    // Apply annual correction if needed
-                    if (request.DataSource == "ABS" && request.SeasonType == "annual")
-                    {
-                        reductionFactor = ApplyAnnualCorrection(reductionFactor);
-                    }
-
-                    return Ok(new RawReductionFactorResponse
-                    {
-                        SignificantWaveHeight = targetHeight,
-                        RawReductionFactor = reductionFactor
-                    });
-                }
+                    SignificantWaveHeight = targetHeight,
+                    RawReductionFactor = reductionFactor
+                });
             }
             catch (Exception ex)
             {
@@ -122,6 +96,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
         {
             try
             {
+
                 var result = await CalculateReductionFactorsForSegment(request.Coordinates, request.ExceedanceProbability, request.Correction);
                 if (result == null)
                 {
@@ -140,12 +115,17 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             }
         }
 
+
+
         [HttpPost("route")]
         public async Task<IActionResult> CalculateRouteReductionFactors([FromBody] RouteReductionFactorsRequest request)
         {
             try
             {
+
                 var allCoordinates = ExtractRouteCoordinates(request.VoyageLegs);
+
+
                 var routeResult = await CalculateReductionFactorsForSegment(allCoordinates, request.ExceedanceProbability, request.Correction);
                 if (routeResult == null)
                 {
@@ -183,104 +163,6 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
             }
         }
 
-        // ADDED: Helper method to get seasonal value
-        private double GetSeasonalValue(ReductionFactors factors, string seasonType)
-        {
-            return seasonType.ToLower() switch
-            {
-                "spring" => factors.Spring,
-                "summer" => factors.Summer,
-                "fall" => factors.Fall,
-                "winter" => factors.Winter,
-                "annual" => factors.Annual,
-                _ => factors.Annual
-            };
-        }
-
-        // ADDED: Synchronous version for raw API
-        private ReductionFactors CalculateReductionFactorsForSegmentSync(List<Coordinate> coordinates, double exceedanceProbability, bool applyCorrection)
-        {
-            try
-            {
-                var contentRootPath = HttpContext.Items["ContentRootPath"]?.ToString();
-                var sessionId = HttpContext.Items["sessionId"]?.ToString();
-
-                if (string.IsNullOrEmpty(contentRootPath) || string.IsNullOrEmpty(sessionId))
-                {
-                    return null;
-                }
-
-                string sessionFolderPath = Path.Combine(contentRootPath, "temp", sessionId);
-
-                // Calculate ABS annual reduction factor
-                double absAnnualHeight, absAnnualRF;
-                _wsdService.CalculateReductionFactor(coordinates, "ABS", "annual",
-                    sessionFolderPath, exceedanceProbability, out absAnnualHeight, out absAnnualRF);
-
-                if (applyCorrection)
-                {
-                    absAnnualRF = ApplyAnnualCorrection(absAnnualRF);
-                }
-
-                // Calculate BMT annual for seasonal factor calculation
-                double bmtAnnualHeight, bmtAnnualRF;
-                _wsdService.CalculateReductionFactor(coordinates, "BMT", "annual",
-                    sessionFolderPath, exceedanceProbability, out bmtAnnualHeight, out bmtAnnualRF);
-
-                // Modified by Sireesha: Handle zero BMT annual significant wave height
-                if (bmtAnnualHeight == 0)
-                {
-                    _logger.LogWarning("BMT annual significant wave height is 0. Setting all seasonal factors to 0.");
-                    return new ReductionFactors
-                    {
-                        Annual = absAnnualRF,
-                        Spring = 0,
-                        Summer = 0,
-                        Fall = 0,
-                        Winter = 0
-                    };
-                }
-
-                var seasons = new[] { "spring", "summer", "fall", "winter" };
-                var seasonalRFs = new Dictionary<string, double>();
-
-                foreach (var season in seasons)
-                {
-                    double bmtSeasonalHeight, bmtSeasonalRF;
-                    _wsdService.CalculateReductionFactor(coordinates, "BMT", season,
-                        sessionFolderPath, exceedanceProbability, out bmtSeasonalHeight, out bmtSeasonalRF);
-
-                    // Modified by Sireesha: Handle zero BMT seasonal significant wave height
-                    if (bmtSeasonalHeight == 0)
-                    {
-                        _logger.LogWarning($"BMT {season} significant wave height is 0. Setting {season} seasonal factor to 0.");
-                        seasonalRFs[season] = 0;
-                        continue;
-                    }
-
-                    double uncorrectedSeasonalFactor = bmtSeasonalHeight / bmtAnnualHeight;
-                    double correctedSeasonalFactor = ApplySeasonalFactorCorrection(uncorrectedSeasonalFactor);
-                    double uncorrectedSeasonalRF = absAnnualRF * correctedSeasonalFactor;
-                    double correctedSeasonalRF = ApplySeasonalRFCorrection(uncorrectedSeasonalRF);
-
-                    seasonalRFs[season] = correctedSeasonalRF;
-                }
-
-                return new ReductionFactors
-                {
-                    Annual = absAnnualRF,
-                    Spring = seasonalRFs["spring"],
-                    Summer = seasonalRFs["summer"],
-                    Fall = seasonalRFs["fall"],
-                    Winter = seasonalRFs["winter"]
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error calculating reduction factors for segment sync.");
-                return null;
-            }
-        }
 
         private async Task<List<VoyageLegReductionFactors>> CalculateVoyageLegReductionFactors(List<VoyageLegs> voyageLegs, double exceedanceProbability, ReductionFactors routeResult, bool applyCorrection)
         {
@@ -348,7 +230,10 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
                 double annualRF = annualResult.RawReductionFactor;
                 double annualHs = annualResult.SignificantWaveHeight;
-                if (applyCorrection)
+
+                // Modified by Sireesha - Date: [Current Date]
+                // Handle zero reduction factor case - do not apply correction if annual reduction factor is zero
+                if (applyCorrection && annualRF != 0)
                 {
                     annualRF = ApplyAnnualCorrection(annualRF);
                 }
@@ -369,20 +254,6 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
                 double bmtAnnualHs = bmtAnnualResult.SignificantWaveHeight;
 
-                // Modified by Sireesha: Handle zero BMT annual significant wave height
-                if (bmtAnnualHs == 0)
-                {
-                    _logger.LogWarning("BMT annual significant wave height is 0. Setting all seasonal factors to 0.");
-                    return new ReductionFactors
-                    {
-                        Annual = annualRF,
-                        Spring = 0,
-                        Summer = 0,
-                        Fall = 0,
-                        Winter = 0
-                    };
-                }
-
                 var seasons = new[] { "spring", "summer", "fall", "winter" };
                 var seasonalRFs = new Dictionary<string, double>();
 
@@ -402,18 +273,17 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                         return null;
                     }
 
-                    // Modified by Sireesha: Handle zero BMT seasonal significant wave height
-                    if (seasonalResult.SignificantWaveHeight == 0)
-                    {
-                        _logger.LogWarning($"BMT {season} significant wave height is 0. Setting {season} seasonal factor to 0.");
-                        seasonalRFs[season] = 0;
-                        continue;
-                    }
-
                     double uncorrectedSeasonalFactor = seasonalResult.SignificantWaveHeight / bmtAnnualHs;
                     double correctedSeasonalFactor = ApplySeasonalFactorCorrection(uncorrectedSeasonalFactor);
                     double uncorrectedSeasonalRF = annualRF * correctedSeasonalFactor;
-                    double correctedSeasonalRF = ApplySeasonalRFCorrection(uncorrectedSeasonalRF);
+
+                    // Modified by Sireesha - Date: [Current Date]
+                    // Handle zero reduction factor case - do not apply correction if seasonal RF or annual RF is zero
+                    double correctedSeasonalRF = uncorrectedSeasonalRF;
+                    if (uncorrectedSeasonalRF != 0 && annualRF != 0)
+                    {
+                        correctedSeasonalRF = ApplySeasonalRFCorrection(uncorrectedSeasonalRF);
+                    }
 
                     seasonalRFs[season] = correctedSeasonalRF;
                 }
@@ -441,6 +311,7 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
         private ReductionFactors ApplyVoyageLegCorrection(ReductionFactors legResult, ReductionFactors routeResult)
         {
+
             return new ReductionFactors
             {
                 Annual = Math.Min(legResult.Annual, routeResult.Annual),
@@ -489,7 +360,6 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
                     return (localTargetHeight, localReductionFactor);
                 });
-
                 return new RawReductionFactorResponse
                 {
                     SignificantWaveHeight = targetHeight,
