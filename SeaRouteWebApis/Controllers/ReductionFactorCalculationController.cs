@@ -231,9 +231,10 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                 double annualRF = annualResult.RawReductionFactor;
                 double annualHs = annualResult.SignificantWaveHeight;
 
-                // Modified by Sireesha - Date: [Current Date]
-                // Handle zero reduction factor case - do not apply correction if annual reduction factor is zero
-                if (applyCorrection && annualRF != 0)
+                // Modified by Sireesha - Date: [Current Date] - Task 2
+                // Handle BkWxRoutes failures - do not apply correction if significant wave height or reduction factor is zero
+                // Zero values indicate route failures and should be preserved as error indicators
+                if (applyCorrection && annualRF != 0 && annualHs != 0)
                 {
                     annualRF = ApplyAnnualCorrection(annualRF);
                 }
@@ -254,6 +255,21 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
 
                 double bmtAnnualHs = bmtAnnualResult.SignificantWaveHeight;
 
+                // Modified by Sireesha - Date: [Current Date] - Task 2
+                // Check for BMT annual wave height failure - if zero, set all seasonal RFs to zero to expose route failure
+                if (bmtAnnualHs == 0)
+                {
+                    _logger.LogWarning("BMT annual significant wave height is zero, indicating route failure. Setting all seasonal RFs to zero.");
+                    return new ReductionFactors
+                    {
+                        Annual = annualRF,
+                        Spring = 0,
+                        Summer = 0,
+                        Fall = 0,
+                        Winter = 0
+                    };
+                }
+
                 var seasons = new[] { "spring", "summer", "fall", "winter" };
                 var seasonalRFs = new Dictionary<string, double>();
 
@@ -273,14 +289,33 @@ namespace NextGenEngApps.DigitalRules.API.Controllers
                         return null;
                     }
 
-                    double uncorrectedSeasonalFactor = seasonalResult.SignificantWaveHeight / bmtAnnualHs;
-                    double correctedSeasonalFactor = ApplySeasonalFactorCorrection(uncorrectedSeasonalFactor);
+                    double bmtSeasonalHs = seasonalResult.SignificantWaveHeight;
+
+                    // Modified by Sireesha - Date: [Current Date] - Task 2
+                    // Check for BMT seasonal wave height failure - if zero, set seasonal RF to zero to expose route failure
+                    if (bmtSeasonalHs == 0)
+                    {
+                        _logger.LogWarning($"BMT {season} significant wave height is zero, indicating route failure. Setting {season} RF to zero.");
+                        seasonalRFs[season] = 0;
+                        continue;
+                    }
+
+                    double uncorrectedSeasonalFactor = bmtSeasonalHs / bmtAnnualHs;
+
+                    // Modified by Sireesha - Date: [Current Date] - Task 2
+                    // Do not apply seasonal factor correction if seasonal factor is zero (route failure)
+                    double correctedSeasonalFactor = uncorrectedSeasonalFactor;
+                    if (uncorrectedSeasonalFactor != 0)
+                    {
+                        correctedSeasonalFactor = ApplySeasonalFactorCorrection(uncorrectedSeasonalFactor);
+                    }
+
                     double uncorrectedSeasonalRF = annualRF * correctedSeasonalFactor;
 
-                    // Modified by Sireesha - Date: [Current Date]
-                    // Handle zero reduction factor case - do not apply correction if seasonal RF or annual RF is zero
+                    // Modified by Sireesha - Date: [Current Date] - Task 2
+                    // Do not apply seasonal RF correction if any component is zero (route failure or annual RF failure)
                     double correctedSeasonalRF = uncorrectedSeasonalRF;
-                    if (uncorrectedSeasonalRF != 0 && annualRF != 0)
+                    if (uncorrectedSeasonalRF != 0 && annualRF != 0 && annualHs != 0 && bmtSeasonalHs != 0)
                     {
                         correctedSeasonalRF = ApplySeasonalRFCorrection(uncorrectedSeasonalRF);
                     }
