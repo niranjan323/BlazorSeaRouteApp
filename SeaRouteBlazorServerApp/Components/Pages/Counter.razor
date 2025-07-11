@@ -1,162 +1,509 @@
-﻿@* @page "/"
-@rendermode InteractiveServer
-@inject IJSRuntime JS
-@inject HttpClient Http
-@inject ILogger<Home> Logger
-@using System.Threading.Tasks
-@using Microsoft.AspNetCore.Components.Web
-@using System.Text.Json
-@using System.Globalization
-@inject NavigationManager navigationManager;
-@inject NextGenEngApps.DigitalRules.CRoute.Services.RouteService routeService;
-@inject CRoute.Services.ICRouteAPIService routeAPIService;
-
-<div class="map-container">
-    <!-- Map -->
-    <div id="map"></div>
-
-    <!-- Floating UI -->
-    <div id="divRF" class="overlay @(showReportForReductionFactor ? "custom-overlay" : "")">
-
-        <!-- Header with Tabs and Close Button -->
-
-        <div class="header">
-            <div class="tabs">
-                <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                    Start New Calculation
-                </button>
-                <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="@(()=> MyRoutes())">
-                    My Calculation Results
-                </button>
-            </div>
-            <button class="close-btn" @onclick="CloseOverlay">×</button>
-        </div>
-
-        <!-- Scrollable Content -->
-        <div class="form-container">
-            @if (selectedTab == 1)
-            {
-                @if (selectedForm == 0)
-                {
-                    <!-- Show Selection Options -->
-                    <div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
-                        <label class="cls_main_label">
-                            Select your calculation option below:
-                        </label>
-                    </div>
-
-                    <div class="calculation-options">
-                        <div class="option-card" @onclick="() => ShowForm(1)">
-                            <img src="img/Reduction_Factor_Calculation_Ship.svg" alt="Reduction Factor">
-                            <h4>Route Reduction Factor Calculation</h4>
-                        </div>
-                        <div class="option-card" @onclick="() => ShowForm(2)">
-                            <img src="img/Limited short voyage-icon@1x.png" alt="Limited Short">
-                            <h4>Limited Short Voyage Calculation</h4>
-                        </div>
-                    </div>
-                }
-                @if (selectedForm == 1)
-                {
-                    <ReductionFactorCalculation OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
-                    OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
-                    OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData"
-                    OnLegsDataReady="HandleReductionLegsReportData" />
-
-                }
-
-                else if (selectedForm == 2)
-                {
-
-                    <ShortVoyageReductionFactor OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" OnReportDataReady="HandleReportData" />
-                }
-            }
-            else if (selectedTab == 2)
-            {
-                <p>My Routes content here...</p>  
-
-                <MyRoutes></MyRoutes>
-            }
-        </div>
-
-
-    </div>
-
-</div>
-
-
-<script>
-    function toggleRow(button) {
-    const row = button.parentElement.parentElement.nextElementSibling;
-    const isVisible = row.style.display === 'table-row';
-    row.style.display = isVisible ? 'none' : 'table-row';
-    button.textContent = isVisible ? '+' : '−';
+﻿
+public static List<Coordinate> NormalizeRouteSegmentCoordinates(List<Coordinate> segmentCoordinates)
+{
+    var normalizedCoordinates = new List<Coordinate>();
+    
+    foreach (var coord in segmentCoordinates)
+    {
+        double alpha = coord.Longitude;
+        double T = 360.0; // period
+        double t0 = -180.0; // starting bound
+        
+        // Calculate k using the formula: k = Math.Floor((alpha - t0) / T)
+        double k = Math.Floor((alpha - t0) / T);
+        
+        // Calculate alpha_0 using: alpha_0 = alpha - k * T
+        double alpha_0 = alpha - k * T;
+        
+        normalizedCoordinates.Add(new Coordinate
+        {
+            Latitude = coord.Latitude,
+            Longitude = alpha_0
+        });
     }
+    
+    return normalizedCoordinates;
+}
 
-</script>
+public static List<Coordinate> TransformSegmentForContinuity(List<Coordinate> currentSegment, List<Coordinate> previousSegment)
+{
+    if (previousSegment == null || previousSegment.Count == 0 || currentSegment == null || currentSegment.Count == 0)
+        return currentSegment;
 
 
-<style>
-
-    table {
-        border-collapse: collapse;
-        width: 100%;
-        margin-top: 20px;
+    double p1 = previousSegment.Last().Longitude;
+    double p2 = currentSegment.First().Longitude;
+    
+    double T = 360.0;
+    double k = Math.Floor((p1 - p2) / T);
+    var transformedSegment = new List<Coordinate>();
+    foreach (var coord in currentSegment)
+    {
+        transformedSegment.Add(new Coordinate
+        {
+            Latitude = coord.Latitude,
+            Longitude = coord.Longitude + k * T
+        });
     }
+    
+    return transformedSegment;
+}
 
-    td {
-        border: 1px solid #ddd;
-        padding: 10px;
-    }
 
-    th {
-        /* background-color: #f4f4f4; */
-        padding: 10px;
-    }
+public async Task CalculateMultiSegmentRoute()
+{
+    try
+    {
+        // Initialize route calculation on JS side but don't use its data
+        await JS.InvokeVoidAsync("initializeRouteCalculation");
 
-    .parent-row td {
-        padding-top: 30px;
-        padding-bottom: 30px;
-        border-top: 1px solid black;
-        border-bottom: 1px solid black;
-        border-right: none;
-        border-left: none;
-        text-align: left;
-    }
-
-    .child-row {
-        /* display: none; */
-        background-color: #f9f9f9;
-    }
-
-        .child-row td {
-            padding-left: 10px;
-            border-top: 1px solid black;
-            border-bottom: 1px solid black;
-            border-right: none;
-            border-left: none;
+        // Get route points from JS for ordering/sequence purposes only
+        var routePoints = await JS.InvokeAsync<List<RoutePointModel>>("getRouteData");
+        if (routePoints == null || routePoints.Count < 2)
+        {
+            return; // Need at least 2 points for a route
         }
 
-    /* .action-icons {
-            cursor: pointer;
-            margin: 0 5px;
-            } */
+        // Create a mapping of all points for processing
+        Dictionary<string, RoutePointRef> pointMapping = new Dictionary<string, RoutePointRef>();
 
-    .expand-btn {
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 18px;
+        List<RouteSegmentInfo> routeSegments = new List<RouteSegmentInfo>();
+        double totalDistance = 0;
+        double totalDuration = 0;
+
+        // Add departure port
+        if (routeModel.MainDeparturePortSelection?.Port != null)
+        {
+            pointMapping["departure"] = new RoutePointRef
+            {
+                Type = "departure",
+                Latitude = routeModel.MainDeparturePortSelection.Port.Latitude,
+                Longitude = routeModel.MainDeparturePortSelection.Port.Longitude,
+                Name = routeModel.MainDeparturePortSelection.Port.Name,
+                PointId = routeModel.MainDeparturePortSelection.Port.Port_Id
+            };
+        }
+
+        // Add arrival port
+        if (routeModel.MainArrivalPortSelection?.Port != null)
+        {
+            pointMapping["arrival"] = new RoutePointRef
+            {
+                Type = "arrival",
+                Latitude = routeModel.MainArrivalPortSelection.Port.Latitude,
+                Longitude = routeModel.MainArrivalPortSelection.Port.Longitude,
+                Name = routeModel.MainArrivalPortSelection.Port.Name,
+                PointId = routeModel.MainArrivalPortSelection.Port.Port_Id
+            };
+        }
+
+        // Add intermediate departure ports
+        for (int i = 0; i < routeModel.DeparturePorts.Count; i++)
+        {
+            var port = routeModel.DeparturePorts[i];
+            if (port.Port != null)
+            {
+                pointMapping[$"departurePort{i}"] = new RoutePointRef
+                {
+                    Type = "port",
+                    Latitude = port.Port.Latitude,
+                    Longitude = port.Port.Longitude,
+                    Name = port.Port.Name,
+                    PointId = port.Port.Port_Id
+                };
+            }
+        }
+
+        // Add intermediate arrival ports
+        for (int i = 0; i < routeModel.ArrivalPorts.Count; i++)
+        {
+            var port = routeModel.ArrivalPorts[i];
+            if (port.Port != null)
+            {
+                pointMapping[$"arrivalPort{i}"] = new RoutePointRef
+                {
+                    Type = "port",
+                    Latitude = port.Port.Latitude,
+                    Longitude = port.Port.Longitude,
+                    Name = port.Port.Name,
+                    PointId = port.Port.Port_Id
+                };
+            }
+        }
+
+        // Process waypoints from C# models
+        // Add departure waypoints
+        for (int i = 0; i < routeModel.DepartureWaypoints.Count; i++)
+        {
+            var waypoint = routeModel.DepartureWaypoints[i];
+            if (double.TryParse(waypoint.Latitude, out double lat) &&
+                double.TryParse(waypoint.Longitude, out double lng))
+            {
+                pointMapping[$"departureWaypoint{i}"] = new RoutePointRef
+                {
+                    Type = "waypoint",
+                    Latitude = lat,
+                    Longitude = lng,
+                    Name = $"Waypoint {i + 1}",
+                    PointId = waypoint.PointId
+                };
+            }
+        }
+
+        // Add arrival waypoints
+        for (int i = 0; i < routeModel.ArrivalWaypoints.Count; i++)
+        {
+            var waypoint = routeModel.ArrivalWaypoints[i];
+            if (double.TryParse(waypoint.Latitude, out double lat) &&
+                double.TryParse(waypoint.Longitude, out double lng))
+            {
+                pointMapping[$"arrivalWaypoint{i}"] = new RoutePointRef
+                {
+                    Type = "waypoint",
+                    Latitude = lat,
+                    Longitude = lng,
+                    Name = $"Waypoint {i + 1}",
+                    PointId = waypoint.PointId
+                };
+            }
+        }
+
+        // Process each segment using route points order from JS but data from C#
+        List<RoutePointRef> orderedPoints = new List<RoutePointRef>();
+
+        // Use JS route points to determine order but get actual data from C# models
+        foreach (var jsPoint in routePoints)
+        {
+            RoutePointRef point = null;
+
+            // Try to match point from JS with our C# data
+            if (jsPoint.Type == "departure" && pointMapping.ContainsKey("departure"))
+            {
+                point = pointMapping["departure"];
+            }
+            else if (jsPoint.Type == "arrival" && pointMapping.ContainsKey("arrival"))
+            {
+                point = pointMapping["arrival"];
+            }
+            else if (jsPoint.Type == "waypoint")
+            {
+                // Find closest waypoint in our mapping by comparing coordinates
+                string closestKey = null;
+                double minDistance = double.MaxValue;
+
+                foreach (var kvp in pointMapping)
+                {
+                    if (kvp.Value.Type == "waypoint")
+                    {
+                        double dist = Math.Pow(kvp.Value.Latitude - jsPoint.LatLng[0], 2) +
+                                      Math.Pow(kvp.Value.Longitude - jsPoint.LatLng[1], 2);
+                        if (dist < minDistance)
+                        {
+                            minDistance = dist;
+                            closestKey = kvp.Key;
+                        }
+                    }
+                }
+
+                if (closestKey != null)
+                {
+                    point = pointMapping[closestKey];
+                }
+            }
+            else if (jsPoint.Type == "port")
+            {
+                // Find closest port in our mapping
+                string closestKey = null;
+                double minDistance = double.MaxValue;
+
+                foreach (var kvp in pointMapping)
+                {
+                    if (kvp.Value.Type == "port")
+                    {
+                        double dist = Math.Pow(kvp.Value.Latitude - jsPoint.LatLng[0], 2) +
+                                      Math.Pow(kvp.Value.Longitude - jsPoint.LatLng[1], 2);
+                        if (dist < minDistance)
+                        {
+                            minDistance = dist;
+                            closestKey = kvp.Key;
+                        }
+                    }
+                }
+
+                if (closestKey != null)
+                {
+                    point = pointMapping[closestKey];
+                }
+            }
+
+            if (point != null)
+            {
+                orderedPoints.Add(point);
+            }
+        }
+
+        bool hasDeparture = orderedPoints.Count > 0 &&
+                 (orderedPoints[0].Type == "departure" || routePoints[0].Type == "departure");
+
+        // Store all segment coordinates separately with TASK 3 TRANSFORMATIONS
+        List<List<Coordinate>> allSegmentCoordinates = new List<List<Coordinate>>();
+        List<Coordinate> previousSegmentCoordinates = null; // TASK 3: Track previous segment
+
+        if (hasDeparture && orderedPoints.Count >= 2)
+        {
+            // TASK 3: Process each segment with proper transformation
+            for (int i = 0; i < orderedPoints.Count - 1; i++)
+            {
+                var origin = orderedPoints[i];
+                var destination = orderedPoints[i + 1];
+
+                // Create route request for this segment
+                var segmentRequest = new RouteRequest
+                {
+                    // Use coordinates from C# model
+                    Origin = new double[] { origin.Longitude, origin.Latitude },
+                    Destination = new double[] { destination.Longitude, destination.Latitude },
+                    Restrictions = new string[] { "northwest" },
+                    include_ports = false,
+                    Units = "nm",
+                    only_terminals = true
+                };
+
+                // Call API for this segment
+                using var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
+                var result = await httpClient.PostAsJsonAsync("api/v1/searoutes/calculate-route", segmentRequest);
+
+                if (result.IsSuccessStatusCode)
+                {
+                    var jsonString = await result.Content.ReadAsStringAsync();
+                    using var jsonDoc = JsonDocument.Parse(jsonString);
+                    var root = jsonDoc.RootElement;
+
+                    // Create separate coordinate list for this segment
+                    var segmentCoordinates = new List<Coordinate>();
+
+                    // Check if route object exists
+                    if (root.TryGetProperty("route", out var routeElement) &&
+                        routeElement.TryGetProperty("properties", out var propertiesElement))
+                    {
+                        // Extract segment distance and duration
+                        double segmentDistance = 0;
+                        double segmentDuration = 0;
+                        string units = "km";
+
+                        if (routeElement.TryGetProperty("geometry", out var geometryElement) &&
+                            geometryElement.TryGetProperty("coordinates", out var coordinatesElement) &&
+                            coordinatesElement.ValueKind == JsonValueKind.Array)
+                        {
+                            // Process each coordinate in the array
+                            foreach (var coord in coordinatesElement.EnumerateArray())
+                            {
+                                if (coord.ValueKind == JsonValueKind.Array && coord.GetArrayLength() >= 2)
+                                {
+                                    // Note: GeoJSON format is [longitude, latitude]
+                                    var longitude = coord[0].GetDouble();
+                                    var latitude = coord[1].GetDouble();
+
+                                    segmentCoordinates.Add(new Coordinate
+                                    {
+                                        Latitude = latitude,
+                                        Longitude = longitude
+                                    });
+                                }
+                            }
+                        }
+
+                        // TASK 3: Apply coordinate transformations
+                        // Step 1: Normalize coordinates using #24288 algorithm
+                        segmentCoordinates = NormalizeRouteSegmentCoordinates(segmentCoordinates);
+                        
+                        // Step 2: Transform for continuity with previous segment (if exists)
+                        if (i > 0 && previousSegmentCoordinates != null)
+                        {
+                            segmentCoordinates = TransformSegmentForContinuity(segmentCoordinates, previousSegmentCoordinates);
+                        }
+
+                        // Store this segment's transformed coordinates
+                        allSegmentCoordinates.Add(segmentCoordinates);
+                        previousSegmentCoordinates = segmentCoordinates; // TASK 3: Update previous segment
+
+                        if (propertiesElement.TryGetProperty("length", out var lengthElement))
+                        {
+                            segmentDistance = lengthElement.GetDouble();
+                            totalDistance += segmentDistance;
+                        }
+
+                        if (propertiesElement.TryGetProperty("duration_hours", out var durationElement))
+                        {
+                            segmentDuration = durationElement.GetDouble();
+                            totalDuration += segmentDuration;
+                        }
+
+                        if (propertiesElement.TryGetProperty("units", out var unitsElement))
+                        {
+                            units = unitsElement.GetString();
+                        }
+
+                        // Store segment information
+                        var segmentInfo = new RouteSegmentInfo
+                        {
+                            SegmentIndex = i,
+                            StartPointName = origin.Name,
+                            EndPointName = destination.Name,
+                            Distance = segmentDistance,
+                            DurationHours = segmentDuration,
+                            Units = units,
+                            StartCoordinates = new double[] { origin.Longitude, origin.Latitude },
+                            EndCoordinates = new double[] { destination.Longitude, destination.Latitude },
+                            StartPointId = origin.PointId,
+                            EndPointId = destination.PointId,
+                        };
+
+                        routeSegments.Add(segmentInfo);
+
+                        // TASK 3: Create route element with transformed coordinates for plotting
+                        var transformedRouteElement = CreateTransformedRouteElement(routeElement, segmentCoordinates);
+                        var transformedRouteJson = transformedRouteElement.GetRawText();
+
+                        // Pass transformed segment info to JavaScript
+                        await JS.InvokeVoidAsync("processRouteSegment", transformedRouteJson, i, orderedPoints.Count - 1);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Error calculating route segment {i}: {result.StatusCode}");
+                    // Add empty coordinates for failed segment
+                    allSegmentCoordinates.Add(new List<Coordinate>());
+                }
+            }
+        }
+
+        routeModel.RouteSegments = routeSegments;
+        routeModel.TotalDistance = totalDistance;
+        routeModel.TotalDurationHours = totalDuration;
+
+        // Create route point inputs with proper segment coordinate mapping
+        var routePointInputs = new List<RoutePointInput>();
+        for (int i = 0; i < orderedPoints.Count; i++)
+        {
+            var point = orderedPoints[i];
+            double segmentDistance = 0;
+            List<double[]> segmentCoordinates = new List<double[]>();
+
+            // Get coordinates for this segment (if it's not the last point)
+            if (i < allSegmentCoordinates.Count)
+            {
+                var coordinates = allSegmentCoordinates[i];
+                if (coordinates != null && coordinates.Count > 0)
+                {
+                    segmentCoordinates = coordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToList();
+                }
+            }
+
+            // Get distance for this segment
+            if (i < routeSegments.Count)
+            {
+                segmentDistance = routeSegments[i].Distance;
+            }
+
+            routePointInputs.Add(new RoutePointInput
+            {
+                Type = point.Type == "departure" ? "port" : point.Type,
+                Name = point.Name,
+                LatLng = new double[] { point.Latitude, point.Longitude },
+                SegmentDistance = segmentDistance,
+                SegmentCoordinates = segmentCoordinates
+            });
+        }
+
+        voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
+
+        routeLegs.Clear();
+        if (voyageLegs != null && voyageLegs.Count > 0)
+        {
+            foreach (var leg in voyageLegs)
+            {
+                routeLegs.Add(new RouteLegModel
+                {
+                    DeparturePort = leg.DeparturePort,
+                    ArrivalPort = leg.ArrivalPort,
+                    Distance = leg.Distance
+                });
+            }
+        }
     }
-
-</style>
-
-
-
-@code{
-    void MyRoutes()
+    catch (Exception ex)
     {
-        navigationManager.NavigateTo("MyRoutes");
+        Console.WriteLine($"Error calculating multi-segment route: {ex.Message}");
     }
+}
 
-   
-} *@
+// TASK 3: Helper method to create transformed route element for JavaScript
+private JsonElement CreateTransformedRouteElement(JsonElement originalRouteElement, List<Coordinate> transformedCoordinates)
+{
+    // Create a new route element with transformed coordinates
+    var transformedRoute = new
+    {
+        type = "Feature",
+        properties = ExtractProperties(originalRouteElement),
+        geometry = new
+        {
+            type = "LineString",
+            coordinates = transformedCoordinates.Select(c => new double[] { c.Longitude, c.Latitude }).ToArray()
+        }
+    };
+
+    var json = System.Text.Json.JsonSerializer.Serialize(transformedRoute);
+    using var doc = JsonDocument.Parse(json);
+    return doc.RootElement.Clone();
+}
+
+// TASK 3: Helper method to extract properties from original route element
+private object ExtractProperties(JsonElement routeElement)
+{
+    if (routeElement.TryGetProperty("properties", out var propertiesElement))
+    {
+        var properties = new Dictionary<string, object>();
+        
+        foreach (var property in propertiesElement.EnumerateObject())
+        {
+            switch (property.Value.ValueKind)
+            {
+                case JsonValueKind.String:
+                    properties[property.Name] = property.Value.GetString();
+                    break;
+                case JsonValueKind.Number:
+                    properties[property.Name] = property.Value.GetDouble();
+                    break;
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                    properties[property.Name] = property.Value.GetBoolean();
+                    break;
+                default:
+                    properties[property.Name] = property.Value.GetRawText();
+                    break;
+            }
+        }
+        
+        return properties;
+    }
+    
+    return new { };
+}
+
+// Supporting classes
+public class RoutePointRef
+{
+    public string Type { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public string Name { get; set; }
+    public string PointId { get; set; }
+}
+
+public class Coordinate
+{
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+}
