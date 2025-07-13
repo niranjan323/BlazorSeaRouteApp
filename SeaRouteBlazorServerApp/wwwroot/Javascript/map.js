@@ -426,17 +426,16 @@ function reorganizeRoutePoints() {
     return routePoints;
 }
 
-// Modified By Niranjan: Helper to normalize longitude to [-180, 180)
-function normalizeLongitude(longitude) {
-    const T = 360.0;
-    const t0 = -180.0;
-    const k = Math.floor((longitude - t0) / T);
-    let alpha0 = longitude - k * T;
+// Helper: Normalize longitude to [-180, 180) // Modified By Niranjan
+function normalizeLongitude(lon) {
+    const T = 360.0, t0 = -180.0;
+    let k = Math.floor((lon - t0) / T);
+    let alpha0 = lon - k * T;
     if (alpha0 >= 180.0) alpha0 -= T;
     return alpha0;
 }
 
-// Modified By Niranjan: Helper to transform segment for continuity
+// Helper: Transform segment for continuity // Modified By Niranjan
 function transformSegmentForContinuity(currentSegment, previousSegment) {
     if (!previousSegment || previousSegment.length === 0 || !currentSegment || currentSegment.length === 0) {
         return currentSegment;
@@ -445,30 +444,19 @@ function transformSegmentForContinuity(currentSegment, previousSegment) {
     const p2 = currentSegment[0][1]; // longitude of first point in current segment
     const T = 360.0;
     const k = Math.floor((p1 - p2) / T);
-    const transformedSegment = [];
-    for (let i = 0; i < currentSegment.length; i++) {
-        const coord = currentSegment[i];
-        transformedSegment.push([
-            coord[0], // latitude
-            coord[1] + k * T // longitude with period translation
-        ]);
-    }
-    return transformedSegment;
+    return currentSegment.map(coord => [coord[0], coord[1] + k * T]);
 }
 
-// Modified By Niranjan: Normalize longitude in createSeaRoutefromAPI
-function createSeaRoutefromAPI(routeJson) {
+// Create segment from API, only normalize if first segment // Modified By Niranjan
+function createSeaRoutefromAPI(routeJson, shouldNormalize = false) {
     try {
         const routeData = typeof routeJson === 'string' ? JSON.parse(routeJson) : routeJson;
         const geoJsonCoordinates = routeData.geometry.coordinates;
-        // Normalize longitude for each coordinate
-        const leafletCoordinates = new Array(geoJsonCoordinates.length);
-        for (let i = 0; i < geoJsonCoordinates.length; i++) {
-            const lng = geoJsonCoordinates[i][0];
-            const lat = geoJsonCoordinates[i][1];
-            const normalizedLng = normalizeLongitude(lng); // Modified By Niranjan
-            leafletCoordinates[i] = [lat, normalizedLng];
-        }
+        const leafletCoordinates = geoJsonCoordinates.map(coord => {
+            let lng = coord[0], lat = coord[1];
+            if (shouldNormalize) lng = normalizeLongitude(lng);
+            return [lat, lng];
+        });
         return {
             coordinates: leafletCoordinates,
             properties: routeData.properties
@@ -479,15 +467,15 @@ function createSeaRoutefromAPI(routeJson) {
     }
 }
 
-// Modified By Niranjan: Apply continuity transformation in processRouteSegment
+// In processRouteSegment, pass shouldNormalize for the first segment // Modified By Niranjan
 function processRouteSegment(routeJson, segmentIndex, totalSegments) {
     try {
-        const segment = createSeaRoutefromAPI(routeJson);
-        // Apply continuity transformation if this is not the first segment
+        const shouldNormalize = segmentIndex === 0;
+        let segment = createSeaRoutefromAPI(routeJson, shouldNormalize);
         if (segmentIndex > 0 && routeSegments[segmentIndex - 1]) {
             const previousSegment = routeSegments[segmentIndex - 1];
             if (previousSegment && previousSegment.coordinates) {
-                segment.coordinates = transformSegmentForContinuity(segment.coordinates, previousSegment.coordinates); // Modified By Niranjan
+                segment.coordinates = transformSegmentForContinuity(segment.coordinates, previousSegment.coordinates);
             }
         }
         routeSegments[segmentIndex] = segment;
@@ -506,16 +494,20 @@ function processRouteSegment(routeJson, segmentIndex, totalSegments) {
 // Modified By Niranjan: Ensure continuity in drawCombinedRoute
 function drawCombinedRoute(segments) {
     routeLayer.clearLayers();
+
     if (!segments || segments.length === 0) {
         return;
     }
+
+    // Pre-allocate arrays for better performance
     const allCoordinates = [];
     const segmentBoundaries = [];
     let totalDistance = 0;
     let totalDuration = 0;
-    // Process segments with continuity checks
+
+    // Process segments more efficiently
     segments.forEach((segment, index) => {
-        if (segment && segment.coordinates && segment.coordinates.length > 0) {
+        if (segment && segment.coordinates) {
             const startIndex = allCoordinates.length;
             // Check for continuity with previous segment
             if (index > 0 && allCoordinates.length > 0) {
@@ -543,6 +535,7 @@ function drawCombinedRoute(segments) {
                 properties: segment.properties,
                 segmentIndex: index
             });
+
             if (segment.properties) {
                 if (segment.properties.length) {
                     totalDistance += Math.round(segment.properties.length);
@@ -553,24 +546,87 @@ function drawCombinedRoute(segments) {
             }
         }
     });
+
+    // Create route polyline with optimized options
     const routePolyline = L.polyline(allCoordinates, {
         color: '#0066ff',
         weight: 3,
         opacity: 0.8,
         smoothFactor: 1,
+        // Improve performance by reducing points on zoom
         interactive: false
     }).addTo(routeLayer);
-    // (Optional) Add markers/labels as needed
+
+    // Add total distance and duration marker only when needed
+    if (routePoints.length > 2 && allCoordinates.length > 0) {
+        const midIndex = Math.floor(allCoordinates.length / 2);
+        const midPoint = allCoordinates[midIndex];
+
+        // Create marker with precomputed HTML for better performance
+        //const distanceMarkerHtml = `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
+        // Distance: ${totalDistance} nm<br>
+        // Duration: ${totalDuration} hours
+        //</div>`;
+
+        //L.marker(midPoint, {
+        //    icon: L.divIcon({
+        //        className: 'distance-marker',
+        //        html: distanceMarkerHtml,
+        //        iconSize: null
+        //    })
+        //}).addTo(routeLayer);
+    }
+
+    // Add distance and duration markers for each segment - optimize for performance
+    // Only add detailed markers if we have fewer than 10 segments to improve performance
+    if (segmentBoundaries.length < 10) {
+        segmentBoundaries.forEach((boundary, idx) => {
+            const segmentMidIndex = Math.floor((boundary.startIndex + boundary.endIndex) / 2);
+            const segmentMidPoint = allCoordinates[segmentMidIndex];
+
+            const segmentProps = boundary.properties;
+            const segmentDistance = segmentProps && segmentProps.length ? Math.round(segmentProps.length) : 0;
+            const segmentDuration = segmentProps && segmentProps.duration_hours ? Math.round(segmentProps.duration_hours) : 0;
+
+            const fromPoint = routePoints[idx];
+            const toPoint = routePoints[idx + 1];
+            const fromName = fromPoint ? fromPoint.name || 'Point' : 'Point';
+            const toName = toPoint ? toPoint.name || 'Point' : 'Point';
+
+            // Segment marker with precomputed HTML
+            //            const segmentMarkerHtml = `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
+            //                Distance: ${segmentDistance} nm<br>
+            //                Duration: ${segmentDuration} hours
+            //            </div>`;
+
+            //            const segmentMarker = L.marker(segmentMidPoint, {
+            //                icon: L.divIcon({
+            //                    className: 'distance-marker',
+            //                    html: segmentMarkerHtml,
+            //                    iconSize: null
+            //                })
+            //            }).addTo(routeLayer);
+
+            // Use efficient tooltip creation
+            //            segmentMarker.bindTooltip(`${fromName} → ${toName}
+            //${segmentDistance} nm / ${segmentDuration} hours`,
+            //                { permanent: false, direction: 'top', offset: [0, -10] });
+        });
+    }
+
+    // Calculate bounds more efficiently
     const routeBounds = L.latLngBounds(allCoordinates);
     const paddingLeft = window.innerWidth * 0.45;
+
+    // Use an optimized flyToBounds that's less demanding
     map.flyToBounds(routeBounds, {
         paddingTopLeft: [paddingLeft, 20],
         paddingBottomRight: [20, 20],
         duration: 1.5
     });
+
     return routePolyline;
 }
-// End of Modified By Niranjan changes
 
 // Update map with port data - optimized
 function updateMapWithPortData(portData, isDeparture) {
