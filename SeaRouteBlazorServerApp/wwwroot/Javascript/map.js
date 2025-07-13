@@ -594,15 +594,17 @@ function drawCombinedRoute(segments) {
         paddingBottomRight: [20, 20],
         duration: 1.5
     });
-//Niranjan
-    // Synchronize pins with route points
-    updatePinsToMatchRoute(routePoints);
+
+    // Niranjan
+    // Synchronize pins with route line coordinates (not just routePoints)
+    updatePinsToMatchRouteLine(allCoordinates, routePoints);
 
     return routePolyline;
 }
-//Niranjan
-// Synchronize map pins with the actual route points
-function updatePinsToMatchRoute(routePoints) {
+
+// Niranjan
+// Synchronize map pins with the actual route line coordinates
+function updatePinsToMatchRouteLine(allCoordinates, routePoints) {
     // Remove all existing pins
     if (departurePin) { map.removeLayer(departurePin); departurePin = null; }
     if (arrivalPin) { map.removeLayer(arrivalPin); arrivalPin = null; }
@@ -611,32 +613,19 @@ function updatePinsToMatchRoute(routePoints) {
     waypointPins.forEach(pin => map.removeLayer(pin));
     waypointPins = [];
 
-    // Add departure pin
-    if (routePoints.length > 0) {
+    // Add departure pin at the first coordinate
+    if (allCoordinates.length > 0) {
         const dep = routePoints[0];
-        departurePin = L.marker(dep.latLng).addTo(map);
-        departurePin.bindPopup("Departure: " + (dep.name || ''));
+        departurePin = L.marker(allCoordinates[0]).addTo(map);
+        departurePin.bindPopup("Departure: " + (dep?.name || ''));
     }
-    // Add arrival pin
-    if (routePoints.length > 1) {
+    // Add arrival pin at the last coordinate
+    if (allCoordinates.length > 1) {
         const arr = routePoints[routePoints.length - 1];
-        arrivalPin = L.marker(arr.latLng).addTo(map);
-        arrivalPin.bindPopup("Arrival: " + (arr.name || ''));
+        arrivalPin = L.marker(allCoordinates[allCoordinates.length - 1]).addTo(map);
+        arrivalPin.bindPopup("Arrival: " + (arr?.name || ''));
     }
-    // Add intermediate pins (ports/waypoints)
-    for (let i = 1; i < routePoints.length - 1; i++) {
-        const p = routePoints[i];
-        let pin = L.marker(p.latLng).addTo(map);
-        if (p.type === 'port') {
-            pin.bindPopup("Port: " + (p.name || ''));
-            portPins.push(pin);
-        } else if (p.type === 'waypoint') {
-            pin.bindPopup("Waypoint: " + (p.name || ''));
-            waypointPins.push(pin);
-        } else {
-            pin.bindPopup(p.name || '');
-        }
-    }
+    // Optionally, add intermediate pins at segment boundaries if needed
 }
 
 // Update map with port data - optimized
