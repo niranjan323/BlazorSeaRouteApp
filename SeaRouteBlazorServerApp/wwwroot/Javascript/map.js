@@ -595,14 +595,14 @@ function drawCombinedRoute(segments) {
         duration: 1.5
     });
 
-    // Place pins at all segment boundaries (departure, intermediate, arrival)
-    updatePinsToMatchRouteLineWithSegments(allCoordinates, routePoints, segmentBoundaries);
+    // Place pins for all route points (departure, intermediates, arrival)
+    updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries);
 
     return routePolyline;
 }
 
-// Place pins at each segment boundary (departure, intermediate, arrival)
-function updatePinsToMatchRouteLineWithSegments(allCoordinates, routePoints, segmentBoundaries) {
+// Robust pin placement for all route points (works for any number of ports/waypoints)
+function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries) {
     // Remove all existing pins
     if (departurePin) { map.removeLayer(departurePin); departurePin = null; }
     if (arrivalPin) { map.removeLayer(arrivalPin); arrivalPin = null; }
@@ -611,16 +611,22 @@ function updatePinsToMatchRouteLineWithSegments(allCoordinates, routePoints, seg
     waypointPins.forEach(pin => map.removeLayer(pin));
     waypointPins = [];
 
-    // Place pins at each segment boundary
-    for (let i = 0; i < segmentBoundaries.length; i++) {
-        const idx = segmentBoundaries[i].startIndex;
+    for (let i = 0; i < routePoints.length; i++) {
+        let coordIdx;
+        if (i === 0) {
+            // First point: start of first segment
+            coordIdx = segmentBoundaries[0].startIndex;
+        } else {
+            // All others: end of previous segment
+            coordIdx = segmentBoundaries[i - 1].endIndex;
+        }
         const p = routePoints[i];
-        let pin = L.marker(allCoordinates[idx]).addTo(map);
+        let pin = L.marker(allCoordinates[coordIdx]).addTo(map);
 
         if (i === 0) {
             departurePin = pin;
             pin.bindPopup("Departure: " + (p?.name || ''));
-        } else if (i === segmentBoundaries.length - 1) {
+        } else if (i === routePoints.length - 1) {
             arrivalPin = pin;
             pin.bindPopup("Arrival: " + (p?.name || ''));
         } else {
