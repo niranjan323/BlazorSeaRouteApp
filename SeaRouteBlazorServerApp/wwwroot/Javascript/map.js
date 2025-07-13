@@ -426,37 +426,23 @@ function reorganizeRoutePoints() {
     return routePoints;
 }
 
-// Helper: Normalize longitude to [-180, 180) // Modified By Niranjan
-function normalizeLongitude(lon) {
-    const T = 360.0, t0 = -180.0;
-    let k = Math.floor((lon - t0) / T);
-    let alpha0 = lon - k * T;
-    if (alpha0 >= 180.0) alpha0 -= T;
-    return alpha0;
-}
-
-// Helper: Transform segment for continuity // Modified By Niranjan
-function transformSegmentForContinuity(currentSegment, previousSegment) {
-    if (!previousSegment || previousSegment.length === 0 || !currentSegment || currentSegment.length === 0) {
-        return currentSegment;
-    }
-    const p1 = previousSegment[previousSegment.length - 1][1]; // longitude of last point in previous segment
-    const p2 = currentSegment[0][1]; // longitude of first point in current segment
-    const T = 360.0;
-    const k = Math.floor((p1 - p2) / T);
-    return currentSegment.map(coord => [coord[0], coord[1] + k * T]);
-}
-
-// Create segment from API, only normalize if first segment // Modified By Niranjan
-function createSeaRoutefromAPI(routeJson, shouldNormalize = false) {
+// Function to create a segment route from FastAPI response - optimized
+function createSeaRoutefromAPI(routeJson) {
     try {
+        // Parse the GeoJSON string if it's not already an object
         const routeData = typeof routeJson === 'string' ? JSON.parse(routeJson) : routeJson;
+
+        // Extract LineString coordinates from the GeoJSON
         const geoJsonCoordinates = routeData.geometry.coordinates;
-        const leafletCoordinates = geoJsonCoordinates.map(coord => {
-            let lng = coord[0], lat = coord[1];
-            if (shouldNormalize) lng = normalizeLongitude(lng);
-            return [lat, lng];
-        });
+
+        // Optimize coordinate conversion for Leaflet
+        // Use a more efficient way to convert coordinates
+        const leafletCoordinates = new Array(geoJsonCoordinates.length);
+        for (let i = 0; i < geoJsonCoordinates.length; i++) {
+            leafletCoordinates[i] = [geoJsonCoordinates[i][1], geoJsonCoordinates[i][0]];
+        }
+
+        // Return the converted coordinates
         return {
             coordinates: leafletCoordinates,
             properties: routeData.properties
@@ -467,23 +453,22 @@ function createSeaRoutefromAPI(routeJson, shouldNormalize = false) {
     }
 }
 
-// In processRouteSegment, pass shouldNormalize for the first segment // Modified By Niranjan
+// Process route segment - optimized
 function processRouteSegment(routeJson, segmentIndex, totalSegments) {
     try {
-        const shouldNormalize = segmentIndex === 0;
-        let segment = createSeaRoutefromAPI(routeJson, shouldNormalize);
-        if (segmentIndex > 0 && routeSegments[segmentIndex - 1]) {
-            const previousSegment = routeSegments[segmentIndex - 1];
-            if (previousSegment && previousSegment.coordinates) {
-                segment.coordinates = transformSegmentForContinuity(segment.coordinates, previousSegment.coordinates);
-            }
-        }
+        const segment = createSeaRoutefromAPI(routeJson);
+
+        // Store this segment
         routeSegments[segmentIndex] = segment;
+
+        // If all segments are received, draw the combined route
         if (routeSegments.filter(s => s !== null).length === totalSegments) {
+            // Use requestAnimationFrame for smoother rendering
             window.requestAnimationFrame(() => {
                 drawCombinedRoute(routeSegments);
             });
         }
+
         return segment;
     } catch (error) {
         console.error("Error processing route segment:", error);
@@ -491,8 +476,9 @@ function processRouteSegment(routeJson, segmentIndex, totalSegments) {
     }
 }
 
-// Modified By Niranjan: Ensure continuity in drawCombinedRoute
+// Draw combined route from multiple segments - optimized
 function drawCombinedRoute(segments) {
+    // Clear previous route
     routeLayer.clearLayers();
 
     if (!segments || segments.length === 0) {
@@ -509,26 +495,10 @@ function drawCombinedRoute(segments) {
     segments.forEach((segment, index) => {
         if (segment && segment.coordinates) {
             const startIndex = allCoordinates.length;
-            // Check for continuity with previous segment
-            if (index > 0 && allCoordinates.length > 0) {
-                const lastCoord = allCoordinates[allCoordinates.length - 1];
-                const firstCoord = segment.coordinates[0];
-                const distance = Math.sqrt(
-                    Math.pow(lastCoord[0] - firstCoord[0], 2) +
-                    Math.pow(lastCoord[1] - firstCoord[1], 2)
-                );
-                // If there's a significant gap (> 0.01 degrees), add a connecting line
-                if (distance > 0.01) {
-                    const numInterpolationPoints = Math.min(5, Math.floor(distance * 100));
-                    for (let i = 1; i <= numInterpolationPoints; i++) {
-                        const t = i / (numInterpolationPoints + 1);
-                        const interpolatedLat = lastCoord[0] + t * (firstCoord[0] - lastCoord[0]);
-                        const interpolatedLng = lastCoord[1] + t * (firstCoord[1] - lastCoord[1]);
-                        allCoordinates.push([interpolatedLat, interpolatedLng]);
-                    }
-                }
-            }
+
+            // Use push.apply for faster array concatenation
             Array.prototype.push.apply(allCoordinates, segment.coordinates);
+
             segmentBoundaries.push({
                 startIndex: startIndex,
                 endIndex: allCoordinates.length - 1,
@@ -624,8 +594,49 @@ function drawCombinedRoute(segments) {
         paddingBottomRight: [20, 20],
         duration: 1.5
     });
+//Niranjan
+    // Synchronize pins with route points
+    updatePinsToMatchRoute(routePoints);
 
     return routePolyline;
+}
+//Niranjan
+// Synchronize map pins with the actual route points
+function updatePinsToMatchRoute(routePoints) {
+    // Remove all existing pins
+    if (departurePin) { map.removeLayer(departurePin); departurePin = null; }
+    if (arrivalPin) { map.removeLayer(arrivalPin); arrivalPin = null; }
+    portPins.forEach(pin => map.removeLayer(pin));
+    portPins = [];
+    waypointPins.forEach(pin => map.removeLayer(pin));
+    waypointPins = [];
+
+    // Add departure pin
+    if (routePoints.length > 0) {
+        const dep = routePoints[0];
+        departurePin = L.marker(dep.latLng).addTo(map);
+        departurePin.bindPopup("Departure: " + (dep.name || ''));
+    }
+    // Add arrival pin
+    if (routePoints.length > 1) {
+        const arr = routePoints[routePoints.length - 1];
+        arrivalPin = L.marker(arr.latLng).addTo(map);
+        arrivalPin.bindPopup("Arrival: " + (arr.name || ''));
+    }
+    // Add intermediate pins (ports/waypoints)
+    for (let i = 1; i < routePoints.length - 1; i++) {
+        const p = routePoints[i];
+        let pin = L.marker(p.latLng).addTo(map);
+        if (p.type === 'port') {
+            pin.bindPopup("Port: " + (p.name || ''));
+            portPins.push(pin);
+        } else if (p.type === 'waypoint') {
+            pin.bindPopup("Waypoint: " + (p.name || ''));
+            waypointPins.push(pin);
+        } else {
+            pin.bindPopup(p.name || '');
+        }
+    }
 }
 
 // Update map with port data - optimized
@@ -751,7 +762,7 @@ function addArrivalPort(portData) {
 function initializeRouteCalculation() {
     // Clear previous route segments efficiently
     routeSegments = [];
-   
+
     // Clear previous route layer efficiently
     routeLayer.clearLayers();
 
