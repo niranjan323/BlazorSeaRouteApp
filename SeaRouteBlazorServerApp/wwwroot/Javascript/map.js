@@ -620,6 +620,9 @@ function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBou
             // All others: end of previous segment
             coordIdx = segmentBoundaries[i - 1].endIndex;
         }
+        // Defensive: skip if coordIdx is out of bounds
+        if (coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
+
         const p = routePoints[i];
         let pin = L.marker(allCoordinates[coordIdx]).addTo(map);
 
