@@ -619,6 +619,9 @@
                             // Get the raw JSON for the route
                             var routeJson = routeElement.GetRawText();
 
+                            // Convert propertiesElement to a .NET object for serialization
+                            var propertiesObj = JsonSerializer.Deserialize<Dictionary<string, object>>(propertiesElement.GetRawText());
+
                             // Apply the fixed coordinate transformation
                             var transformedCoordinates = TransformSegmentCoordinates(rawCoordinates, referenceLongitude);
                             // Update reference longitude for next segment
@@ -626,11 +629,11 @@
                             {
                                 referenceLongitude = transformedCoordinates.Last().Longitude;
                             }
-                            // Create GeoJSON for this segment with transformed coordinates
+                            // Create GeoJSON for this segment with transformed coordinates and original properties
                             var segmentGeoJson = new
                             {
                                 type = "Feature",
-                                properties = new { },
+                                properties = propertiesObj, // <-- now includes length, duration_hours, etc.
                                 geometry = new
                                 {
                                     type = "LineString",
