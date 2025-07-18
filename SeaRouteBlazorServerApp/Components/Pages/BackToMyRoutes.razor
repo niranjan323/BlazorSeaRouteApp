@@ -8,6 +8,7 @@
 @using System.Drawing
 @using NextGenEngApps.DigitalRules.CRoute.Services.API.Request
 @inject CRoute.Services.ICRouteAPIService routeAPIService
+@using SeaRouteModel.Models
 
 <div id="map"></div>
 
@@ -318,62 +319,6 @@
         }
     }
 
-    private static double NormalizeLongitude(double longitude)
-    {
-        double T = 360.0;
-        double t0 = -180.0;
-        double k = Math.Floor((longitude - t0) / T);
-        double alpha0 = longitude - k * T;
-        if (alpha0 >= 180.0) alpha0 -= T;
-        return alpha0;
-    }
-
-    private static List<Coordinate> TransformSegmentCoordinates(List<Coordinate> rawCoordinates, double? referenceLongitude)
-    {
-        if (rawCoordinates == null || rawCoordinates.Count == 0)
-            return new List<Coordinate>();
-
-        var transformedCoordinates = new List<Coordinate>();
-
-        foreach (var coord in rawCoordinates)
-        {
-            double transformedLng = coord.Longitude;
-
-            // First, normalize to [-180, 180) range
-            transformedLng = NormalizeLongitude(transformedLng);
-
-            // If we have a reference longitude, ensure continuity
-            if (referenceLongitude.HasValue)
-            {
-                // Calculate potential shifts
-                double diff1 = Math.Abs(transformedLng - referenceLongitude.Value);
-                double diff2 = Math.Abs(transformedLng + 360 - referenceLongitude.Value);
-                double diff3 = Math.Abs(transformedLng - 360 - referenceLongitude.Value);
-
-                // Choose the longitude that minimizes the jump
-                if (diff2 < diff1 && diff2 < diff3)
-                {
-                    transformedLng += 360;
-                }
-                else if (diff3 < diff1 && diff3 < diff2)
-                {
-                    transformedLng -= 360;
-                }
-            }
-
-            transformedCoordinates.Add(new Coordinate
-            {
-                Latitude = coord.Latitude,
-                Longitude = transformedLng
-            });
-
-            // Update reference for next coordinate
-            referenceLongitude = transformedLng;
-        }
-
-        return transformedCoordinates;
-    }
-
     public async Task CalculateMultiSegmentRoute(List<RoutePointModel> routePoints, RouteModel routeModel, string color)
     {
         try
@@ -535,9 +480,7 @@
             (orderedPoints[0].Type == "departure" || routePoints[0].Type == "departure");
             if (hasDeparture && orderedPoints.Count >= 2)
             {
-                // Track the reference longitude for continuity
-                double? referenceLongitude = null;
-                // Process each segment sequentially using our ordered C# data
+                double referenceLongitude = 0;
                 for (int i = 0; i < orderedPoints.Count - 1; i++)
                 {
                     var origin = orderedPoints[i];
@@ -572,7 +515,6 @@
                         routeElement.TryGetProperty("properties", out var propertiesElement))
                         {
                             List<Coordinate> rawCoordinates = new List<Coordinate>();
-                            // Extract segment distance and duration
                             double segmentDistance = 0;
                             double segmentDuration = 0;
                             string units = "km";
@@ -616,24 +558,20 @@
                                 units = unitsElement.GetString();
                             }
 
-                            // Get the raw JSON for the route
                             var routeJson = routeElement.GetRawText();
-
-                            // Convert propertiesElement to a .NET object for serialization
                             var propertiesObj = JsonSerializer.Deserialize<Dictionary<string, object>>(propertiesElement.GetRawText());
 
-                            // Apply the fixed coordinate transformation
-                            var transformedCoordinates = TransformSegmentCoordinates(rawCoordinates, referenceLongitude);
-                            // Update reference longitude for next segment
+                            List<Coordinate> transformedCoordinates =
+                                (i == 0) ? rawCoordinates : CoordinateUtils.TransformSegmentCoordinates(rawCoordinates, referenceLongitude);
                             if (transformedCoordinates.Count > 0)
                             {
                                 referenceLongitude = transformedCoordinates.Last().Longitude;
                             }
-                            // Create GeoJSON for this segment with transformed coordinates and original properties
+
                             var segmentGeoJson = new
                             {
                                 type = "Feature",
-                                properties = propertiesObj, // <-- now includes length, duration_hours, etc.
+                                properties = propertiesObj,
                                 geometry = new
                                 {
                                     type = "LineString",
@@ -641,10 +579,12 @@
                                 }
                             };
                             var segmentJson = JsonSerializer.Serialize(segmentGeoJson);
-                            // Pass segment info to JavaScript along with route data
-                            // Send to JavaScript to process this segment
+
                             await JSRuntime.InvokeVoidAsync("showRouteSegment", segmentJson, i, orderedPoints.Count - 1,
-                            Math.Round(routeModel.ReductionFactor, 3).ToString(), color);
+                            Math.Round(routeModel.ReductionFactor, 3).ToString(), color,
+                            routeDetails.RouteName,
+                            mainDep.PortData.Unlocode,
+                            mainArr.PortData.Unlocode);
                         }
                     }
                     else

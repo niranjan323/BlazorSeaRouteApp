@@ -31,7 +31,7 @@ async function searchLocationOnMap(lat = null, lon = null) {
     }
 }
 
-function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFactor = "0", lineColor) {
+function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFactor = "0", lineColor, routeName, depUNLOCODE, arrUNLOCODE) {
     try {
         const segment = createSeaRoutefromAPI(routeJson);
 
@@ -41,7 +41,7 @@ function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFacto
         if (routeSegmentsList.filter(s => s !== null).length === totalSegments) {
             // Use requestAnimationFrame for smoother rendering
             window.requestAnimationFrame(() => {
-                drawRoute(routeSegmentsList, reductionFactor, lineColor);
+                drawRoute(routeSegmentsList, reductionFactor, lineColor, routeName, depUNLOCODE, arrUNLOCODE);
             });
         }
 
@@ -52,7 +52,7 @@ function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFacto
     }
 }
 
-function drawRoute(segments, reductionFactor, lineColor) {
+function drawRoute(segments, reductionFactor, lineColor, routeName, depUNLOCODE, arrUNLOCODE) {
 
     if (!segments || segments.length === 0) {
         return;
@@ -100,14 +100,15 @@ function drawRoute(segments, reductionFactor, lineColor) {
         interactive: false
     }).addTo(routeLayer);
 
-    // Add total distance and duration marker only when needed
+
     if (allCoordinates.length > 0) {
         const midIndex = Math.floor(allCoordinates.length / 2);
         const midPoint = allCoordinates[midIndex];
-        // Create marker with precomputed HTML for better performance
         const distanceMarkerHtml = `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
-        Distance: ${totalDistance} nm<br>
-        Reduction Factor: ${reductionFactor}
+            Route name: ${routeName || ''}<br>
+            ${depUNLOCODE || ''} - ${arrUNLOCODE || ''}<br>
+            Distance: ${totalDistance} nm<br>
+            Reduction factor: ${reductionFactor}
         </div>`;
 
         L.marker(midPoint, {
@@ -119,94 +120,57 @@ function drawRoute(segments, reductionFactor, lineColor) {
         }).addTo(routeLayer);
     }
 
-    // Add distance and duration markers for each segment - optimize for performance
-    // Only add detailed markers if we have fewer than 10 segments to improve performance
-    //if (segmentBoundaries.length < 10) {
-    //    segmentBoundaries.forEach((boundary, idx) => {
-    //        const segmentMidIndex = Math.floor((boundary.startIndex + boundary.endIndex) / 2);
-    //        const segmentMidPoint = allCoordinates[segmentMidIndex];
+    updatePinsToMatchAllRoutePointsList(allCoordinates, segmentBoundaries);
 
-    //        const segmentProps = boundary.properties;
-    //        const segmentDistance = segmentProps && segmentProps.length ? Math.round(segmentProps.length) : 0;
-    //        const segmentDuration = segmentProps && segmentProps.duration_hours ? Math.round(segmentProps.duration_hours) : 0;
-
-    //        const fromPoint = routePoints[idx];
-    //        const toPoint = routePoints[idx + 1];
-    //        const fromName = fromPoint ? fromPoint.name || 'Point' : 'Point';
-    //        const toName = toPoint ? toPoint.name || 'Point' : 'Point';
-
-    //        // Segment marker with precomputed HTML
-    //        const segmentMarkerHtml = `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
-    //            Distance: ${segmentDistance} nm<br>
-    //            ReductionFactor: ${reductionFactor}
-    //        </div>`;
-
-    //        const segmentMarker = L.marker(segmentMidPoint, {
-    //            icon: L.divIcon({
-    //                className: 'distance-marker',
-    //                html: segmentMarkerHtml,
-    //                iconSize: null
-    //            })
-    //        }).addTo(routeLayer);
-
-    //        // Use efficient tooltip creation
-    //        segmentMarker.bindTooltip(`${fromName} → ${toName}
-    //            {segmentDistance} nm / ${segmentDuration} hours`,
-    //            { permanent: false, direction: 'top', offset: [0, -10] });
-    //    });
-    //}
-
-     // Place pins for all route points (departure, intermediates, arrival) after normalization
-     updatePinsToMatchAllRoutePointsList(allCoordinates, segmentBoundaries);
-    //Calculate bounds more efficiently
     const routeBounds = L.latLngBounds(allCoordinates);
-    /*const paddingLeft = window.innerWidth * 0.45;*/
 
-    //Use an optimized flyToBounds that's less demanding
     map.fitBounds(routeBounds, {
-        //paddingTopLeft: [paddingLeft, 20],
-        //paddingBottomRight: [20, 20]
         padding: [50, 50]
     });
 
-    // Reset routeSegmentsList after rendering
     routeSegmentsList = [];
     return routePolyline;
 }
-
-// Place pins at start/end/intermediate points after normalization (like map.js)
 function updatePinsToMatchAllRoutePointsList(allCoordinates, segmentBoundaries) {
-    // Remove all existing pins (if you have global pin variables, clear them here)
-    if (window.routeListPins) {
-        window.routeListPins.forEach(pin => map.removeLayer(pin));
+    if (window.departurePin) { map.removeLayer(window.departurePin); window.departurePin = null; }
+    if (window.arrivalPin) { map.removeLayer(window.arrivalPin); window.arrivalPin = null; }
+    if (window.portPins && Array.isArray(window.portPins)) {
+        window.portPins.forEach(pin => map.removeLayer(pin));
     }
-    window.routeListPins = [];
+    window.portPins = [];
+    if (window.waypointPins && Array.isArray(window.waypointPins)) {
+        window.waypointPins.forEach(pin => map.removeLayer(pin));
+    }
+    window.waypointPins = [];
 
-    // Place pins at the start of the first segment, end of each segment
     for (let i = 0; i < segmentBoundaries.length; i++) {
         let coordIdx;
         let label = '';
         if (i === 0) {
-            // First point: start of first segment
             coordIdx = segmentBoundaries[0].startIndex;
             label = 'Departure';
         } else {
-            // All others: end of previous segment
             coordIdx = segmentBoundaries[i - 1].endIndex;
             label = i === segmentBoundaries.length - 1 ? 'Arrival' : `Port/WP ${i}`;
         }
         if (coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
         let pin = L.marker(allCoordinates[coordIdx]).addTo(map);
-        pin.bindPopup(label);
-        window.routeListPins.push(pin);
+        if (i === 0) {
+            window.departurePin = pin;
+            pin.bindPopup(label);
+        } else if (i === segmentBoundaries.length - 1) {
+            window.arrivalPin = pin;
+            pin.bindPopup(label);
+        } else {
+            pin.bindPopup(label);
+            window.portPins.push(pin);
+        }
     }
 }
 
 function zoomOutMap() {
     const bounds = map.getBounds();
     map.fitBounds(bounds, {
-        //paddingTopLeft: [20, 20],
-        //paddingBottomRight: [20, 20],
         padding: [50, 50]
     });
     map.setZoom(2);
