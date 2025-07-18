@@ -581,10 +581,14 @@
                             var segmentJson = JsonSerializer.Serialize(segmentGeoJson);
 
                             await JSRuntime.InvokeVoidAsync("showRouteSegment", segmentJson, i, orderedPoints.Count - 1,
-                            Math.Round(routeModel.ReductionFactor, 3).ToString(), color,
-                            routeDetails.RouteName,
-                            mainDep.PortData.Unlocode,
-                            mainArr.PortData.Unlocode);
+                                Math.Round(routeModel.ReductionFactor, 3).ToString(), color,
+                                routeDetails.RouteName,
+                                routeModel.MainDeparturePortSelection.Port.Name,
+                                routeModel.MainDeparturePortSelection.Port.Unlocode,
+                                routeModel.MainArrivalPortSelection.Port.Name,
+                                routeModel.MainArrivalPortSelection.Port.Unlocode,
+                                Math.Round(routeModel.TotalDistance).ToString()
+                            );
                         }
                     }
                     else

@@ -31,7 +31,7 @@ async function searchLocationOnMap(lat = null, lon = null) {
     }
 }
 
-function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFactor = "0", lineColor, routeName, depUNLOCODE, arrUNLOCODE) {
+function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFactor = "0", lineColor, routeName, depPortName, depUnlocode, arrPortName, arrUnlocode, totalDistance) {
     try {
         const segment = createSeaRoutefromAPI(routeJson);
 
@@ -41,7 +41,7 @@ function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFacto
         if (routeSegmentsList.filter(s => s !== null).length === totalSegments) {
             // Use requestAnimationFrame for smoother rendering
             window.requestAnimationFrame(() => {
-                drawRoute(routeSegmentsList, reductionFactor, lineColor, routeName, depUNLOCODE, arrUNLOCODE);
+                drawRoute(routeSegmentsList, reductionFactor, lineColor, routeName, depPortName, depUnlocode, arrPortName, arrUnlocode, totalDistance);
             });
         }
 
@@ -52,7 +52,7 @@ function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFacto
     }
 }
 
-function drawRoute(segments, reductionFactor, lineColor, routeName, depUNLOCODE, arrUNLOCODE) {
+function drawRoute(segments, reductionFactor, lineColor, routeName, depPortName, depUnlocode, arrPortName, arrUnlocode, totalDistance) {
 
     if (!segments || segments.length === 0) {
         return;
@@ -105,8 +105,8 @@ function drawRoute(segments, reductionFactor, lineColor, routeName, depUNLOCODE,
         const midIndex = Math.floor(allCoordinates.length / 2);
         const midPoint = allCoordinates[midIndex];
         const distanceMarkerHtml = `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
-            Route name: ${routeName || ''}<br>
-            ${depUNLOCODE || ''} - ${arrUNLOCODE || ''}<br>
+            Route name: ${routeName}<br>
+            (${depUnlocode}) - (${arrUnlocode})<br>
             Distance: ${totalDistance} nm<br>
             Reduction factor: ${reductionFactor}
         </div>`;
