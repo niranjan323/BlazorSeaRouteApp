@@ -1,85 +1,45 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
+﻿using SeaRouteModel.Models;
 
-public async Task<List<LegModel>> GetRouteLegsList(string recordId)
-{
-    List<LegModel> result = [];
-    try
-    {
-        string userId = "1";
-        var response = await _httpClient.GetAsync($"{Endpoints.ROUTE_LEGS_LIST}?userId={userId}&recordId={recordId}");
-        response.EnsureSuccessStatusCode();
-        result = await response.Content.ReadFromJsonAsync<List<LegModel>>();
-    }
-    catch (Exception ex)
-    {
-        throw;
-    }
-
-    return result;
-}
-
-[HttpGet("legs")]
-public async Task<IActionResult> GetRecordLegs(string userId, string recordId)
+public async Task<List<RecordDto>> GetRecordListAsync(string userId)
 {
     try
     {
-        var legs = await _recordService.GetVoyageLegsAsync(recordId, userId);
-        legs = legs.Where(x => x.RecordId == recordId).ToList();
-        return Ok(legs);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "error occured on GetVoyageLegs");
-        return StatusCode((int)StatusCodes.Status500InternalServerError);
-    }
-}
+        // todo for non abs user
+        bool isAbsUser = true;
+        _ = Guid.TryParse(userId, out Guid userGuid);
+        var user = isAbsUser
+            ? await _userRepository.GetUserByAbsIdAsync(userGuid)
+            : await _userRepository.GetByIdAsync(userGuid);
 
-public async Task<List<RecordLegInfo>> GetVoyageLegsAsync(string recordId, string userId)
-{
-    try
-    {
-        if (!Guid.TryParse(recordId, out Guid recordGuid))
-            return new List<RecordLegInfo>();
-        var legCount = await (from rec in _dbContext.Records
-                              join rv in _dbContext.RouteVersions on rec.RecordId equals rv.RecordId
-                              join leg in _dbContext.VoyageLegs on rv.RouteVersionId equals leg.RouteVersionId
-                              where rec.IsActive == true && rec.RecordId == recordGuid
-                              select leg).CountAsync();
-        if (legCount <= 1)
-            return new List<RecordLegInfo>();
+        Guid actualUserId = user.UserId;
+        var records = await _recordRepository.GetRecordListAsync(actualUserId.ToString());
+        if (records == null)
+            return [];
 
-        var legs = await (from rec in _dbContext.Records
-                          join rv in _dbContext.RouteVersions on rec.RecordId equals rv.RecordId
-                          join leg in _dbContext.VoyageLegs on rv.RouteVersionId equals leg.RouteVersionId
-                          join apo in _dbContext.Ports on leg.ArrivalPort equals apo.GeoPointId
-                          join dpo in _dbContext.Ports on leg.DeparturePort equals dpo.GeoPointId
-                          join recVessel in _dbContext.RecordVessels on rec.RecordId equals recVessel.RecordId into vessels
-                          from rv_vessel in vessels.DefaultIfEmpty()
-                          join vessel in _dbContext.Vessels on rv_vessel.VesselId equals vessel.VesselId into vesselDetails
-                          from vd in vesselDetails.DefaultIfEmpty()
-                          where rec.IsActive == true && rec.RecordId == recordGuid && rv.IsActive == true
-                          select new RecordLegInfo()
-                          {
-                              RecordId = rec.RecordId.ToString(),
-                              RecordLegId = leg.VoyageLegId.ToString(),
-                              RecordLegName = string.Empty,
-                              AnnualReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Annual)!.ReductionFactor ?? default,
-                              SpringReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Spring)!.ReductionFactor ?? default,
-                              SummerReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Summer)!.ReductionFactor ?? default,
-                              FallReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Fall)!.ReductionFactor ?? default,
-                              WinterReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Winter)!.ReductionFactor ?? default,
-                              DeparturePort = dpo.PortName,
-                              DeparturePortId = dpo.GeoPointId.ToString(),
-                              ArrivalPort = apo.PortName,
-                              ArrivalPortId = apo.GeoPointId.ToString(),
-                              RouteDistance = leg.Distance ?? 0,
-                              VesselIMO = vd != null ? vd.VesselImo : string.Empty, // Adjust based on your Vessel model
-                              VesselName = vd != null ? vd.VesselName : string.Empty,
-                              LegOrder = leg.VoyageLegOrder
-                          }).OrderBy(x => x.LegOrder).ToListAsync();
-
-        return legs;
+        return records.Select(x => new RecordDto()
+        {
+            RecordId = x.RecordId,
+            RecordName = x.RecordName ?? string.Empty,
+            UserId = userId,
+            RouteDistance = x.RouteDistance,
+            ReductionFactors = new ReductionFactors
+            {
+                Annual = x.AnnualReductionFactor,
+                Spring = x.SpringReductionFactor,
+                Summer = x.SummerReductionFactor,
+                Fall = x.FallReductionFactor,
+                Winter = x.WinterReductionFactor
+            },
+            DeparturePort = x.DeparturePort,
+            ArrivalPort = x.ArrivalPort,
+            // Add UNLOCODE fields
+            DeparturePortUNLOCODE = x.DeparturePortUNLOCODE,
+            ArrivalPortUNLOCODE = x.ArrivalPortUNLOCODE,
+            VesselIMO = x.Vessel.IMONumber,
+            VesselName = x.Vessel.VesselName,
+            CalcType = x.CalcType,
+            CreatedDate = x.CreatedDate
+        }).ToList();
     }
     catch (Exception)
     {
@@ -87,112 +47,138 @@ public async Task<List<RecordLegInfo>> GetVoyageLegsAsync(string recordId, strin
     }
 }
 
-
-#####################################################################################################################################################################
-
-public async Task<List<LegModel>> GetRouteLegsList(string recordId)
-{
-    List<LegModel> result = [];
-    try
-    {
-        // Get actual logged-in user ID instead of hardcoded "1"
-        string userId = GetCurrentUserId(); // Implement this method to get current user
-        var response = await _httpClient.GetAsync($"{Endpoints.ROUTE_LEGS_LIST}?userId={userId}&recordId={recordId}");
-        response.EnsureSuccessStatusCode();
-        result = await response.Content.ReadFromJsonAsync<List<LegModel>>();
-    }
-    catch (Exception ex)
-    {
-        throw;
-    }
-
-    return result;
-}
-
-// 2. Fix the controller - remove redundant filtering
-[HttpGet("legs")]
-public async Task<IActionResult> GetRecordLegs(string userId, string recordId)
+// Updated Repository Method
+public async Task<List<RecordInfo>> GetRecordListAsync(string userId)
 {
     try
     {
-        var legs = await _recordService.GetVoyageLegsAsync(recordId, userId);
-        // Remove this line as filtering is now done in service:
-        // legs = legs.Where(x => x.RecordId == recordId).ToList();
-        return Ok(legs);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "error occured on GetVoyageLegs");
-        return StatusCode((int)StatusCodes.Status500InternalServerError);
-    }
-}
-
-// 3. Fix the service method to filter by user
-public async Task<List<RecordLegInfo>> GetVoyageLegsAsync(string recordId, string userId)
-{
-    try
-    {
-        if (!Guid.TryParse(recordId, out Guid recordGuid))
-            return new List<RecordLegInfo>();
+        var routeList = new List<RecordInfo>();
 
         if (!Guid.TryParse(userId, out Guid userGuid))
-            return new List<RecordLegInfo>();
+            return routeList;
 
-        var legCount = await (from rec in _dbContext.Records
-                              join rv in _dbContext.RouteVersions on rec.RecordId equals rv.RecordId
-                              join leg in _dbContext.VoyageLegs on rv.RouteVersionId equals leg.RouteVersionId
-                              join ru in _dbContext.RecordUsers on rec.RecordId equals ru.RecordId // Add user mapping
-                              where rec.IsActive == true && rec.RecordId == recordGuid && ru.UserId == userGuid
-                              select leg).CountAsync();
+        var routeListQuery = (from rec in _dbContext.Records
+                              join ru in _dbContext.RecordUsers.Where(r => r.IsActive == true) on rec.RecordId equals ru.RecordId
+                              join rv in _dbContext.RecordVessels.Where(v => v.IsActive == true) on rec.RecordId equals rv.RecordId into vessels
+                              from ve in vessels.DefaultIfEmpty()
+                              join vessel in _dbContext.Vessels on ve.VesselId equals vessel.VesselId into vesselDetails
+                              from vd in vesselDetails.DefaultIfEmpty()
+                              where rec.IsActive == true && ru.UserId == userGuid
+                              select new RecordInfo()
+                              {
+                                  RecordId = rec.RecordId.ToString(),
+                                  RecordName = rec.RouteName,
+                                  UserId = ru.UserId.ToString(),
+                                  AnnualReductionFactor = rec.RecordReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Annual)!.ReductionFactor,
+                                  SpringReductionFactor = rec.RecordReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Spring)!.ReductionFactor,
+                                  SummerReductionFactor = rec.RecordReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Summer)!.ReductionFactor,
+                                  FallReductionFactor = rec.RecordReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Fall)!.ReductionFactor,
+                                  WinterReductionFactor = rec.RecordReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Winter)!.ReductionFactor,
+                                  RouteDistance = rec.RouteDistance ?? 0,
+                                  Vessel = new VesselInfo()
+                                  {
+                                      IMONumber = vd != null ? vd.VesselImo : string.Empty,
+                                      VesselName = vd != null ? vd.VesselName : string.Empty,
+                                      Breadth = default,
+                                      Flag = vd != null ? vd.Flag : string.Empty
+                                  },
+                                  VoyageDate = rec.ShortVoyageRecord != null ? rec.CreatedDate : null,
+                                  CalcType = rec.ShortVoyageRecord != null ? "Short Voyage Reduction Factor" : "Reduction Factor",
+                                  CreatedDate = rec.CreatedDate,
+                              }).AsQueryable();
 
-        if (legCount <= 1)
-            return new List<RecordLegInfo>();
+        // Updated query to include UNLOCODE
+        var query = (from rv in _dbContext.RouteVersions
+                     join rec in _dbContext.Records on rv.RecordId equals rec.RecordId
+                     join ru in _dbContext.RecordUsers.Where(r => r.IsActive == true) on rec.RecordId equals ru.RecordId
+                     join vl in _dbContext.RoutePoints on rv.RouteVersionId equals vl.RouteVersionId
+                     where rv.IsActive == true && vl.IsActive == true && rec.IsActive == true && ru.UserId == userGuid
+                     group vl by new { rv.RecordId, rv.RouteVersionId } into g
+                     select new RecordInfo
+                     {
+                         RecordId = g.Key.RecordId.ToString(),
+                         DeparturePort = g.OrderBy(v => v.RoutePointOrder)
+                             .Select(v => v.GeoPoint.Port.PortName).FirstOrDefault(),
+                         ArrivalPort = g.OrderByDescending(v => v.RoutePointOrder)
+                             .Select(v => v.GeoPoint.Port.PortName).FirstOrDefault(),
+                         // Add UNLOCODE fields
+                         DeparturePortUNLOCODE = g.OrderBy(v => v.RoutePointOrder)
+                             .Select(v => v.GeoPoint.Port.UNLOCODE).FirstOrDefault(),
+                         ArrivalPortUNLOCODE = g.OrderByDescending(v => v.RoutePointOrder)
+                             .Select(v => v.GeoPoint.Port.UNLOCODE).FirstOrDefault()
+                     }).AsQueryable();
 
-        var legs = await (from rec in _dbContext.Records
-                          join rv in _dbContext.RouteVersions on rec.RecordId equals rv.RecordId
-                          join leg in _dbContext.VoyageLegs on rv.RouteVersionId equals leg.RouteVersionId
-                          join apo in _dbContext.Ports on leg.ArrivalPort equals apo.GeoPointId
-                          join dpo in _dbContext.Ports on leg.DeparturePort equals dpo.GeoPointId
-                          join recVessel in _dbContext.RecordVessels on rec.RecordId equals recVessel.RecordId into vessels
-                          from rv_vessel in vessels.DefaultIfEmpty()
-                          join vessel in _dbContext.Vessels on rv_vessel.VesselId equals vessel.VesselId into vesselDetails
-                          from vd in vesselDetails.DefaultIfEmpty()
-                          join ru in _dbContext.RecordUsers on rec.RecordId equals ru.RecordId // Add user mapping join
-                          where rec.IsActive == true && rec.RecordId == recordGuid && rv.IsActive == true && ru.UserId == userGuid // Filter by user
-                          select new RecordLegInfo()
-                          {
-                              RecordId = rec.RecordId.ToString(),
-                              RecordLegId = leg.VoyageLegId.ToString(),
-                              RecordLegName = string.Empty,
-                              AnnualReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Annual)!.ReductionFactor ?? default,
-                              SpringReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Spring)!.ReductionFactor ?? default,
-                              SummerReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Summer)!.ReductionFactor ?? default,
-                              FallReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Fall)!.ReductionFactor ?? default,
-                              WinterReductionFactor = leg.VoyageLegReductionFactors.FirstOrDefault(an => an.SeasonType == (byte)SeasonType.Winter)!.ReductionFactor ?? default,
-                              DeparturePort = dpo.PortName,
-                              DeparturePortId = dpo.GeoPointId.ToString(),
-                              ArrivalPort = apo.PortName,
-                              ArrivalPortId = apo.GeoPointId.ToString(),
-                              RouteDistance = leg.Distance ?? 0,
-                              VesselIMO = vd != null ? vd.VesselImo : string.Empty,
-                              VesselName = vd != null ? vd.VesselName : string.Empty,
-                              LegOrder = leg.VoyageLegOrder
-                          }).OrderBy(x => x.LegOrder).ToListAsync();
-
-        return legs;
+        var records = await (from rl in routeListQuery
+                             join p in query on rl.RecordId equals p.RecordId
+                             select new RecordInfo()
+                             {
+                                 RecordId = rl.RecordId,
+                                 RecordName = rl.RecordName,
+                                 UserId = rl.UserId,
+                                 AnnualReductionFactor = rl.AnnualReductionFactor,
+                                 SpringReductionFactor = rl.SpringReductionFactor,
+                                 SummerReductionFactor = rl.SummerReductionFactor,
+                                 FallReductionFactor = rl.FallReductionFactor,
+                                 WinterReductionFactor = rl.WinterReductionFactor,
+                                 DeparturePort = p.DeparturePort,
+                                 ArrivalPort = p.ArrivalPort,
+                                 // Include UNLOCODE in final result
+                                 DeparturePortUNLOCODE = p.DeparturePortUNLOCODE,
+                                 ArrivalPortUNLOCODE = p.ArrivalPortUNLOCODE,
+                                 RouteDistance = rl.RouteDistance,
+                                 Vessel = rl.Vessel,
+                                 VoyageDate = rl.VoyageDate,
+                                 CalcType = rl.CalcType,
+                                 CreatedDate = rl.CreatedDate,
+                             }).ToListAsync();
+        return records;
     }
-    catch (Exception)
+    catch (Exception ex)
     {
+        _logger.LogError(ex, $"An error occurred while fetching records: {ex.Message}");
         throw;
     }
 }
 
-private string GetCurrentUserId()
+
+// Updated RecordDto
+public class RecordDto
 {
+    public string RecordId { get; set; }
+    public string RecordName { get; set; }
+    public string UserId { get; set; }
+    public double RouteDistance { get; set; }
+    public ReductionFactors ReductionFactors { get; set; }
+    public string DeparturePort { get; set; }
+    public string ArrivalPort { get; set; }
+    // Add UNLOCODE properties
+    public string DeparturePortUNLOCODE { get; set; }
+    public string ArrivalPortUNLOCODE { get; set; }
+    public string VesselIMO { get; set; }
+    public string VesselName { get; set; }
+    public string CalcType { get; set; }
+    public DateTime CreatedDate { get; set; }
+}
 
-    // return HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    // return _userService.GetCurrentUserId();
-    // return _authService.GetLoggedInUserId();
-
-    throw new NotImplementedException("Implement based on your authentication system");
+// Updated RecordInfo
+public class RecordInfo
+{
+    public string RecordId { get; set; }
+    public string RecordName { get; set; }
+    public string UserId { get; set; }
+    public double AnnualReductionFactor { get; set; }
+    public double SpringReductionFactor { get; set; }
+    public double SummerReductionFactor { get; set; }
+    public double FallReductionFactor { get; set; }
+    public double WinterReductionFactor { get; set; }
+    public string DeparturePort { get; set; }
+    public string ArrivalPort { get; set; }
+    // Add UNLOCODE properties
+    public string DeparturePortUNLOCODE { get; set; }
+    public string ArrivalPortUNLOCODE { get; set; }
+    public double RouteDistance { get; set; }
+    public VesselInfo Vessel { get; set; }
+    public DateTime? VoyageDate { get; set; }
+    public string CalcType { get; set; }
+    public DateTime CreatedDate { get; set; }
 }
