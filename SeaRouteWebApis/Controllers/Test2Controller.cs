@@ -1,4 +1,141 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SeaRouteModel.Models;
+
+[HttpPost("route")]
+public async Task<IActionResult> CalculateVoyageLegReductionFactors([FromBody] VoyageLegReductionFactorRequest request)
+{
+    try
+    {
+        // 1. Abstract the creation of route coordinates
+        var allCoordinates = ExtractRouteCoordinates(request.VoyageLegs);
+
+        // Calculate route-level reduction factors
+        var routeResult = await CalculateReductionFactorsForSegment(allCoordinates, request.ExceedanceProbability, request.Correction);
+        if (routeResult == null)
+        {
+            return BadRequest("Failed to calculate route reduction factors.");
+        }
+
+        // 2. Abstract the calculation of voyage leg reduction factors
+        var voyageLegResults = await CalculateVoyageLegReductionFactors(request.VoyageLegs, request.ExceedanceProbability, routeResult, request.Correction);
+        if (voyageLegResults == null)
+        {
+            return BadRequest("Failed to calculate voyage leg reduction factors.");
+        }
+
+        var response = new VoyageLegReductionFactorResponse
+        {
+            Route = new RouteReductionFactors
+            {
+                ReductionFactors = new ReductionFactors
+                {
+                    Annual = routeResult.Annual,
+                    Spring = routeResult.Spring,
+                    Summer = routeResult.Summer,
+                    Fall = routeResult.Fall,
+                    Winter = routeResult.Winter
+                }
+            },
+            VoyageLegs = voyageLegResults
+        };
+
+        return Ok(response);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error calculating voyage leg reduction factors.");
+        return StatusCode(500, $"Error calculating voyage leg reduction factors: {ex.Message}");
+    }
+}
+
+/// <summary>
+/// Extracts and deduplicates coordinates from all voyage legs to create route coordinates
+/// </summary>
+/// <param name="voyageLegs">List of voyage legs containing coordinates</param>
+/// <returns>Deduplicated list of coordinates for the entire route</returns>
+private List<Coordinate> ExtractRouteCoordinates(List<VoyageLeg> voyageLegs)
+{
+    var allCoordinates = new List<Coordinate>();
+    var coordinateSet = new HashSet<string>();
+
+    foreach (var leg in voyageLegs)
+    {
+        foreach (var coord in leg.Coordinates)
+        {
+            var coordKey = $"{coord.Latitude},{coord.Longitude}";
+            if (coordinateSet.Add(coordKey))
+            {
+                allCoordinates.Add(coord);
+            }
+        }
+    }
+
+    return allCoordinates;
+}
+
+/// <summary>
+/// Calculates reduction factors for individual voyage legs and applies corrections
+/// </summary>
+/// <param name="voyageLegs">List of voyage legs to process</param>
+/// <param name="exceedanceProbability">Exceedance probability for calculations</param>
+/// <param name="routeResult">Route-level reduction factors for correction</param>
+/// <param name="applyCorrection">Whether to apply voyage leg correction</param>
+/// <returns>List of voyage leg reduction factors</returns>
+private async Task<List<VoyageLegReductionFactors>> CalculateVoyageLegReductionFactors(
+    List<VoyageLeg> voyageLegs,
+    double exceedanceProbability,
+    ReductionFactors routeResult,
+    bool applyCorrection)
+{
+    var voyageLegResults = new List<VoyageLegReductionFactors>();
+
+    foreach (var leg in voyageLegs)
+    {
+        var legResult = await CalculateReductionFactorsForSegment(leg.Coordinates, exceedanceProbability, false);
+        if (legResult == null)
+        {
+            _logger.LogError($"Failed to calculate reduction factors for voyage leg {leg.VoyageLegOrder}.");
+            return null;
+        }
+
+        // Apply voyage leg correction using the route result
+        var correctedFactors = ApplyVoyageLegCorrection(legResult, routeResult, applyCorrection);
+
+        voyageLegResults.Add(new VoyageLegReductionFactors
+        {
+            VoyageLegOrder = leg.VoyageLegOrder,
+            ReductionFactors = correctedFactors
+        });
+    }
+
+    return voyageLegResults;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using Microsoft.AspNetCore.Mvc;
 using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
 using SeaRouteModel.Models;
 using SeaRouteWebApis.Controllers;

@@ -1,69 +1,78 @@
 ﻿@page "/MyRoutes"
 @using System.Globalization
+@using NextGenEngApps.DigitalRules.CRoute.Models
+@* //@using static NextGenEngApps.DigitalRules.CRoute.Models.RouteList *@
 @inject NavigationManager navigationManager;
+@inject NextGenEngApps.DigitalRules.CRoute.Services.RouteService routeService;
 @rendermode InteractiveServer
+@inject CRoute.Services.ICRouteAPIService apiService;
 @using System.IO
-@using SeaRouteBlazorServerApp.Components.Services
-@using SeaRouteModel.Models
 @inject IJSRuntime JSRuntime;
-@inject IApiService apiService;
-@inject RouteService routeService;
+
 <div class="cls_myroute_content">
-
-        <div class="cls_route_div_rep"  >
-            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center"  >
-                <label class="cls_myroute_label">Sort by</label>
-                <div class="dropdown">
-                    <button class="dropdown-button" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <img src="@currentIcon" class="dropdown-icon" /> @currentLabel
-                    </button>
-
-                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                        <div class="dropdown-item-container">
-                            <img src="images/route_name.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("name", "asc", "Route Name", "images/route_name.svg"))">Route Name</a>
-                        </div>
-                        <div class="dropdown-item-container">
-                            <img src="images/loading_port.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("pod", "asc", "Port of Departure", "images/loading_port.svg"))">Port of Departure</a>
-                        </div>
-                        <div class="dropdown-item-container">
-                            <img src="images/location pin.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("Arr", "asc", "Port of Arrival", "images/location pin.svg"))">Port of Arrival</a>
-                        </div>
-                        <div class="dropdown-item-container">
-                            <img src="images/date_of_voyage.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("date", "asc", "Date of Voyage", "images/date_of_voyage.svg"))">Date of Voyage</a>
-                        </div>
-                        <div class="dropdown-item-container">
-                            <img src="images/Calculate.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("rf", "asc", "Reduction Factor", "images/Calculate.svg"))">Reduction Factor</a>
-                        </div>
-                        <div class="dropdown-item-container">
-                            <img src="images/vessel_IMO_icon.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("imo", "asc", "Vessel IMO", "images/vessel_IMO_icon.svg"))">Vessel IMO</a>
-                        </div>
-                        <div class="dropdown-item-container">
-                            <img src="images/Vessel_name_icon.svg" class="dropdown-item-icon" />
-                            <a class="dropdown-item" @onclick="@(() => SortedList("vesselname", "asc", "Vessel Name", "images/Vessel_name_icon.svg"))">Vessel Name</a>
-                        </div>
-                    </div>
-                </div>
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <div class="alert alert-success d-flex align-items-center delete_message" role="alert">
+            <symbol id="check-circle-fill" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
+            </symbol>
+            <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Success:"><use xlink:href="#check-circle-fill" /></svg>
+            <div>
+                @Message
             </div>
         </div>
+    }
+    <div class="cls_route_div_rep">
+        <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+            @* <div>
+<p class="p-0 m-0">Sort by</p>
+</div>
+<div class="dropdown">
+<button class="btn btn-secondary dropdown-toggle bg-white text-black rounded-pill" type="button"
+id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+<img src="@currentIcon" class="px-2 mb-1" /> @currentLabel
+</button>
 
-
-   
-        <div class="cls_route_div_rep"  >
-            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center"  >
-                <h3 class="cls_myroute_label"  >
-                    Select and show on map
-                </h3>
-            </div>
+<div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/route_name.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(() => SortedList("name", "asc", "Route Name", "Assets/route_name.svg"))">Route Name</a>
+</div>
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/departure_anchor.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(() => SortedList("pod", "asc", "Port of Departure", "Assets/departure_anchor.svg"))">Port of Departure</a>
+</div>
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/location pin.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("Arr","asc", "Port of Arrival", "Assets/location pin.svg"))">Port of Arrival</a>
+</div>
+@* <div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/date_of_voyage.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("date","asc", "Date of Voyage", "Assets/date_of_voyage.svg"))">Date of Voyage</a>
+</div>
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/Distance.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("dis","asc", "Route Distance", "Assets/Distance.svg"))">Route Distance</a>
+</div>
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/Annual Reduction Factor.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("rf","asc", "Reduction Factor", "Assets/Annual Reduction Factor.svg"))">Reduction Factor</a>
+</div>
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/vessel_IMO_icon.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("imo","asc", "Vessel IMO", "Assets/vessel_IMO_icon.svg"))">Vessel IMO</a>
+</div>
+<div class="d-flex gap-1 justify-content-center align-items-center ps-1 m-1">
+<img src="Assets/Vessel_name_icon.svg" class="pb-1" style="width:15px;" />
+<a class="dropdown-item ps-2 ms-1" @onclick="@(()=>SortedList("vesselname","asc", "Vessel Name", "Assets/Vessel_name_icon.svg"))">Vessel Name</a>
+</div>
+</div>
+</div> *@
         </div>
-
-
-
+    </div>
+    <div class="px-4 pt-3">
+        <p class="m-0 p-0">Select and show on map</p>
+    </div>
     <div class="cls_myroute_table">
         <table>
             <thead>
@@ -73,86 +82,93 @@
                         <input type="checkbox" @onclick="SelectAll" id="checkAll" @bind="CheckAll">
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/route_name.svg" class="cls_myroute_table_img" />
-                            Route Name
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("name", "Route Name", "Assets/route_name.svg"))" style="cursor:pointer">
+                            <img src="Assets/route_name.svg" class="cls_myroute_table_img" />
+                            <a>Route Name</a> @GetSortIcon("name")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/calculation_type.svg" class="cls_myroute_table_img" />
-                            Calcs Type
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("calc", "Calcs Type", "Assets/calculation_type.svg"))" style="cursor:pointer">
+                            <img src="Assets/calculation_type.svg" class="cls_myroute_table_img" />
+                            Calcs Type @GetSortIcon("calc")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/vessel_IMO_icon.svg" class="cls_myroute_table_img" />
-                            Vessel<br />IMO
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("imo", "Vessel IMO", "Assets/vessel_IMO_icon.svg"))" style="cursor:pointer">
+                            <img src="Assets/vessel_IMO_icon.svg" class="cls_myroute_table_img" />
+                            Vessel<br />IMO @GetSortIcon("imo")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/Vessel_name_icon.svg" class="cls_myroute_table_img" />
-                            Vessel<br />Name
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("vesselname", "Vessel Name", "Assets/Vessel_name_icon.svg"))" style="cursor:pointer">
+                            <img src="Assets/Vessel_name_icon.svg" class="cls_myroute_table_img" />
+                            Vessel<br />Name @GetSortIcon("vesselname")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/loading_port.svg" class="cls_myroute_table_img" />
-                            Port of<br />Departure
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("pod", "Port of Departure", "Assets/departure_anchor.svg"))" style="cursor:pointer">
+                            <img src="Assets/departure_anchor.svg" class="cls_myroute_table_img" />
+                            Port of<br />Departure @GetSortIcon("pod")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/location pin.svg" class="cls_myroute_table_img" />
-                            Port of<br />Arrival
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("Arr", "Port of Arrival", "Assets/location pin.svg"))" style="cursor:pointer">
+                            <img src="Assets/location pin.svg" class="cls_myroute_table_img" />
+                            Port of<br />Arrival @GetSortIcon("Arr")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/routes.png" class="cls_myroute_table_img" />
-                            Route<br />Distance
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("dis", "Route Distance", "Assets/Distance.svg"))" style="cursor:pointer">
+                            <img src="Assets/Distance.svg" class="cls_myroute_table_img" />
+                            Route<br />Distance (nm) @GetSortIcon("dis")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/Calculate.svg" class="cls_myroute_table_img" />
-                            Short Voyage<br />Reduction Factor
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("svrf", "Short Voyage Reduction Factor", "img/Limited short voyage-icon@1x.png"))" style="cursor:pointer">
+                            <img src="img/Limited short voyage-icon@1x.png" class="cls_myroute_table_img" />
+                            Short Voyage<br />Reduction Factor @GetSortIcon("svrf")
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/reduction-factor.png" class="cls_myroute_table_img" />
-                            Reduction<br />Factor
+
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("rf", " Annual Reduction Factor", "Assets/Annual Reduction Factor.svg"))" style="cursor:pointer">
+                            <img src="Assets/Annual Reduction Factor.svg" class="cls_myroute_table_img" />
+                            Annual Reduction<br />Factor
+                            @GetSortIcon("rf")
                         </div>
+
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/Spring.svg" class="cls_myroute_table_img" />
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("sprRF", " Annual Reduction Factor", "Assets/Spring.svg"))" style="cursor:pointer">
+                            <img src="Assets/Spring.svg" class="cls_myroute_table_img" />
                             Spring
+                            <p>(Mar-May) @GetSortIcon("sprRF")</p>
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/Summer.svg" class="cls_myroute_table_img" />
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("sumRF", " Annual Reduction Factor", "Assets/Summer.svg"))" style="cursor:pointer">
+                            <img src="Assets/Summer.svg" class="cls_myroute_table_img" />
                             Summer
+                            <p>(Jun-Aug) @GetSortIcon("sumRF")</p>
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/Fall.svg" class="cls_myroute_table_img" />
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("fallRF", " Annual Reduction Factor", "Assets/Fall.svg"))" style="cursor:pointer">
+                            <img src="Assets/Fall.svg" class="cls_myroute_table_img" />
                             Fall
+                            <p>(Sep-Nov) @GetSortIcon("fallRF")</p>
                         </div>
                     </th>
                     <th>
-                        <div class="cls_table_div">
-                            <img src="images/Winter.svg" class="cls_myroute_table_img" />
+                        <div class="cls_table_div" @onclick="@(() => ToggleSortOrder("winRF", " Annual Reduction Factor", "Assets/Winter.svg"))" style="cursor:pointer">
+                            <img src="Assets/Winter.svg" class="cls_myroute_table_img" />
                             Winter
+                            <p>(Nov-Feb) @GetSortIcon("winRF")</p>
                         </div>
                     </th>
                     <th class="cls_width3">
                         <div class="cls_table_div">
-                            <img src="images/Actions.svg" class="cls_myroute_table_img" />
+                            <img src="Assets/Actions.svg" class="cls_myroute_table_img" />
                             Actions
                         </div>
                     </th>
@@ -167,7 +183,7 @@
                         var routeId = item.RecordId;
                         var routeName = item.RecordName;
                         <tr class="cls_myroute_table_tr_selected">
-                            <td >
+                            <td>
                                 @if (item.Expanded)
                                 {
                                     <span class="expand-btn" @onclick="@(() => ToggleExpand(item))">−</span>
@@ -177,8 +193,8 @@
                                     <span class="expand-btn" @onclick="@(() => ToggleExpand(item))">+</span>
                                 }
                             </td>
-                            <td >
-                                <input  type="checkbox" @onclick="@(() => SelectRoute(routeId))" @bind="item.IsSelected">
+                            <td>
+                                <input type="checkbox" @onclick="@(() => SelectRoute(routeId))" @bind="item.IsSelected">
                             </td>
                             <td>@item.RecordName</td>
                             <td>Reduction Factor</td>
@@ -186,19 +202,66 @@
                             <td>@item.VesselName</td>
                             <td>@item.DeparturePort</td>
                             <td>@item.ArrivalPort</td>
-                            <td>@Math.Round(item.RouteDistance).ToString() nm</td>
-                            <td>@Math.Round(item.ReductionFactor, 2)</td>
-                            <td>@Math.Round(item.ReductionFactor, 2)</td>
-                            <td >@GetSeasonValue(item, "Spring")</td>
-                            <td >@GetSeasonValue(item, "Summer")</td>
-                            <td >@GetSeasonValue(item, "Fall")</td>
-                            <td >@GetSeasonValue(item, "Winter")</td>
-                            <td >
-                                <div >
-                                    <a href="images/report.png" target="_blank"><img src="images/download-icon-10@1x.png" class="cls_myroute_table_img" /></a>
-                                    <img src="images/edit.svg" class="cls_myroute_table_img" />
-                                    <a @onclick="@(() => DeleteVesselRoute(routeId))"><img src="images/remove.svg" class="cls_myroute_table_img" /></a>
+                            <td>@Math.Round(item.RouteDistance).ToString()</td>
+                            @* <td>@Math.Round(item.ReductionFactor, 2)</td>
+<td>@Math.Round(item.ReductionFactor, 2)</td> *@
+                            <td></td>
+                            <td>@item.ReductionFactors.Annual.ToString("0.00")</td>
+                            <td>@item.ReductionFactors.Spring.ToString("0.00")</td>
+                            <td>@item.ReductionFactors.Summer.ToString("0.00")</td>
+                            <td>@item.ReductionFactors.Fall.ToString("0.00")</td>
+                            <td>@item.ReductionFactors.Winter.ToString("0.00")</td>
+                            <td>
+                                @* <div class="action-container" @onclick="() => ToggleActions(item)">
+
+@if (item.ShowActions)
+{
+<div class="action-options">
+<a @onclick="@(() => ShowAbsReport(routeId))">
+<img src="Assets/Submit.svg" class="cls_myroute_table_img" />
+</a>
+<a href="Assets/report.png" target="_blank">
+<img src="Assets/download-icon-10@1x.png" class="cls_myroute_table_img" />
+</a>
+<img src="Assets/edit.svg" class="cls_myroute_table_img" />
+<a @onclick="@(() => DeleteRoute(routeId))">
+<img src="Assets/remove.svg" class="cls_myroute_table_img" />
+</a>
+</div>
+}
+else
+{
+<img src="Assets/Action_menu.svg" class="cls_myroute_table_img" />
+}
+</div> *@
+                                <div class="action-container dropdown">
+                                    <button class="btn" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <img src="Assets/Action_menu.svg" class="cls_myroute_table_img" />
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                        <li>
+                                            <a class="dropdown-item" @onclick="@(() => ShowAbsReport(routeId))" style="cursor:pointer;">
+                                                <img src="Assets/Submit.svg" class="cls_myroute_table_img" /> Submit Report
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="Assets/report.png" target="_blank" style="cursor:pointer;">
+                                                <img src="Assets/download-icon-10@1x.png" class="cls_myroute_table_img" /> Download Report
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" @onclick="@(() => EditRoute(routeId))" style="cursor:pointer;">
+                                                <img src="Assets/edit.svg" class="cls_myroute_table_img" /> Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" @onclick="@(() => DeleteRoute(routeId))" style="cursor:pointer;">
+                                                <img src="Assets/remove.svg" class="cls_myroute_table_img" /> Delete
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
+
                             </td>
                         </tr>
 
@@ -207,25 +270,26 @@
                             @foreach (var childItem in item.Legs)
                             {
                                 <tr class="cls_myroute_table_tr">
-                                    <td ></td>
-                                    <td ></td>
+                                    <td></td>
+                                    <td></td>
                                     <td>@childItem.RecordLegName</td>
                                     <td></td>
-                                     <td>@item.VesselIMO</td>
-                                     <td>@item.VesselName</td>
-                                     <td>@childItem.DeparturePort</td>
+                                    <td>@item.VesselIMO</td>
+                                    <td>@item.VesselName</td>
+                                    <td>@childItem.DeparturePort</td>
                                     <td>@childItem.ArrivalPort</td>
-                                    <td>@Math.Round(childItem.Distance) nm</td>
-                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
-                                    <td>@Math.Round(childItem.ReductionFactor, 3)</td>
-
-                                    <td >@GetSeasonValue(childItem, "Spring")</td>
-                                    <td >@GetSeasonValue(childItem, "Summer")</td>
-                                    <td >@GetSeasonValue(childItem, "Fall")</td>
-                                    <td >@GetSeasonValue(childItem, "Winter")</td>
-                                    <td >
-                                        <div >
-                                            <img src="images/download-icon-10@1x.png" class="cls_myroute_table_img" />
+                                    <td>@Math.Round(childItem.Distance) </td>
+                                    @* <td>@Math.Round(childItem.ReductionFactor, 3)</td>
+<td>@Math.Round(childItem.ReductionFactor, 3)</td> *@
+                                    <td></td>
+                                    <td>@childItem.ReductionFactors.Annual.ToString("0.00")</td>
+                                    <td>@childItem.ReductionFactors.Spring.ToString("0.00")</td>
+                                    <td>@childItem.ReductionFactors.Summer.ToString("0.00")</td>
+                                    <td>@childItem.ReductionFactors.Fall.ToString("0.00")</td>
+                                    <td>@childItem.ReductionFactors.Winter.ToString("0.00")</td>
+                                    <td>
+                                        <div>
+                                            <img src="Assets/download-icon-10@1x.png" class="cls_myroute_table_img" />
                                         </div>
                                     </td>
                                 </tr>
@@ -236,189 +300,362 @@
             </tbody>
         </table>
     </div>
-
-
     @if (routelist != null && routelist.Any(x => x.IsSelected))
     {
-        <div class="view-map-footer">
-            <img src="images/map-icon@1x.png" class="view-map-icon" />
-            <a class="view-map-link" @onclick="@(() => ViewOnMap())">
-                View on map
-                <img src="images/right arrow.png" class="arrow-icon" />
-            </a>
+        <div class="d-flex w-100 gap-2 px-5 pb-4 pt-4">
+            <img src="Assets/map-icon@1x.png" style="height:20px;" />
+            <div class="d-flex justify-content-center align-items-center gap-1">
+                <a @onclick="@(() => ViewOnMap())"><span style="cursor:pointer;">View on map</span></a>
+                <div style="height:20px; width:10px;">
+                    <img src="Assets/right arrow.png" />
+                </div>
+            </div>
         </div>
     }
+
+
 </div>
 
+
+
+
+
+<script>
+    function toggleRow(button) {
+    const row = button.parentElement.parentElement.nextElementSibling;
+    const isVisible = row.style.display === 'table-row';
+    row.style.display = isVisible ? 'none' : 'table-row';
+    button.textContent = isVisible ? '+' : '−';
+    }
+</script>
+
+
+
 @code {
+
+
+    [Parameter]
+    public EventCallback<string> OnShowAbsReport { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnEditRoute { get; set; }
+
+    private string Message { get; set; } = string.Empty;
     List<RouteListModel> routelist { get; set; } = new();
     protected override async Task OnInitializedAsync()
     {
-        var list = await GetRouteList();
-        routelist = list;
-        routelist = routelist.OrderBy(x => x.RecordName).ToList();
+        await BindRouteList();
 
         var items = routeService.RouteNames;
         if (items != null)
-{
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                string routeId = items[i].Key;
+                var item = routelist.FirstOrDefault(x => x.RecordId == routeId);
+                if (item != null)
+                    item.IsSelected = true;
+            }
+            CheckAll = items.Count == routelist.Count ? true : false;
+        }
+    }
+    private void ToggleActions(RouteListModel item)
+    {
+        item.ShowActions = !item.ShowActions;
+    }
+    private string GetCorrectedReductionFactor(decimal originalFactor, string seasonType)
+    {
+        originalFactor = Math.Max(originalFactor, 0.80m);
+
+        decimal correctedFactor;
+
+        switch (seasonType)
+        {
+            case "Summer":
+                correctedFactor = originalFactor * 0.9m;
+                break;
+            case "Spring":
+                correctedFactor = originalFactor * 0.93m;
+                break;
+            case "Fall":
+                correctedFactor = originalFactor * 0.97m;
+                break;
+            case "Annual":
+            case "Winter":
+            default:
+                correctedFactor = originalFactor;
+                break;
+        }
 
 
-for (int i = 0; i < items.Count; i++)
-{
-string routeId = items[i].Key;
-var item = routelist.FirstOrDefault(x => x.RecordId == routeId);
-if (item != null)
-item.IsSelected = true;
-}
-CheckAll = items.Count == routelist.Count ? true : false;
-}
-}
-private DotNetObjectReference<MyRoutes>? objRef;
-private async Task<List<RouteListModel>> GetRouteList()
-{
-try
-{
-var routes = await apiService.GetRouteList();
-if (routes == null)
-return new List<RouteListModel>();
+        if (seasonType == "Annual" || seasonType == "Winter")
+        {
+            correctedFactor = Math.Max(correctedFactor, 0.80m);
+        }
 
-return routes;
-}
-catch (Exception ex)
-{
-throw;
-}
+        return correctedFactor.ToString("F2");
+    }
+    private DotNetObjectReference<MyRoutes>? objRef;
 
-}
+    private async Task<List<RouteListModel>> GetRouteList()
+    {
+        try
+        {
+            var routes = await apiService.GetRouteList();
+            if (routes == null)
+                return new List<RouteListModel>();
 
-private string GetSeasonValue(dynamic item, string season)
-{
-    // For the demo, we'll return placeholder values
-    // In real implementation, you would get these from your data model
-    if (season == "Spring") return "0.85";
-    if (season == "Summer") return "0.85";
-    if (season == "Fall") return "0.85";
-    if (season == "Winter") return "0.85";
-   
-    return "0.80";
-}
-bool CheckAll { get; set; } = false;
-async Task ToggleExpand(RouteListModel route)
-{
-route.Expanded = !route.Expanded;
-var legs = await apiService.GetRouteLegsList(route.RecordId);
-if (legs.Count > 0)
-{
-route.Legs = legs;
-StateHasChanged();
-}
+            return routes;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
 
-await Task.CompletedTask;
-}
-void SelectAll()
-{
-for (int i = 0; i < routelist.Count; i++)
-{
-routelist[i].IsSelected = !CheckAll;
-}
-CheckAll = routelist.Where(x => x.IsSelected == true).Count() == routelist.Count();
-}
-void SelectRoute(string routeId)
-{
-var route = routelist.Where(x => x.RecordId == routeId).First();
-route.IsSelected = !route.IsSelected;
+    }
+    bool CheckAll { get; set; } = false;
+    async Task ToggleExpand(RouteListModel route)
+    {
+        route.Expanded = !route.Expanded;
+        var legs = await apiService.GetRouteLegsList(route.RecordId);
+        if (legs.Count > 0)
+        {
+            route.Legs = legs;
+            StateHasChanged();
+        }
 
-CheckAll = routelist.Where(x => x.IsSelected == true).Count() == routelist.Count();
-}
-void DeleteVesselRoute(string routeId)
-{
-var route = routelist.FirstOrDefault(x => x.RecordId == routeId);
-if (route != null)
-routelist.Remove(route);
-}
-void DownloadReport(string routeId)
-{
-// var filePath = Path.Combine(Env.WebRootPath, "files", "sample.pdf");
-// byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-// // Convert to base64
-// string base64String = Convert.ToBase64String(fileBytes);
-// // Trigger download
-// await JS.InvokeVoidAsync("saveAsFile", "sample.pdf", base64String);
-}
-void ViewOnMap()
-{
-if (routeService.RouteNames != null)
-routeService.RouteNames.Clear();
+        await Task.CompletedTask;
+    }
+    void SelectAll()
+    {
+        for (int i = 0; i < routelist.Count; i++)
+        {
+            routelist[i].IsSelected = !CheckAll;
+        }
+        CheckAll = routelist.Where(x => x.IsSelected == true).Count() == routelist.Count();
+    }
+    void SelectRoute(string routeId)
+    {
+        var route = routelist.Where(x => x.RecordId == routeId).First();
+        route.IsSelected = !route.IsSelected;
 
-var routes = routelist.Where(x => x.IsSelected == true)
-.Select(x => new KeyValuePair<string, string>(x.RecordId, x.DeparturePort + "-" + x.ArrivalPort)).ToList();
+        CheckAll = routelist.Where(x => x.IsSelected == true).Count() == routelist.Count();
 
-routeService.RouteNames = routes;
-navigationManager.NavigateTo("BackToMyRoutes");
-}
+    }
+    async Task DeleteRoute(string recordId)
+    {
+        string userId = "1";//todo
+        var result = await apiService.DeleteRouteAsync(recordId, userId);
+        if (result)
+        {
+            Message = "Route deleted successfully!";
+            await BindRouteList();
+            StateHasChanged();
+            await Task.Delay(3000);//showing message for 3 secs
+            await HideMessageAsync();
+        }
+    }
+    async Task HideMessageAsync()
+    {
+        Message = string.Empty;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
 
-void Back()
-{
-navigationManager.NavigateTo("/");
-}
+    void DownloadReport(string routeId)
+    {
+        // var filePath = Path.Combine(Env.WebRootPath, "files", "sample.pdf");
+        // byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
+        // // Convert to base64
+        // string base64String = Convert.ToBase64String(fileBytes);
+        // // Trigger download
+        // await JS.InvokeVoidAsync("saveAsFile", "sample.pdf", base64String);
+    }
+    void ViewOnMap()
+    {
+        if (routeService.RouteNames != null)
+            routeService.RouteNames.Clear();
 
-private string currentLabel = "Route Name A-Z";
-private string currentIcon = "Assets/route_name.svg";
+        var routes = routelist.Where(x => x.IsSelected == true)
+        .Select(x => new KeyValuePair<string, string>(x.RecordId, x.DeparturePort + "-" + x.ArrivalPort)).ToList();
 
-void SortedList(string sortName, string sortOrder, string label, string icon)
-{
-currentLabel = label;
-currentIcon = icon;
-switch (sortName)
-{
-case "name":
-{
-routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.RecordName) : routelist.OrderByDescending(x => x.RecordName)).ToList();
-break;
-}
-case "pod":
-{
-routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.DeparturePort) : routelist.OrderByDescending(x => x.DeparturePort)).ToList();
-break;
-}
-case "Arr":
-{
-routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ArrivalPort) : routelist.OrderByDescending(x => x.ArrivalPort)).ToList();
-break;
-}
-case "date":
-{
-routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.VoyageDate) : routelist.OrderByDescending(x => x.VoyageDate)).ToList();
-break;
+        routeService.RouteNames = routes;
+        navigationManager.NavigateTo("BackToMyRoutes");
+    }
+    void Back()
+    {
+        navigationManager.NavigateTo("/");
+    }
+    private string currentLabel = "Route Name";
+    private string currentIcon = "Assets/route_name.svg";
+    private async Task BindRouteList()
+    {
+        var list = await GetRouteList();
+        // foreach (var item in list)
+        // {
+        // item.SpringRF = GetCorrectedReductionFactor((decimal)item.ReductionFactor, "Spring");
+        // item.SummerRF = GetCorrectedReductionFactor((decimal)item.ReductionFactor, "Summer");
+        // item.FallRF = GetCorrectedReductionFactor((decimal)item.ReductionFactor, "Fall");
+        // item.WinterRF = GetCorrectedReductionFactor((decimal)item.ReductionFactor, "Winter");
+        // }
+        routelist = list;
+        routelist = routelist.OrderBy(x => x.RecordName).ToList();
+        await Task.CompletedTask;
+    }
 
-}
-case "imo":
+    private string currentSortColumn = "";
+    private Dictionary<string, string> sortOrders = new Dictionary<string, string>
 {
-routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.VesselIMO) : routelist.OrderByDescending(x => x.VesselIMO)).ToList();
-break;
+{ "name", "asc" },
+{ "pod", "asc" },
+{ "Arr", "asc" },
+{ "date", "asc" },
+{ "imo", "asc" },
+{ "vesselname", "asc" },
+{ "rf", "asc" },
+{ "dis", "asc" },
+{ "calc", "asc"},
+{"svrf", "asc"},
+{"sprRF", "asc"},
+{"sumRF", "asc"},
+{"fallRF", "asc"},
+{"winRF", "asc"}
+};
 
-}
-case "vesselname":
-{
-routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.VesselName) : routelist.OrderByDescending(x => x.VesselName)).ToList();
-break;
+    void ToggleSortOrder(string sortName, string label, string icon)
+    {
+        if (currentSortColumn != sortName)
+        {
+            currentSortColumn = sortName;
+        }
 
-}
-default:
-{
-routelist = routelist.OrderBy(x => x.RecordName).ToList();
-break;
-}
+        sortOrders[sortName] = sortOrders[sortName] == "asc" ? "desc" : "asc";
+        SortedList(sortName, sortOrders[sortName], label, icon);
+    }
 
-}
-}
+    string GetSortIcon(string sortName)
+    {
+        return currentSortColumn == sortName
+        ? (sortOrders[sortName] == "asc" ? "↑" : "↓")
+        : "";
+    }
 
-protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-if (firstRender)
-{
-objRef = DotNetObjectReference.Create(this);
-await JSRuntime.InvokeVoidAsync("initializeMap", objRef);
-}
-}
+    void SortedList(string sortName, string sortOrder, string label, string icon)
+    {
+
+        currentLabel = label;
+        currentIcon = icon;
+        switch (sortName)
+        {
+            case "name":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.RecordName) : routelist.OrderByDescending(x => x.RecordName)).ToList();
+                    break;
+                }
+            case "pod":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.DeparturePort) : routelist.OrderByDescending(x => x.DeparturePort)).ToList();
+                    break;
+                }
+            case "Arr":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ArrivalPort) : routelist.OrderByDescending(x => x.ArrivalPort)).ToList();
+                    break;
+                }
+            case "dis":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.RouteDistance) : routelist.OrderByDescending(x => x.RouteDistance)).ToList();
+                    break;
+
+                }
+            case "imo":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.VesselIMO) : routelist.OrderByDescending(x => x.VesselIMO)).ToList();
+                    break;
+
+                }
+            case "vesselname":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.VesselName) : routelist.OrderByDescending(x => x.VesselName)).ToList();
+                    break;
+
+                }
+            case "rf":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ReductionFactors.Annual) : routelist.OrderByDescending(x => x.ReductionFactors.Annual)).ToList();
+                    break;
+
+                }
+            case "calc":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.CalcType) : routelist.OrderByDescending(x => x.CalcType)).ToList();
+                    break;
+
+                }
+            case "svrf":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ShortVoyageRF) : routelist.OrderByDescending(x => x.ShortVoyageRF)).ToList();
+                    break;
+
+                }
+            case "sprRF":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ReductionFactors.Spring) : routelist.OrderByDescending(x => x.ReductionFactors.Spring)).ToList();
+                    break;
+
+                }
+            case "sumRF":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ReductionFactors.Summer) : routelist.OrderByDescending(x => x.ReductionFactors.Summer)).ToList();
+                    break;
+
+                }
+            case "fallRF":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ReductionFactors.Fall) : routelist.OrderByDescending(x => x.ReductionFactors.Fall)).ToList();
+                    break;
+
+                }
+            case "winRF":
+                {
+                    routelist = (sortOrder == "asc" ? routelist.OrderBy(x => x.ReductionFactors.Winter) : routelist.OrderByDescending(x => x.ReductionFactors.Winter)).ToList();
+                    break;
+
+                }
+
+
+            default:
+                {
+                    routelist = routelist.OrderBy(x => x.RecordName).ToList();
+                    break;
+                }
+
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // objRef = DotNetObjectReference.Create(this);
+            // await JSRuntime.InvokeVoidAsync("initializeMap", objRef);
+        }
+    }
+    private async Task ShowAbsReport(string routeId)
+    {
+        if (OnShowAbsReport.HasDelegate)
+        {
+            await OnShowAbsReport.InvokeAsync(routeId);
+        }
+    }
+
+    private async Task EditRoute(string routeId)
+    {
+        if (OnEditRoute.HasDelegate)
+        {
+            await OnEditRoute.InvokeAsync(routeId);
+        }
+    }
+
+
 }

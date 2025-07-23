@@ -121,105 +121,110 @@ public class BkWxRoutes : IBkWxRoutes
   
     public void ProcessWaveData(string sessionFolderPath, string waveData, string seasonType = "annual")
     {
-        // Validate seasonType
-        string[] validSeasons = { "annual", "spring", "summer", "fall", "winter" };
-        if (!validSeasons.Contains(seasonType.ToLower()))
-        {
-            _logger.LogWarning($"Invalid seasonType '{seasonType}' provided. Defaulting to 'annual'.");
-            seasonType = "annual";
-        }
-        // Define file paths within the session folder
-        string traFilePath = Path.Combine(sessionFolderPath, "F101.tra");
-        string ctlFilePath = Path.Combine(sessionFolderPath, "F101.ctl");
         try
         {
-            // Read files
-            if (File.Exists(ctlFilePath))
+            // Validate seasonType
+            string[] validSeasons = { "annual", "spring", "summer", "fall", "winter" };
+            if (!validSeasons.Contains(seasonType.ToLower()))
             {
-                using (FSW777 = FileIO.GetFileStreamWriter("check.dat", FileMode.Create))
+                Console.WriteLine($"Invalid seasonType '{seasonType}' provided. Defaulting to 'annual'.");
+                seasonType = "annual";
+            }
+            // Define file paths within the session folder
+            string traFilePath = Path.Combine(sessionFolderPath, "F101.tra");
+            string ctlFilePath = Path.Combine(sessionFolderPath, "F101.ctl");
+            try
+            {
+                // Read files
+                if (File.Exists(ctlFilePath))
                 {
-                    FILE12 = ctlFilePath.Trim();
-                    EXISTS = File.Exists(FILE12);
-                    if (!EXISTS)
+                    using (FSW777 = FileIO.GetFileStreamWriter("check.dat", FileMode.Create))
                     {
-                        Console.WriteLine($">> Cannot find CTL file {FILE12}");
-                        //Environment.Exit(1);
-                    }
-                    ReadCtlFile(ctlFilePath);
-                    // Open file
-                    if (WAVETYPE == "ABS")
-                    {
-                        NGRID = 1102;
-                        NHGT = 20;
-                        NPER = 17;
-                        NDIR = 24;
-                        HGTB = 0.5f;
-                        DHGT = 1.0f;
-                        PERB = 3.5f;
-                        DPER = 1.0f;
-                    }
-                    else if (WAVETYPE == "BMT")
-                    {
-                        NGRID = 117;
-                        NHGT = 15;
-                        NPER = 11;
-                        NDIR = 8;
-                        HGTB = 0.5f;
-                        DHGT = 1.0f;
-                        PERB = 3.5f;
-                        DPER = 1.0f;
-                    }
-                    else
-                    {
-                        Console.WriteLine("WAVETYPE [" + waveData + "] is not recognized. Check the input file!");
-                        //Environment.Exit(0);
-                    }
-                    for (int i = 0; i < NHGT; i++)
-                    {
-                        HS[i] = HGTB + (i * DHGT);
-                    }
-                    for (int i = 0; i < NPER; i++)
-                    {
-                        TZ[i] = PERB + (i * DPER);
-                    }
-                    SYSDIR = sessionFolderPath + "\\";
-                    WOKDIR = sessionFolderPath + "\\";
-                    FILENAME = WOKDIR.Trim() + PROJNAME;
-                    FILE46 = FILENAME + ".ROS"; // for view rosette & weighting
-                    using (FSW46 = FileIO.GetFileStreamWriter(FILE46, FileMode.Create))
-                    {
-                        using (FSW39 = FileIO.GetFileStreamWriter("TEMP39", FileMode.Create))
+                        FILE12 = ctlFilePath.Trim();
+                        EXISTS = File.Exists(FILE12);
+                        if (!EXISTS)
                         {
-                            FILE19 = WOKDIR.Trim() + "intermediate.wsd";
-                            using (FSW19 = FileIO.GetFileStreamWriter(FILE19, FileMode.Create))
+                            Console.WriteLine($">> Cannot find CTL file {FILE12}");
+                            //Environment.Exit(1);
+                        }
+                        ReadCtlFile(ctlFilePath);
+                        // Open file
+                        if (WAVETYPE == "ABS")
+                        {
+                            NGRID = 1102;
+                            NHGT = 20;
+                            NPER = 17;
+                            NDIR = 24;
+                            HGTB = 0.5f;
+                            DHGT = 1.0f;
+                            PERB = 3.5f;
+                            DPER = 1.0f;
+                        }
+                        else if (WAVETYPE == "BMT")
+                        {
+                            NGRID = 117;
+                            NHGT = 15;
+                            NPER = 11;
+                            NDIR = 8;
+                            HGTB = 0.5f;
+                            DHGT = 1.0f;
+                            PERB = 3.5f;
+                            DPER = 1.0f;
+                        }
+                        else
+                        {
+                            Console.WriteLine("WAVETYPE [" + waveData + "] is not recognized. Check the input file!");
+                            //Environment.Exit(0);
+                        }
+                        for (int i = 0; i < NHGT; i++)
+                        {
+                            HS[i] = HGTB + (i * DHGT);
+                        }
+                        for (int i = 0; i < NPER; i++)
+                        {
+                            TZ[i] = PERB + (i * DPER);
+                        }
+                        SYSDIR = sessionFolderPath + "\\";
+                        WOKDIR = sessionFolderPath + "\\";
+                        FILENAME = WOKDIR.Trim() + PROJNAME;
+                        FILE46 = FILENAME + ".ROS"; // for view rosette & weighting
+                        using (FSW46 = FileIO.GetFileStreamWriter(FILE46, FileMode.Create))
+                        {
+                            using (FSW39 = FileIO.GetFileStreamWriter("TEMP39", FileMode.Create))
                             {
-                                // Logic for handling routes based on flags
-                                if (IFLAG_ISTE == 1 && SAVEFLG[0] == '1')
-                                    Wxroute(1, FILENAME, IANALYSIS_TYPE, seasonType);
-                                if (IFLAG_TRAN == 1 && SAVEFLG[1] == '1')
-                                    Wxroute(2, FILENAME, IANALYSIS_TYPE, seasonType);
-                                if (IFLAG_HSTE == 1 && SAVEFLG[2] == '1')
-                                    Wxroute(3, FILENAME, IANALYSIS_TYPE, seasonType);
-                                if (IFLAG_HRTE == 1 && SAVEFLG[3] == '1')
-                                    Wxroute(4, FILENAME, IANALYSIS_TYPE, seasonType);
+                                FILE19 = WOKDIR.Trim() + "intermediate.wsd";
+                                using (FSW19 = FileIO.GetFileStreamWriter(FILE19, FileMode.Create))
+                                {
+                                    // Logic for handling routes based on flags
+                                    if (IFLAG_ISTE == 1 && SAVEFLG[0] == '1')
+                                        Wxroute(1, FILENAME, IANALYSIS_TYPE, seasonType);
+                                    if (IFLAG_TRAN == 1 && SAVEFLG[1] == '1')
+                                        Wxroute(2, FILENAME, IANALYSIS_TYPE, seasonType);
+                                    if (IFLAG_HSTE == 1 && SAVEFLG[2] == '1')
+                                        Wxroute(3, FILENAME, IANALYSIS_TYPE, seasonType);
+                                    if (IFLAG_HRTE == 1 && SAVEFLG[3] == '1')
+                                        Wxroute(4, FILENAME, IANALYSIS_TYPE, seasonType);
+                                    PRintWSDS(WOKDIR);
+                                }
                             }
                         }
-                        PRintWSDS(WOKDIR);
                     }
-                    Console.WriteLine("Program successfully completed ......");
                 }
             }
+            catch (NullReferenceException ex)
+            {
+                Console.WriteLine($"NullReferenceException: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception: {ex.Message}");
+                throw;
+            }
         }
-
-        catch (NullReferenceException ex)
+        finally
         {
-            Console.WriteLine($"NullReferenceException: {ex.Message}");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Exception: {ex.Message}");
-            throw;
+            CleanupTempFiles();
         }
     }
 
@@ -299,7 +304,9 @@ public class BkWxRoutes : IBkWxRoutes
                     FILE19 = WOKDIR.Trim() + "intermediate.wsd";
                     using (FSW19 = FileIO.GetFileStreamWriter(FILE19, FileMode.Create))
                     {
-                        ProcessRoutes();
+// The seasonType parameter should be passed from the ProcessWaveData method
+// which is the entry point defined in IBkWxRoutes interface
+ProcessRoutes("annual"); // Default to annual if not specified
                     }
                 }
                 PRintWSDS(WOKDIR);
@@ -1044,10 +1051,18 @@ public class BkWxRoutes : IBkWxRoutes
                     }
                     else if (j == 3)
                     {
-                        X1 = LONG[N, 0];
-                        Y1 = LATI[N, 1];
-                        X2 = LONG[N, 0];
-                        Y2 = LATI[N, 0];
+                        if (N >= 0 && N < 2000)  // Add bounds checking
+                        {
+                            X1 = LONG[N, 0];
+                            Y1 = LATI[N, 1];
+                            X2 = LONG[N, 0];
+                            Y2 = LATI[N, 0];
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Warning: Invalid grid index N={N} is out of bounds [0,2000)");
+                            continue;
+                        }
                     }
 
                     DET = (float)((Y4 - Y3) * (X2 - X1) - (X4 - X3) * (Y2 - Y1));
@@ -1919,5 +1934,39 @@ public class BkWxRoutes : IBkWxRoutes
             }
         }
         return "";
+    }
+
+    private void CleanupTempFiles()
+    {
+        try
+        {
+            string[] tempFiles = new string[]
+            {
+                Path.Combine(SYSDIR, "TEMP39"),
+                Path.Combine(SYSDIR, "TEMP51"),
+                Path.Combine(SYSDIR, "TEMP52"),
+                Path.Combine(SYSDIR, "TEMP53.tmp")
+            };
+
+            foreach (string tempFile in tempFiles)
+            {
+                if (File.Exists(tempFile))
+                {
+                    try
+                    {
+                        File.Delete(tempFile);
+                        Console.WriteLine($"Cleaned up temporary file: {tempFile}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not delete temporary file {tempFile}: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Error during temporary file cleanup: {ex.Message}");
+        }
     }
 }

@@ -17,7 +17,7 @@ namespace SeaRouteModel.Models
         public string ArrivalLocation { get; set; } = string.Empty;
         public string ABSNotation { get; set; } = string.Empty;
 
-         public List<RouteSegmentInfo> RouteSegments { get; set; } = new List<RouteSegmentInfo>();
+        public List<RouteSegmentInfo> RouteSegments { get; set; } = new List<RouteSegmentInfo>();
         public double TotalDistance { get; set; }
         public double TotalDurationHours { get; set; }
         public List<RouteItemModel> DepartureItems { get; set; } = new List<RouteItemModel>();
@@ -31,5 +31,7 @@ namespace SeaRouteModel.Models
         public List<PortSelectionModel> ArrivalPorts { get; set; } = new List<PortSelectionModel>();
         public List<WaypointModel> DepartureWaypoints { get; set; } = new List<WaypointModel>();
         public List<WaypointModel> ArrivalWaypoints { get; set; } = new List<WaypointModel>();
+
+        public string ReductionFactor { get; set; }
     }
 }

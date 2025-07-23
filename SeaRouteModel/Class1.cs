@@ -6,33 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace SeaRouteModel.Models
 {
     // Short Voyage Records
-    [Table("short_voyage_records")]
-    public class ShortVoyageRecord : BaseClass
-    {
-        [Key]
-        [Column("record_id")]
-        public Guid RecordId { get; set; }
-
-        [Required]
-        [Column("departure_time")]
-        public DateTime DepartureTime { get; set; }
-
-        [Required]
-        [Column("arrival_time")]
-        public DateTime ArrivalTime { get; set; }
-
-        [Column("forecast_time")]
-        public DateTime? ForecastTime { get; set; }
-
-        [Column("forecast_hswell")]
-        public float? ForecastHswell { get; set; }
-
-        [Column("forecast_hwind")]
-        public float? ForecastHwind { get; set; }
-
-        // Navigation property
-        public virtual Record Record { get; set; }
-    }
+   
 
     // Season Types
     [Table("season_types")]
@@ -276,31 +250,6 @@ namespace SeaRouteModel.Models
     }
 
     // Placeholder classes for referenced entities (you may already have these)
-    [Table("records")]
-    public class Record : BaseClass
-    {
-        [Key]
-        [Column("record_id")]
-        public Guid RecordId { get; set; }
-
-        [Column("route_name")]
-        [StringLength(100)]
-        public string? RouteName { get; set; }
-
-        [Column("route_distance")]
-        public double? RouteDistance { get; set; }
-
-        [Column("submitted")]
-        public bool Submitted { get; set; }
-
-        // Navigation properties
-        public virtual ShortVoyageRecord ShortVoyageRecord { get; set; }
-
-        public virtual ICollection<RecordReductionFactor> RecordReductionFactors { get; set; } = new List<RecordReductionFactor>();
-        public virtual ICollection<RouteVersion> RouteVersions { get; set; } = new List<RouteVersion>();
-        public virtual ICollection<RecordUser> RecordUsers { get; set; } = new List<RecordUser>();
-        public virtual ICollection<RecordVessel> RecordVessels { get; set; } = new List<RecordVessel>();
-    }
 
     [Table("geo_points")]
     public class GeoPoint : BaseClass

@@ -3,15 +3,10 @@ var map;
 
 // Store route segments from FastAPI calls
 let routeSegmentsList = [];
-// Niranjan modified by - Store route information for popup display
-let routeInfo = {};
-
 function initializeRouteListRouteCalculation() {
     // Clear previous route layer efficiently
     routeSegmentsList = [];
     routeLayer.clearLayers();
-    // Niranjan modified by - Clear route info
-    routeInfo = {};
 }
 
 async function searchLocationOnMap(lat = null, lon = null) {
@@ -36,32 +31,17 @@ async function searchLocationOnMap(lat = null, lon = null) {
     }
 }
 
-// Niranjan modified by - Updated function signature to accept additional parameters
-function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFactor = "0", lineColor, routeName = "", departurePortName = "", departurePortUnlocode = "", arrivalPortName = "", arrivalPortUnlocode = "", totalDistance = "0") {
+function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFactor = "0", lineColor, routeName, depPortName, depUnlocode, arrPortName, arrUnlocode, totalDistance) {
     try {
         const segment = createSeaRoutefromAPI(routeJson);
 
         // Store this segment
         routeSegmentsList[segmentIndex] = segment;
-
-        // Niranjan modified by - Store route information for the first segment
-        if (segmentIndex === 0) {
-            routeInfo = {
-                routeName: routeName,
-                departurePortName: departurePortName,
-                departurePortUnlocode: departurePortUnlocode,
-                arrivalPortName: arrivalPortName,
-                arrivalPortUnlocode: arrivalPortUnlocode,
-                reductionFactor: reductionFactor,
-                totalDistance: totalDistance
-            };
-        }
-
         // If all segments are received, draw the combined route
         if (routeSegmentsList.filter(s => s !== null).length === totalSegments) {
             // Use requestAnimationFrame for smoother rendering
             window.requestAnimationFrame(() => {
-                drawRoute(routeSegmentsList, reductionFactor, lineColor);
+                drawRoute(routeSegmentsList, reductionFactor, lineColor, routeName, depPortName, depUnlocode, arrPortName, arrUnlocode, totalDistance);
             });
         }
 
@@ -72,7 +52,7 @@ function showRouteSegment(routeJson, segmentIndex, totalSegments, reductionFacto
     }
 }
 
-function drawRoute(segments, reductionFactor, lineColor) {
+function drawRoute(segments, reductionFactor, lineColor, routeName, depPortName, depUnlocode, arrPortName, arrUnlocode, totalDistance) {
 
     if (!segments || segments.length === 0) {
         return;
@@ -81,7 +61,8 @@ function drawRoute(segments, reductionFactor, lineColor) {
     // Pre-allocate arrays for better performance
     const allCoordinates = [];
     const segmentBoundaries = [];
-    // Niranjan modified by - Removed totalDistance and totalDuration calculation as it's passed from C#
+    let totalDistance = 0;
+    let totalDuration = 0;
 
     // Process segments more efficiently
     segments.forEach((segment, index) => {
@@ -98,7 +79,14 @@ function drawRoute(segments, reductionFactor, lineColor) {
                 segmentIndex: index
             });
 
-            // Niranjan modified by - Removed distance and duration calculation
+            if (segment.properties) {
+                if (segment.properties.length) {
+                    totalDistance += Math.round(segment.properties.length);
+                }
+                if (segment.properties.duration_hours) {
+                    totalDuration += Math.round(segment.properties.duration_hours);
+                }
+            }
         }
     });
 
@@ -116,13 +104,11 @@ function drawRoute(segments, reductionFactor, lineColor) {
     if (allCoordinates.length > 0) {
         const midIndex = Math.floor(allCoordinates.length / 2);
         const midPoint = allCoordinates[midIndex];
-
-        // Niranjan modified by - Updated popup content with route information from C#
-        const distanceMarkerHtml = `<div style="background-color: white; padding: 8px 12px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold; min-width: 200px;">
-        <div style="margin-bottom: 4px;"><strong>Route name:</strong> ${routeInfo.routeName || 'N/A'}</div>
-        <div style="margin-bottom: 4px;"><strong>${routeInfo.departurePortUnlocode || 'N/A'}</strong> - <strong>${routeInfo.arrivalPortUnlocode || 'N/A'}</strong></div>
-        <div style="margin-bottom: 4px;"><strong>Distance:</strong> ${routeInfo.totalDistance || '0'} nm</div>
-        <div><strong>Reduction factor:</strong> ${routeInfo.reductionFactor || '0'}</div>
+        const distanceMarkerHtml = `<div style="background-color: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #0066ff; font-weight: bold;">
+            Route name: ${routeName}<br>
+            (${depUnlocode}) - (${arrUnlocode})<br>
+            Distance: ${totalDistance} nm<br>
+            Reduction factor: ${reductionFactor}
         </div>`;
 
         L.marker(midPoint, {
@@ -145,7 +131,6 @@ function drawRoute(segments, reductionFactor, lineColor) {
     routeSegmentsList = [];
     return routePolyline;
 }
-
 function updatePinsToMatchAllRoutePointsList(allCoordinates, segmentBoundaries) {
     if (window.departurePin) { map.removeLayer(window.departurePin); window.departurePin = null; }
     if (window.arrivalPin) { map.removeLayer(window.arrivalPin); window.arrivalPin = null; }

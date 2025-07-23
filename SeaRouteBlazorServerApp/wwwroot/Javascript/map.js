@@ -594,16 +594,10 @@ function drawCombinedRoute(segments) {
         paddingBottomRight: [20, 20],
         duration: 1.5
     });
-
-    // Place pins for all route points (departure, intermediates, arrival)
     updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries);
-
     return routePolyline;
 }
-
-// Robust pin placement for all route points (works for any number of ports/waypoints)
 function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries) {
-    // Remove all existing pins
     if (departurePin) { map.removeLayer(departurePin); departurePin = null; }
     if (arrivalPin) { map.removeLayer(arrivalPin); arrivalPin = null; }
     portPins.forEach(pin => map.removeLayer(pin));
@@ -614,13 +608,10 @@ function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBou
     for (let i = 0; i < routePoints.length; i++) {
         let coordIdx;
         if (i === 0) {
-            // First point: start of first segment
             coordIdx = segmentBoundaries[0].startIndex;
         } else {
-            // All others: end of previous segment
             coordIdx = segmentBoundaries[i - 1].endIndex;
         }
-        // Defensive: skip if coordIdx is out of bounds
         if (coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
 
         const p = routePoints[i];

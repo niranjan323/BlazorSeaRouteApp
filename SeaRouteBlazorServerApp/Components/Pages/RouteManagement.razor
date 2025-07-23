@@ -661,11 +661,9 @@
     {
         try
         {
-            // Get the HTML of the report container (e.g., the main report panel)
-            // The report container should have a unique id, e.g., "report-content-container"
-            var html = await JS.InvokeAsync<string>("getHtmlForPdf", "report-content-container");
-            // Optionally, add a <base> tag for relative URLs
             var baseUrl = _navigationManager.BaseUri;
+            // Pass baseUrl to JS
+            var html = await JS.InvokeAsync<string>("getHtmlForPdf", "report-content-container", baseUrl);
             string fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
             await PdfService.DownloadPdfAsync(html, fileName, baseUrl);
         }
