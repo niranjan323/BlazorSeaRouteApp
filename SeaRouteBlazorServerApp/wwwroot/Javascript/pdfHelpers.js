@@ -85,22 +85,3 @@ window.printPdfFromBase64 = (base64Data) => {
 
     document.body.appendChild(printFrame);
 };
-
-/**
- * Gets the outer HTML of an element by id for PDF generation
- * @param {string} elementId
- * @returns {string}
- */
-window.getHtmlForPdf = function(elementId, baseUrl) {
-    var el = document.getElementById(elementId);
-    if (!el) return '';
-    // Clone the node to avoid modifying the live DOM
-    var clone = el.cloneNode(true);
-    // Optionally, inline styles or add base tag here
-    // Wrap in a full HTML document for DinkToPdf
-    var baseTag = baseUrl ? `<base href=\"${baseUrl}\">` : '';
-    var docHtml = `<!DOCTYPE html><html><head>${baseTag}` +
-        document.head.innerHTML +
-        `</head><body>` + clone.outerHTML + `</body></html>`;
-    return docHtml;
-};

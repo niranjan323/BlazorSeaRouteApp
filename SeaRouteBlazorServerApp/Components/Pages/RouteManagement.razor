@@ -2,675 +2,786 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject HttpClient Http
-@inject ILogger<RouteManagement> Logger
+@inject ILogger<Home> Logger
 @using System.Threading.Tasks
 @using Microsoft.AspNetCore.Components.Web
 @using System.Text.Json
-@using SeaRouteBlazorServerApp.Components.Services
-@using SeaRouteModel.Models
+@using System.Globalization
+@using NextGenEngApps.DigitalRules.CRoute.Services
+@inject NavigationManager navigationManager;
+@inject NextGenEngApps.DigitalRules.CRoute.Services.RouteService routeService;
+@inject CRoute.Services.ICRouteAPIService routeAPIService;
 @inject IPdfService PdfService
-@inject NavigationManager _navigationManager
+@using Microsoft.AspNetCore.Components.Forms
+
 <div class="map-container">
-    <!-- Map -->
-    <div id="map" style="margin-top:42px;"></div>
-
-
-    <div class="cls_floating_outline">
-
-        @* added cls_floating_content*@
-    <!-- Floating UI -->
-      
-
-        <!-- Scrollable Content -->
-            @if (selectedTab == 1)
-            {
-                @if (selectedForm == 0)
-                {
-                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
-                    <!-- Header with Tabs and Close Button -->
-
-                    <div class="header">
-                        <div class="tabs">
-                            <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                                Start New Calculation
-                            </button>
-                            <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
-                                My Routes
-                            </button>
-                        </div>
-                        <button class="close-btn" @onclick="CloseOverlay">×</button>
-                    </div>
-
-                    <div class="cls_form_container">
-
-                    <!-- Show Selection Options -->
-                    <div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
-                        <label class="cls_main_label">
-                            Select your calculation option below:
-                        </label>
-                    </div>
-
-                    <div class="calculation-options">
-                        <div class="option-card" @onclick="() => ShowForm(1)">
-                            <img src="Images/reduction-factor.png" alt="Reduction Factor">
-                            <h4>Reduction Factor Calculations</h4>
-                        </div>
-                        <div class="option-card" @onclick="() => ShowForm(2)">
-                            <img src="Images/group-92@1x.png" alt="Limited Short">
-                            <h4>Limited Short Voyage</h4>
-                        </div>
-                        </div>
-                    </div>
-                </div>
-
-                }
-                @if (selectedForm == 1)
-                {
-                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
-                    <!-- Header with Tabs and Close Button -->
-
-                    <div class="header">
-                        <div class="tabs">
-                            <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                                Start New Calculation
-                            </button>
-                            <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
-                                My Routes
-                            </button>
-                        </div>
-                        <button class="close-btn" @onclick="CloseOverlay">×</button>
-                    </div>
-
-                    <div class="cls_form_container">
-
-                    <ReductionFactorCal OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
-                                        OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
-                                        OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData"/>
-                    </div>
-                </div>
-
-                }
-
-                else if (selectedForm == 2)
-                {
-                <div class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
-                    <!-- Header with Tabs and Close Button -->
-
-                    <div class="header">
-                        <div class="tabs">
-                            <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                                Start New Calculation
-                            </button>
-                            <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
-                                My Routes
-                            </button>
-                        </div>
-                        <button class="close-btn" @onclick="CloseOverlay">×</button>
-                    </div>
-                    <div class="cls_form_container">
-
-                    <LimitedShortVoyage OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" OnReportDataReady="HandleReportData" />
-                    </div>
-                </div>
-                
-                }
-            }
-            else if (selectedTab == 2)
-            {
-            <div class="cls_myfloating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
-                <!-- Header with Tabs and Close Button -->
-
-                <div class="header">
-                    <div class="tabs">
-                        <button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
-                            Start New Calculation
-                        </button>
-                        <button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="() => SelectTab(2)">
-                            My Routes
-                        </button>
-                    </div>
-                    <button class="close-btn" @onclick="CloseOverlay">×</button>
-                </div>
-                <div class="cls_form_container1">
-
-                <MyRoutes></MyRoutes>
-                </div>
-            </div>
-
-            }
-
-
-
-    <!-- Right side - Report (only shown after calculation) -->
-    @if (showReport)
-    {
-            <div class=cls_floating_content>
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn @(selectedTab == 1 ? "active" : "")">
-                        Reports
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseReport">×</button>
-            </div>
-
-            <div class="report-content" id="report-content-container">
-                <div class="report-actions">
-                    <button class="download-btn" @onclick="DownloadReportHtmlAsPdf">
-                        <img src="Images/path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
-                    </button>
-                    <button class="print-btn" @onclick="PrintReport">
-                        <img src="Images/path-1871-1@1x.png" alt="Print" width="16" height="16" /> Print Report
-                    </button>
-                </div>
-
-                <div class="report-details">
-                    <h4>Report 1 Reduction Factor Calculation</h4>
-
-                    <div class="report-section">
-                        <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
-                        <p>Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is @(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"). More details can be found below.</p>
-                        <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>User Inputs</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Vessel Name:</td>
-                                <td><strong>@(reductionFactor.VesselName ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Vessel IMO:</td>
-                                <td><strong>@(reductionFactor.IMONo ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Vessel Breadth:</td>
-                                <td><strong>@reductionFactor.Breadth</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Port of Departure:</td>
-                                <td><strong>@(reductionFactor.PortOfDeparture ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Port of Arrival:</td>
-                                <td><strong>@(reductionFactor.PortOfArrival ?? "N/A")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Time Zone:</td>
-                                <td><strong>@(reductionFactor.TimeZone ?? "UTC")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Date of Departure:</td>
-                                <td>@reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd")</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Date of Arrival:</td>
-                                <td>@reductionFactor.DateOfArrival.ToString("yyyy-MM-dd")</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Duration (Hrs):</td>
-                                <td>@reductionFactor.Duration</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Estimated Time of Departure:</td>
-                                <td>@reductionFactor.ETD.ToString("HH:mm")</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Estimated Time of Arrival:</td>
-                                <td>@reductionFactor.ETA.ToString("HH:mm")</td>
-                                <td></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Weather Forecast</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Date:</td>
-                                <td>@reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd")</td>
-                            </tr>
-                            <tr>
-                                <td>Time:</td>
-                                <td>@reductionFactor.WeatherForecasetTime.ToString("HH:mm")</td>
-                            </tr>
-                            <tr>
-                                <td>Before ETD (Hrs):</td>
-                                <td>@reductionFactor.WeatherForecastBeforeETD</td>
-                            </tr>
-                            <tr>
-                                <td>Source:</td>
-                                <td><a href="http://www.weather.gov">@(reductionFactor.WeatherForecastSource ?? "www.weather.gov")</a></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Forecast Maximum Significant Wave Height</h5>
-                        <table class="report-table">
-                            <tr>
-                                <td>Hswell [m]:</td>
-                                <td>@reductionFactor.WaveHeightHswell</td>
-                            </tr>
-                            <tr>
-                                <td>Hwind [m]:</td>
-                                <td>@reductionFactor.WaveHeightHwind</td>
-                            </tr>
-                            <tr>
-                                <td>Hs, max [m]:</td>
-                                <td>@reductionFactor.WaveHsmax</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Output</h5>
-                        <p><strong>Duration OK:</strong> @reductionFactor.DurationOk</p>
-                        <p><strong>Forecast Before ETD OK:</strong> @reductionFactor.WeatherForecastBeforeETDOK</p>
-                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</span></p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>Voyage Map</h5>
-                        <div id="reportMapContainer" @ref="reportMapContainer"></div>
-                    </div>
-                    <!-- Modal -->
-                    <div id="canvasModal" class="canvas-modal" onclick="hideFullCanvas()">
-                        <img id="fullCanvasImage" />
-                    </div>
-                    <div class="report-section">
-                        <h5>Limited Short Voyage Reduction Factor</h5>
-                        <div class="result-value">
-                            <p>Reduction Factor: <strong>@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</strong></p>
-                        </div>
-
-                        <div class="chart-container">
-                            <canvas id="reductionChart2"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Notes Section -->
-                    <div class="report-section notes-section">
-                        <h5>Notes</h5>
-                        <ul>
-                            <li>The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.</li>
-                            <li>The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).</li>
-                            <li>A short voyage is to have a duration of less than 72 hours from departure port to arrival port.</li>
-                            <li>The weather reports need to be received within 6 hours of departure.</li>
-                            <li>The forecasted wave height needs to cover the duration of the voyage plus 12 hours.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    <!-- Report Panel (only shown after ShowReport is called) -->
-    @if (showReportForReductionFactor)
-    {
-            <div class="cls_floating_content @(showReportForReductionFactor ? "custom-report-container1" : "")">
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn active">
-                        Reports
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseReportForReductionFactor">×</button>
-            </div>
-
-            <div class="report-content" id="report-content-container">
-                <div class="report-actions">
-                   @*  <button class="download-btn" @onclick="DownloadCompleteReductionFactorReport">
-                        <img src="Images/path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
-                    </button> *@
-                    <button class="download-btn" @onclick="DownloadReportHtmlAsPdf">
-                        <img src="Images/path-1534-1@1x.png" alt="PDF" width="16" height="16" /> Download Report
-                    </button>
-                    <button class="print-btn" @onclick="PrintReport">
-                        <img src="Images/path-1871-1@1x.png" alt="Print" width="16" height="16" /> Print Report
-                    </button>
-                </div>
-
-                <div class="report-details">
-                    @if (IsEditing)
-                    {
-                        <div class="edit-heading-container">
-                            <input @bind="HeadingText" @bind:event="oninput" class="heading-edit-input" />
-                            <button @onclick="SaveHeading" class="save-button">Save</button>
-                            <button @onclick="CancelEditing" class="cancel-button">Cancel</button>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="heading-container">
-                            <h4>@HeadingText</h4>
-                            <button @onclick="StartEditing" class="edit-button">
-                                <img src="Images/pencil-48.png" alt="Edit" class="edit-icon" />
-                            </button>
-                        </div>
-                    }
-
-                    <div class="report-section">
-                        <p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
-                        <p>
-                            Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the route from
-                            
-                            More details can be found below.
-                        </p>
-                        <p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
-                    </div>
-
-                    <div class="report-section">
-                        <h5>User Inputs</h5>
-                       @*  <table class="report-table">
-                            <tr>
-                                <td>Route Name:</td>
-                                <td><strong>@(routeModel?.RouteName ?? "Marseille - Shanghai")</strong></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>Port of Departure:</td>
-                                <td><strong>@(routeModel?.MainDeparturePortSelection.Port.Name ?? "Marseille, France")</strong></td>
-                                <td>@(routeModel?.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS")</td>
-                            </tr>
-                            <tr>
-                                <td>Loading Port:</td>
-                                <td><strong>@(routeModel?.DeparturePorts.FirstOrDefault()?.Port?.Name ?? "Singapore")</strong></td>
-                                <td>@(routeModel?.DeparturePorts.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN")</td>
-                            </tr>
-                            <tr>
-                                <td>Port of Arrival:</td>
-                                <td><strong>@(routeModel?.MainArrivalPortSelection.Port.Name ?? "Shanghai, China")</strong></td>
-                                <td>@(routeModel?.ArrivalPorts.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH")</td>
-                            </tr>
-                        </table> *@
-                    </div>
-
-                    @* <div class="report-section">
-                        <h5>Output</h5>
-                        <p><strong>Reduction Factor: </strong><span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span></p>
-                    </div> *@
-
-                    <div class="report-section">
-                        <h5>Output</h5>
-
-                        @if (isCLPVChecked)
-                        {
-                            <p>
-                                <strong>Reduction Factor: </strong>
-                                <span class="reduction-factor">@(routeReductionFactor?.ToString("0.00") ?? "0.82")</span>
-                            </p>
-                        }
-                        else if (isCLPVParrChecked)
-                        {
-                            <table class="report-table">
-                                <thead>
-                                    <tr>
-                                        <th>Season</th>
-                                        <th>Reduction Factor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var season in seasonalOptions)
-                                    {
-                                        <tr>
-                                            <td>@season</td>
-                                            <td><span class="reduction-factor">@(GetReductionFactorForSeason(season))</span></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        }
-                    </div>
-
-
-                    <div class="report-section">
-                        <h5>Route Map</h5>
-                        <div id="reportMapContainer" @ref="reportMapContainer" style="height: 200px; width: 100%;"></div>
-                    </div>
-
-                    <!-- Notes Section -->
-                    <div class="report-section notes-section">
-                        <h5>Notes</h5>
-                        <ul>
-                            <li>The vessel is to have CLP-V or CLP-VP(XR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.</li>
-                            <li>ABS Container Securing Guide 6.2.4</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (AddEditVessalReport)
-    {
-        <div class="cls_floating_content">
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn active">
-                        Vessel Info
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseVesselInfo">×</button>
-            </div>
-
-            <div class="cls_form_container">
-                <button class="back-btn" @onclick="CloseVesselInfo">
-                    ⬅ Back
-                </button>
-
-                <div class="route_content">
-                    <div class="cls_route_div">
-                        <div class="cls_route_div_rep">
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                <img src="Images/group-92@1x.png" alt="Route Icon" class="icon">
-                                <h3 class="heading_Customize">
-                                    Add/Edit Vessel Information
-                                </h3>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cls_vessel_outline">
-                        @for (int i = 0; i < vesselInfos.Count; i++)
-                        {
-                            var vessel = vesselInfos[i];
-                            var isLast = i == vesselInfos.Count - 1;
-
-                            <div class="cls_vessel_container_con">
-                                <div class="cls_vessel_container">
-                                    <div class="cls_vessel_div">
-                                        <label class="cls_vessel_div_label">Vessel Name</label>
-                                        <input type="text" @bind="vessel.VesselName" class="content_div_input" />
-                                    </div>
-                                    <div class="cls_vessel_div">
-                                        <label class="cls_vessel_div_label">IMO Number</label>
-                                        <input type="text" @bind="vessel.IMONumber" class="content_div_input" />
-                                    </div>
-                                </div>
-                                <div class="cls_vessel_div_btm">
-                                    <div class="cls_vessel_div">
-                                        <label class="cls_vessel_div_label">Flag</label>
-                                        <select @bind="vessel.Flag" class="content_div_input">
-                                            <option value="">-- Select Flag --</option>
-                                            <option>Liberia</option>
-                                            <option>Marshall Islands</option>
-                                            <option>Hong Kong</option>
-                                            <option>Bahamas</option>
-                                            <option>Singapore</option>
-                                            <option>Greece</option>
-                                            <option>Malta</option>
-                                            <option>China</option>
-                                            <option>Cyprus</option>
-                                            <option>Japan</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="cls_vessel_div">
-                                        <label class="cls_vessel_div_label">Report Date</label>
-                                        <input type="date" @bind="vessel.ReportDate" class="content_div_input" />
-                                    </div>
-
-                                    @if (isLast && vesselInfos.Count == 1)
-                                    {
-                                        <!-- Plus button for the only vessel form -->
-                                        <div class="cls_btn_plus" @onclick="AddNewVessel">
-                                            <div class="horizontal"></div>
-                                            <div class="vertical"></div>
-                                        </div>
-                                    }
-                                    else if (isLast)
-                                    {
-                                        <!-- Plus button for adding new vessel at the end -->
-                                        <div class="cls_btn_plus" @onclick="AddNewVessel">
-                                            <div class="horizontal"></div>
-                                            <div class="vertical"></div>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <!-- Minus button for removing vessel -->
-                                        <div class="cls_btn_minimize" @onclick="() => RemoveVessel(vessel)">
-                                            <div class="cls_btn_minimize_div"></div>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
-                        <button class="cls_button_blue" @onclick="SaveVesselInfo">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-
-
-    @if (ShowABSReport)
-    {
-            <div class="cls_floating_content @(showReportForReductionFactor ? "custom-report-container" : "")">
-            <div class="header">
-                <div class="tabs">
-                    <button class="tab-btn active">
-                        ABS Records
-                    </button>
-                </div>
-                <button class="close-btn" @onclick="CloseABSReportForm">×</button>
-            </div>
-
-            <div class="cls_form_container">
-                <button class="back-btn" @onclick="CloseABSReportForm">
-                    ⬅ Back
-                </button>
-
-                <div class="route_content">
-                    <div class="cls_route_div">
-                        <div class="cls_route_div_rep">
-                            <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                                <img src="Images/group-345-4@1x.png" alt="ABS Logo" class="cls_abs_icon">
-                                <h3 class="heading_Customize">
-                                    Submit Report for ABS Records
-                                </h3>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cls_abs_logo_image ">
-                        <img src="Images/group-345-4@1x.png" alt="ABS Logo" class="cls_abs_logo">
-                    </div>
-
-                    <div class="cls_route_div_rep">
-                        <label class="cls_abs_main_label"> <span class="cls_astrix">*</span> Subject vessel has the CLP-V or CLP-V(PARR) notation?</label>
-
-                        <div class="cls_abs_radio_outline">
-                            <div class="cls_abs_radio_div">
-                                <input type="checkbox" name="name" @onchange='e => OnCheckboxChanged(e, "CLP-V")' checked="@isCLPVChecked" />
-                                <label class="cls_radio_text">CLP-V</label>
-                            </div>
-                            <div class="cls_abs_radio_div">
-                                <input type="checkbox" name="name" @onchange='e => OnCheckboxChanged(e, "CLP-V(PARR)")' checked="@isCLPVParrChecked" />
-                                <label class="cls_radio_text">CLP-V(PARR)</label>
-                            </div>
-                            <div class="cls_abs_radio_div">
-                                <input type="checkbox" name="name" value="Neither" />
-                                <label class="cls_radio_text">Neither</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cls_route_div_rep" style="margin-top:34px;">
-                        <label class="cls_abs_main_label"> <span class="cls_astrix">*</span> Subject vessel has the CLP-V or CLP-V(PARR) notation?</label>
-                        <div class="cls_imo_outline">
-
-                            @for (int i = 0; i < vesselImos.Count; i++)
-                            {
-                                <div class="cls_imo_div">
-                                    <label class="cls_imo_label">IMO @(i + 1)</label>
-                                    <div class="cls_flex cls_flex_gap_8px cls_width43 cls_flex_align_center">
-                                        <input type="text" @bind="vesselImos[i].ImoNumber" class="content_div_input" placeholder="12345678" style="width:90%;" />
-                                        @if (i == vesselImos.Count - 1)
-                                        {
-                                            @* <button class="add-imo-btn" @onclick="AddNewImo">+</button> *@
-                                            <div class="cls_btn_plus" @onclick="AddNewImo" style="margin-bottom:0px;">
-                                                <!--!--><div class="horizontal"></div>
-                                                <div class="vertical"></div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <label>&nbsp;</label>
-                                        }
-                                    </div>
-                                  
-                                </div>
-                            }
-
-                           
-                        </div>
-                    </div>
-
-
-                    <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
-                        <button class="cls_button_light" @onclick="SubmitABSReport">Submit for ABS Records</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    </div>
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Floating UI -->
+
+<div class="cls_floating_outline">
+
+
+@if (selectedTab == 1)
+{
+@if (selectedForm == 0)
+{
+<div id="divRF" class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+<div class="header">
+<div class="tabs">
+<button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+Start New Calculation
+</button>
+<button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="@(()=> SelectTab(2))">
+My Calculation Results
+</button>
+</div>
+<button class="close-btn" @onclick="CloseOverlay">×</button>
+</div>
+<!-- Show Selection Options -->
+<div class="cls_flex cls_flex_justify_center cls_margin_top_10px">
+<label class="cls_main_label">
+Select your calculation option below:
+</label>
+</div>
+<div class="cls_form_container">
+<div class="calculation-options">
+<div class="option-card" @onclick="() => ShowForm(1)">
+<img src="img/Reduction_Factor_Calculation_Ship.svg" alt="Reduction Factor">
+<h4>Route Reduction Factor Calculation</h4>
+</div>
+<div class="option-card" @onclick="() => ShowForm(2)">
+<img src="img/Limited short voyage-icon@1x.png" alt="Limited Short">
+<h4>Limited Short Voyage Calculation</h4>
+</div>
+</div>
+</div>
+</div>
+}
+@if (selectedForm == 1)
+{
+<div id="divRF" class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+<div class="header">
+<div class="tabs">
+<button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+Start New Calculation
+</button>
+<button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="@(()=> SelectTab(2))">
+My Calculation Results
+</button>
+</div>
+<button class="close-btn" @onclick="CloseOverlay">×</button>
+</div>
+<div @onclick='() => ShowPopUp("divRF")' class="cls_form_container">
+<ReductionFactorCalculation OnBack="GoBack" OnAddEditVessel="AddEditVesselInfo"
+OnShowReportForReductionFactor="ShowReportForReductionFactor" @ref="reductionFactorCalRef"
+OnShowAbsReport="ShowAbsReport" OnReportDataReady="HandleReductionReportData"
+OnLegsDataReady="HandleReductionLegsReportData" EditRouteId=@EditRouteId
+OnReductionFactorDataReceived="HandleReductionFactorData" />
+
+</div>
 </div>
 
-@code {
-
-    private async Task DownloadReportHtmlAsPdf()
-    {
-        try
-        {
-            var baseUrl = _navigationManager.BaseUri;
-            // Pass baseUrl to JS
-            var html = await JS.InvokeAsync<string>("getHtmlForPdf", "report-content-container", baseUrl);
-            string fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-            await PdfService.DownloadPdfAsync(html, fileName, baseUrl);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error downloading PDF from HTML");
-        }
-    }
 }
 
+else if (selectedForm == 2)
+{
+<div id="divRF" class="cls_floating_content @(showReportForReductionFactor ? "custom-overlay" : "")">
+<div class="header">
+<div class="tabs">
+<button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+Start New Calculation
+</button>
+<button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="@(()=> SelectTab(2))">
+My Calculation Results
+</button>
+</div>
+<button class="close-btn" @onclick="CloseOverlay">×</button>
+</div>
+<div class="cls_form_container">
+<ShortVoyageReductionFactor OnBack="GoBack" OnShowReport="ShowReport" OnAddEditVessel="AddEditVesselInfo" OnReportDataReady="HandleReportData" />
+</div>
+</div>
+}
+}
+else if (selectedTab == 2)
+{
+<div id="divRF" class="cls_floating_content1 @(showReportForReductionFactor ? "custom-overlay" : "")">
+<div class="header">
+<div class="tabs">
+<button class="tab-btn @(selectedTab == 1 ? "active" : "")" @onclick="() => SelectTab(1)">
+Start New Calculation
+</button>
+<button class="tab-btn @(selectedTab == 2 ? "active" : "")" @onclick="@(()=> SelectTab(2))">
+My Calculation Results
+</button>
+</div>
+<button class="close-btn" @onclick="CloseOverlay">×</button>
+</div>
+<div class="cls_form_container1">
+<MyRoutes OnShowAbsReport="ShowAbsReport" OnEditRoute="HandleEditRoute"></MyRoutes>
+</div>
+</div>
+}
+
+
+
+</div>
+
+
+<!-- Right side - Report (only shown after calculation) -->
+@if (showReport)
+{
+<div class="report-container draggable" id="divSVRF" @onclick='() => ShowPopUp("divSVRF")'>
+<div class="header drag-handle">
+<div class="tabs">
+<button class="tab-btn @(selectedTab == 1 ? "active" : "")">
+Reports
+</button>
+</div>
+<button class="close-btn" @onclick="CloseReport">×</button>
+</div>
+<button class="back-btn" @onclick="CloseReport">
+<img src="img/back arrow.svg" alt="Back" style="width:16px; height:16px; margin-right:5px;" /> Close
+</button>
+<div class="report-content">
+<div class="report-actions">
+<button class="download-btn" @onclick="DownloadUnifiedReport">
+    <img src="img/Download_Report_icon.svg" alt="PDF" width="16" height="16" /> Download Report (Unified)
+</button>
+<button class="print-btn" @onclick="PrintReport">
+<img src="img/Print_Report_icon.svg" alt="Print" width="16" height="16" /> Print Report
+</button>
+</div>
+
+<div class="report-details">
+@if (IsEditing)
+{
+<div class="edit-heading-container">
+<input @bind="HeadingTextShortVoyage" @bind:event="oninput" class="heading-edit-input" />
+<button @onclick="SaveHeading" class="save-button">Save</button>
+<button @onclick="CancelEditing" class="cancel-button">Cancel</button>
+</div>
+}
+else
+{
+<div class="heading-container">
+<h4>@HeadingTextShortVoyage</h4>
+<button @onclick="StartEditing" class="edit-button">
+
+<img src="img/path-259-1@1x.png" alt="Edit" class="edit-icon" />
+</button>
+</div>
+}
+
+<div class="report-section">
+<p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
+<p>Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is @(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"). More details can be found below.</p>
+<p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
+</div>
+
+<div class="report-section">
+<h5>User Inputs</h5>
+<table class="report-table">
+<tr>
+<td>Vessel Name:</td>
+<td><strong>@(reductionFactor.VesselName ?? "N/A")</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Vessel IMO:</td>
+<td><strong>@(reductionFactor.IMONo ?? "N/A")</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Vessel Breadth:</td>
+<td><strong>@reductionFactor.Breadth</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Port of Departure:</td>
+<td><strong>@(reductionFactor.PortOfDeparture ?? "N/A")</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Port of Arrival:</td>
+<td><strong>@(reductionFactor.PortOfArrival ?? "N/A")</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Time Zone:</td>
+<td><strong>@(reductionFactor.TimeZone ?? "UTC")</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Date of Departure:</td>
+<td>@reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd")</td>
+<td></td>
+</tr>
+<tr>
+<td>Date of Arrival:</td>
+<td>@reductionFactor.DateOfArrival.ToString("yyyy-MM-dd")</td>
+<td></td>
+</tr>
+<tr>
+<td>Duration (Hrs):</td>
+<td>@reductionFactor.Duration</td>
+<td></td>
+</tr>
+<tr>
+<td>Estimated Time of Departure:</td>
+<td>@reductionFactor.ETD.ToString("HH:mm")</td>
+<td></td>
+</tr>
+<tr>
+<td>Estimated Time of Arrival:</td>
+<td>@reductionFactor.ETA.ToString("HH:mm")</td>
+<td></td>
+</tr>
+</table>
+</div>
+
+<div class="report-section">
+<h5>Weather Forecast</h5>
+<table class="report-table">
+<tr>
+<td>Date:</td>
+<td>@reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd")</td>
+</tr>
+<tr>
+<td>Time:</td>
+<td>@reductionFactor.WeatherForecasetTime.ToString("HH:mm")</td>
+</tr>
+<tr>
+<td>Before ETD (Hrs):</td>
+<td>@reductionFactor.WeatherForecastBeforeETD</td>
+</tr>
+<tr>
+<td>Source:</td>
+<td><a href="http://www.weather.gov">@(reductionFactor.WeatherForecastSource ?? "www.weather.gov")</a></td>
+</tr>
+</table>
+</div>
+
+<div class="report-section">
+<h5>Forecast Maximum Significant Wave Height</h5>
+<table class="report-table">
+<tr>
+<td>Hswell [m]:</td>
+<td>@reductionFactor.WaveHeightHswell</td>
+</tr>
+<tr>
+<td>Hwind [m]:</td>
+<td>@reductionFactor.WaveHeightHwind</td>
+</tr>
+<tr>
+<td>Hs, max [m]:</td>
+<td>@reductionFactor.WaveHsmax</td>
+</tr>
+</table>
+</div>
+
+<div class="report-section">
+<h5>Output</h5>
+<p><strong>Duration OK:</strong> @reductionFactor.DurationOk</p>
+<p><strong>Forecast Before ETD OK:</strong> @reductionFactor.WeatherForecastBeforeETDOK</p>
+<p><strong>Reduction Factor: </strong><span class="reduction-factor">@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</span></p>
+</div>
+
+<div class="report-section">
+<h5>Voyage Map</h5>
+<div id="reportMapContainer" @ref="reportMapContainer"></div>
+</div>
+<!-- Modal -->
+<div id="canvasModal" class="canvas-modal" onclick="hideFullCanvas()">
+<img id="fullCanvasImage" />
+</div>
+<div class="report-section">
+<h5>Limited Short Voyage Reduction Factor</h5>
+<div class="result-value">
+<p>Reduction Factor: <strong>@(reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A")</strong></p>
+</div>
+
+<div class="chart-container">
+<canvas id="reductionChart2"></canvas>
+</div>
+</div>
+
+<!-- Notes Section -->
+<div class="report-section notes-section">
+<h5>Notes</h5>
+<ul>
+<li>The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.</li>
+<li>The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).</li>
+<li>A short voyage is to have a duration of less than 72 hours from departure port to arrival port.</li>
+<li>The weather reports need to be received within 6 hours of departure.</li>
+<li>The forecasted wave height needs to cover the duration of the voyage plus 12 hours.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+}
+
+
+
+<!-- Report Panel (only shown after ShowReport is called) -->
+@if (showReportForReductionFactor)
+{
+<div id="divShowReportRF" @onclick='() => ShowPopUp("divShowReportRF")' class="report-container @(showReportForReductionFactor ? "custom-report-container1" : "") draggable">
+<div class="header drag-handle">
+<div class="tabs">
+<button class="tab-btn active">
+Reports
+</button>
+</div>
+<button class="close-btn" @onclick="CloseReportForReductionFactor">×</button>
+</div>
+<button class="back-btn" @onclick="CloseReportForReductionFactor">
+<img src="img/back arrow.svg" alt="Back" style="width:16px; height:16px; margin-right:5px;" /> Close
+</button>
+<div class="report-content">
+<div class="report-actions">
+<button class="download-btn" @onclick="DownloadCompleteReductionFactorReport">
+<img src="img/Download_Report_icon.svg" alt="PDF" width="16" height="16" /> Download Report
+</button>
+<button class="print-btn" @onclick="PrintReport">
+<img src="img/Print_Report_icon.svg" alt="Print" width="16" height="16" /> Print Report
+</button>
+</div>
+
+<div class="report-details">
+@if (IsEditing)
+{
+<div class="edit-heading-container">
+<input @bind="HeadingText" @bind:event="oninput" class="heading-edit-input" />
+<button @onclick="SaveHeading" class="save-button">Save</button>
+<button @onclick="CancelEditing" class="cancel-button">Cancel</button>
+</div>
+}
+else
+{
+<div class="heading-container">
+<h4>@HeadingText</h4>
+<button @onclick="StartEditing" class="edit-button">
+
+<img src="img/path-259-1@1x.png" alt="Edit" class="edit-icon" />
+</button>
+</div>
+}
+
+<div class="report-section">
+<p><strong>Attention:</strong> Mr. Alan Bond, Mani Industries (WCN: 123456)</p>
+<p>
+Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the route from
+@(routeModel?.MainDeparturePortSelection?.Port?.Name) to @(routeModel?.MainArrivalPortSelection?.Port?.Name) is <span style="color: #0066cc;">@decimal.Round(decimal.Max((decimal)routeModel?.ReductionFactor, 0.80m), 2)</span>.
+More details can be found below.
+</p>
+<p>For any clarifications, contact Mr. Holland Wright at +65 6371 2xxx or (<a href="mailto:HWright@eagle.org">HWright@eagle.org</a>).</p>
+</div>
+
+<div class="report-section">
+<h5>User Inputs</h5>
+<table class="report-table">
+<tr>
+<td><strong>Route Name:</strong></td>
+<td style="color: #0066cc;">@(routeModel?.RouteName)</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Report Date:</strong></td>
+<td style="color: #0066cc;">@(routeModel?.ReportDate?.ToString("MM/dd/yyyy") ?? "N/A")</td>
+<td></td>
+</tr>
+@if (routeModel!.Vessel != null)
+{
+<tr>
+<td><strong>Vessel Name:</strong></td>
+<td style="color: #0066cc;">@routeModel.Vessel!.VesselName</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Vessel Imo:</strong></td>
+<td style="color: #0066cc;">@routeModel.Vessel!.IMONumber</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Flag:</strong></td>
+<td style="color: #0066cc;">@routeModel.Vessel!.Flag</td>
+<td></td>
+</tr>
+}
+<tr>
+<td><strong>Port of Departure:</strong></td>
+<td style="color: #0066cc;">@(routeModel?.MainDeparturePortSelection?.Port?.Unlocode)</td>
+<td>@($"{routeModel?.MainDeparturePortSelection?.Port?.Name}, {@routeModel?.MainDeparturePortSelection?.Port?.Country}")</td>
+</tr>
+@if (routeModel?.DeparturePorts != null && routeModel?.DeparturePorts.Count > 0)
+{
+for (int i = 0; i < routeModel?.DeparturePorts.Count; i++)
+{
+var port = routeModel?.DeparturePorts[i]?.Port;
+<tr>
+<td><strong>Loading Port @(i + 1):</strong></td>
+<td style="color: #0066cc;">@(port?.Unlocode ?? "N/A")</td>
+<td>@($"{port?.Name ?? "Unknown"}, {port?.Country ?? "Unknown"}")</td>
+</tr>
+}
+}
+<tr>
+<td><strong>Port of Arrival: </strong></td>
+<td style="color: #0066cc;">@(routeModel?.MainArrivalPortSelection?.Port?.Unlocode)</td>
+<td>@($"{routeModel?.MainArrivalPortSelection?.Port?.Name}, {@routeModel?.MainArrivalPortSelection?.Port?.Country}")</td>
+</tr>
+</table>
+</div>
+
+<div class="report-section">
+<h5>Output</h5>
+@if (isCLPVChecked)
+{
+<p>
+<strong>Reduction Factor: </strong>
+<span class="reduction-factor">@decimal.Round(decimal.Max((decimal)routeModel?.ReductionFactor, 0.80m), 2)</span>
+
+</p>
+}
+else
+{
+<div class="route_content">
+<div class="cls_route_div">
+<div class="cls_route_table">
+<table>
+<tbody>
+<tr>
+<td rowspan="2"></td>
+<td colspan="3">
+</td>
+<td colspan="4">
+<img src="img/group-3805-1@1x.png" alt="Seasonal Reduction Factor" class="cls_table_img" />
+<span style="font-size: 12px;"> Seasonal Reduction Factor </span>
+</td>
+</tr>
+<tr>
+<td colspan="3">
+<div class="cls_table_div_outline">
+<div class="cls_table_div cls_width33">
+<img src="img/group-3812-1@1x.png" alt="Routes" class="cls_table_img" />
+Routes
+</div>
+
+<div class="cls_table_div cls_width33">
+<img src="img/group-3814-2@1x.png" alt="Distance" class="cls_table_img" />
+Distance
+</div>
+
+<div class="cls_table_div cls_width33">
+<img src="img/group-3832-1@1x.png" alt="Annual Reduction Factor" class="cls_table_img" />
+Annual Reduction Factor
+</div>
+</div>
+</td>
+<td colspan="4">
+<div class="cls_table_div_outline">
+@foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+{
+<div class="cls_table_div cls_width25">
+<img src="img/@(season.ToLower()).png" alt="@season" class="cls_table_img" />
+@season
+<p>(@string.Join("-", seasonMonths.GetValueOrDefault(season, new List<string>())))</p>
+</div>
+}
+</div>
+</td>
+</tr>
+
+<tr>
+<td><span style="font-size: 12px;">Entire Route</span></td>
+<td colspan="3">
+<div class="cls_table_div_outline">
+<div class="cls_table_div cls_width33">
+@routeModel?.MainDeparturePortSelection?.Port?.Name - @routeModel?.MainArrivalPortSelection?.Port?.Name
+</div>
+
+<div class="cls_table_div cls_width33">
+@if (routeModel?.TotalDistance != null)
+{
+@(Math.Round(routeModel.TotalDistance)) <text> nm</text>
+}
+</div>
+
+<div class="cls_table_div cls_width33">
+@string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual"))
+</div>
+</div>
+</td>
+<td colspan="4">
+<div class="cls_table_div_outline">
+@foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+{
+<div class="cls_table_div cls_width25">
+@string.Format("{0:0.00}", GetSeasonalReductionFactor(season))
+</div>
+}
+</div>
+</td>
+</tr>
+
+@if (routeLegs != null && routeLegs.Any())
+{
+<tr class="cls_route_table_tr">
+<td rowspan="@routeLegs.Count()">
+<span style="font-size: 12px;">Route Splitting</span>
+</td>
+@{
+var firstLeg = routeLegs.First();
+}
+<td colspan="3">
+<div class="cls_table_div_outline">
+<div class="cls_table_div cls_width33">
+@firstLeg.DeparturePort - @firstLeg.ArrivalPort
+</div>
+
+<div class="cls_table_div cls_width33">
+<span>@(Math.Round(firstLeg.Distance)) nm</span>
+</div>
+
+<div class="cls_table_div cls_width33">
+@string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual", false, 1))
+</div>
+</div>
+</td>
+<td colspan="4">
+<div class="cls_table_div_outline">
+@foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+{
+<div class="cls_table_div cls_width25">
+@string.Format("{0:0.00}", GetSeasonalReductionFactor(season, false, 1))
+</div>
+}
+</div>
+</td>
+</tr>
+
+@for (int i = 1; i < routeLegs.Count(); i++)
+{
+var leg = routeLegs.ElementAt(i);
+<tr class="cls_route_table_tr">
+<td colspan="3">
+<div class="cls_table_div_outline">
+<div class="cls_table_div cls_width33">
+@leg.DeparturePort - @leg.ArrivalPort
+</div>
+
+<div class="cls_table_div cls_width33">
+<span>@(Math.Round(leg.Distance)) nm</span>
+</div>
+
+<div class="cls_table_div cls_width33">
+@string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual", false, i + 1))
+</div>
+</div>
+</td>
+<td colspan="4">
+<div class="cls_table_div_outline">
+@foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+{
+<div class="cls_table_div cls_width25">
+@string.Format("{0:0.00}", GetSeasonalReductionFactor(season, false, i + 1))
+</div>
+}
+</div>
+</td>
+</tr>
+}
+}
+@* else
+{
+<!-- Debug: routeLegs is null or empty -->
+<tr><td colspan="8" style="color:red;">No route legs found (routeLegs is null or empty)</td></tr>
+} *@
+</tbody>
+</table>
+</div>
+</div>
+</div>
+}
+</div>
+
+<div class="report-section">
+<h5>Route Map</h5>
+<div id="reportMapContainer" @ref="reportMapContainer" style="height: 200px; width: 100%;"></div>
+</div>
+
+<!-- Notes Section -->
+<div class="report-section notes-section">
+<h5>Notes</h5>
+<ul>
+<li>The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.</li>
+<li>ABS Container Securing Guide 6.2.4</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+}
+
+
+
+
+
+@if (ShowABSReport)
+{
+<div id="divShowAbsReport" @onclick='() => ShowPopUp("divShowAbsReport")' class="report-container @(showReportForReductionFactor ? "custom-report-container" : "") draggable">
+<div class="header drag-handle">
+<div class="tabs">
+<button class="tab-btn active">
+ABS Records
+</button>
+</div>
+<button class="close-btn" @onclick="CloseABSReportForm">×</button>
+</div>
+
+<div class="form-container">
+<button class="back-btn" @onclick="CloseABSReportForm">
+<img src="img/back arrow.svg" alt="Back" style="width:16px; height:16px; margin-right:5px;" /> Close
+</button>
+
+<div class="route_content">
+@if (!ShowSubmissionUI)
+{
+<div class="cls_route_div">
+<div class="cls_route_div_rep">
+<div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
+<img src="img/group-345-4@1x.png" alt="ABS Logo" class="cls_abs_icon">
+<h3 class="heading_Customize">
+Submit Report for ABS Records
+</h3>
+</div>
+</div>
+</div>
+
+<div class="cls_abs_logo_image ">
+<img src="img/group-345-4@1x.png" alt="ABS Logo" class="cls_abs_logo">
+</div>
+
+<div class="cls_route_div_rep">
+<label class="cls_abs_main_label"> <span class="cls_astrix">*</span> Subject vessel has the CLP-V or CLP-V(PARR) notation?</label>
+
+<div class="cls_abs_radio_outline">
+<div class="cls_abs_radio_div">
+<input type="checkbox" name="name" @onchange='e => OnCheckboxChanged(e, "CLP-V")' checked="@isCLPVChecked" />
+<label class="cls_radio_text">CLP-V</label>
+</div>
+<div class="cls_abs_radio_div">
+<input type="checkbox" name="name" @onchange='e => OnCheckboxChanged(e, "CLP-V(PARR)")' checked="@isCLPVParrChecked" />
+<label class="cls_radio_text">CLP-V(PARR)</label>
+</div>
+@* <div class="cls_abs_radio_div">
+                                <input type="checkbox" name="name" value="Neither" />
+                                <label class="cls_radio_text">Neither</label>
+                            </div> *@
+</div>
+</div>
+
+<div class="cls_route_div_rep" style="margin-top:34px;">
+<label class="cls_abs_main_label"> <span class="cls_astrix">*</span>Subject vessel</label>
+<div class="cls_imo_outline">
+@for (int i = 0; i < vesselImos.Count; i++)
+{
+<div class="cls_imo_div">
+<div class="cls_flex cls_flex_gap_8px cls_flex_align_center p-2 flex-column" style="align-items: flex-start;">
+<div class="d-flex align-items-center justify-content-center gap-2">
+<p class="cls_imo_label fw-bold">Vessel Name:</p>
+<p class="cls_imo_label_info">@vesselImos[i].VesselName</p>
+</div>
+<div class="d-flex align-items-center justify-content-center gap-2">
+<p class="cls_imo_label fw-bold">Vessel IMO: </p>
+<p class="cls_imo_label_info">@vesselImos[i].ImoNumber</p>
+</div>
+<div class="d-flex align-items-center justify-content-center gap-2">
+<p class="cls_imo_label fw-bold">Flag: </p>
+<p class="cls_imo_label_info">@vesselImos[i].Flag</p>
+</div>
+</div>
+</div>
+}
+</div>
+</div>
+
+@if (!string.IsNullOrEmpty(ReportMessage))
+{
+<div class="cls_red_outline">
+@ReportMessage
+</div>
+}
+
+<div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
+<button class="cls_button_light"
+@onclick="SubmitABSReport">
+Submit for ABS Records
+</button>
+</div>
+}
+else
+{
+<div class="cls_abs_logo_image ">
+<img src="img/group-345-4@1x.png" alt="ABS Logo" class="cls_abs_logo">
+</div>
+@if (!IsSubmissionComplete)
+{
+<div class="d-flex justify-content-center align-items-center flex-column gap-3 m-5">
+<img src="Assets/Submission in Progress.svg" />
+<p>Submission in progress...</p>
+</div>
+}
+else
+{
+@if (IsMailSent)
+{
+<div class="d-flex justify-content-center align-items-center flex-column gap-3 m-5">
+<img src="Assets/Successful Submission.svg" />
+<p>Submission successfull</p>
+<button class="rounded-pill bg-primary py-1 px-4 border-0 text-white" @onclick="CloseABSReportForm">✓ ok</button>
+</div>
+}
+else
+{
+<div class="d-flex justify-content-center align-items-center flex-column gap-3 m-5">
+<img src="Assets/Failed Submission.svg" />
+<p>Submission failed</p>
+<button class="rounded-pill bg-primary py-1 px-4 border-0 text-white" @onclick="CloseABSReportForm">cancel</button>
+</div>
+}
+}
+}
+</div>
+</div>
+</div>
+}
+
+</div>
+
+
+<script>
+function toggleRow(button) {
+const row = button.parentElement.parentElement.nextElementSibling;
+const isVisible = row.style.display === 'table-row';
+row.style.display = isVisible ? 'none' : 'table-row';
+button.textContent = isVisible ? '+' : '−';
+}
+
+</script>
+
+
+
+
+@code {
+void MyRoutes()
+{
+navigationManager.NavigateTo("MyRoutes");
+}
+
+
+}
