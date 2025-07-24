@@ -245,7 +245,7 @@ else
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item" href="Assets/report.png" target="_blank" style="cursor:pointer;">
+                                            <a class="dropdown-item" @onclick="() => DownloadRouteReport(item.RecordId)" style="cursor:pointer;">
                                                 <img src="Assets/download-icon-10@1x.png" class="cls_myroute_table_img" /> Download Report
                                             </a>
                                         </li>
@@ -657,5 +657,54 @@ else
         }
     }
 
+    private async Task DownloadRouteReport(string routeId)
+    {
+        // Fetch the route data for the given routeId (implement as needed)
+        var route = routelist.FirstOrDefault(x => x.RecordId == routeId);
+        if (route == null) return;
+        // Build UnifiedReportData for this route (reuse logic from main report)
+        var reportData = BuildUnifiedRouteReportData(route);
+        string fileName = $"RouteReport_{DateTime.Now:yyyyMMdd}_{route.RecordName.Replace(" ", "_")}.pdf";
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, Convert.ToBase64String(await apiService.GenerateRouteReportPdfAsync(reportData)));
+    }
+    // Helper: Build UnifiedReportData for a route (implement as needed, similar to BuildUnifiedReductionFactorReportData)
+    private UnifiedReportData BuildUnifiedRouteReportData(RouteListModel route)
+    {
+        var data = new UnifiedReportData
+        {
+            Title = $"Route Report: {route.RecordName}",
+            Attention = "Mr. Alan Bond, Mani Industries (WCN: 123456)",
+            Body = $"Route from {route.DeparturePort} to {route.ArrivalPort}. Reduction Factor: {route.ReductionFactors.Annual:0.00}",
+            Notes = new List<string>
+            {
+                "The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.",
+                "ABS Container Securing Guide 6.2.4"
+            }
+        };
+        // User Inputs Section
+        var userInputs = new UnifiedReportSection
+        {
+            Heading = "User Inputs",
+            Type = "table",
+            Table = new List<KeyValuePair<string, string>>
+            {
+                new("Route Name", route.RecordName),
+                new("Port of Departure", route.DeparturePort),
+                new("Port of Arrival", route.ArrivalPort),
+                new("Vessel Name", route.VesselName),
+                new("Vessel IMO", route.VesselIMO)
+            }
+        };
+        data.Sections.Add(userInputs);
+        // Output Section
+        var output = new UnifiedReportSection { Heading = "Output", Type = "table" };
+        output.Table.Add(new KeyValuePair<string, string>("Annual Reduction Factor", route.ReductionFactors.Annual.ToString("0.00")));
+        output.Table.Add(new KeyValuePair<string, string>("Spring", route.ReductionFactors.Spring.ToString("0.00")));
+        output.Table.Add(new KeyValuePair<string, string>("Summer", route.ReductionFactors.Summer.ToString("0.00")));
+        output.Table.Add(new KeyValuePair<string, string>("Fall", route.ReductionFactors.Fall.ToString("0.00")));
+        output.Table.Add(new KeyValuePair<string, string>("Winter", route.ReductionFactors.Winter.ToString("0.00")));
+        data.Sections.Add(output);
+        return data;
+    }
 
 }

@@ -345,206 +345,223 @@ namespace NextGenEngApps.DigitalRules.CRoute.Components.Pages
         }
 
 
+        // Refactored: Download Short Voyage Report using UnifiedReportData
         private async Task DownloadReport()
         {
             try
             {
-                // Create report data
-                var reportData = CreateShortVoyageReportData();
-
-                // Generate file name
+                var reportData = BuildUnifiedShortVoyageReportData();
                 string fileName = $"ShortVoyageReport_{DateTime.Now:yyyyMMdd}_{reductionFactor.VesselName}.pdf";
-
-                // Call the PDF service
                 await PdfService.DownloadPdfAsync(reportData, fileName);
             }
             catch (Exception ex)
             {
-                // Handle exception
                 Console.Error.WriteLine($"Error downloading report: {ex.Message}");
             }
         }
 
-        private ReportData CreateShortVoyageReportData()
-        {
-            var reportData = new ReportData
-            {
-                ReportName = "Short Voyage Reduction Factor Report",
-                Title = HeadingText,
-                AttentionText = $"Mr. Alan Bond, Mani Industries (WCN: 123456)"
-            };
-
-            // User Inputs Section
-            var userInputsSection = new ReportSection
-            {
-                Title = "User Inputs",
-                Type = "table",
-                TableData = new List<ReportTableRow>
-            {
-                // Header row
-                new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
-                // Data rows
-                new ReportTableRow { Cells = new List<string> { "Vessel Name", reductionFactor.VesselName ?? "N/A" } },
-                new ReportTableRow { Cells = new List<string> { "Vessel IMO", reductionFactor.IMONo ?? "N/A" } },
-                new ReportTableRow { Cells = new List<string> { "Vessel Breadth", reductionFactor.Breadth.ToString() } },
-                new ReportTableRow { Cells = new List<string> { "Port of Departure", reductionFactor.PortOfDeparture ?? "N/A" } },
-                new ReportTableRow { Cells = new List<string> { "Port of Arrival", reductionFactor.PortOfArrival ?? "N/A" } },
-                new ReportTableRow { Cells = new List<string> { "Time Zone", reductionFactor.TimeZone ?? "UTC" } },
-                new ReportTableRow { Cells = new List<string> { "Date of Departure", reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd") } },
-                new ReportTableRow { Cells = new List<string> { "Date of Arrival", reductionFactor.DateOfArrival.ToString("yyyy-MM-dd") } },
-                new ReportTableRow { Cells = new List<string> { "Duration (Hrs)", reductionFactor.Duration.ToString() } },
-                new ReportTableRow { Cells = new List<string> { "ETD", reductionFactor.ETD.ToString("HH:mm") } },
-                new ReportTableRow { Cells = new List<string> { "ETA", reductionFactor.ETA.ToString("HH:mm") } }
-            }
-            };
-            reportData.Sections.Add(userInputsSection);
-
-            // Weather Forecast Section
-            var weatherSection = new ReportSection
-            {
-                Title = "Weather Forecast",
-                Type = "table",
-                TableData = new List<ReportTableRow>
-            {
-                new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
-                new ReportTableRow { Cells = new List<string> { "Date", reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd") } },
-                new ReportTableRow { Cells = new List<string> { "Time", reductionFactor.WeatherForecasetTime.ToString("HH:mm") } },
-                new ReportTableRow { Cells = new List<string> { "Before ETD (Hrs)", reductionFactor.WeatherForecastBeforeETD.ToString() } },
-                new ReportTableRow { Cells = new List<string> { "Source", reductionFactor.WeatherForecastSource ?? "www.weather.gov" } }
-            }
-            };
-            reportData.Sections.Add(weatherSection);
-
-            // Wave Height Section
-            //var waveHeightSection = new ReportSection
-            //{
-            //    Title = "Forecast Maximum Significant Wave Height",
-            //    Type = "table",
-            //    TableData = new List<ReportTableRow>
-            //{
-            //    new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
-            //    new ReportTableRow { Cells = new List<string> { "Hswell [m]", reductionFactor.WaveHeightHswell.ToString() } },
-            //    new ReportTableRow { Cells = new List<string> { "Hwind [m]", reductionFactor.WaveHeightHwind.ToString() } },
-            //    new ReportTableRow { Cells = new List<string> { "Hs, max [m]", reductionFactor.WaveHsmax.ToString() } }
-            //}
-            //};
-            //reportData.Sections.Add(waveHeightSection);
-
-            // Output Section
-            var outputSection = new ReportSection
-            {
-                Title = "Output",
-                Type = "text",
-                Content = $"Duration OK: {reductionFactor.DurationOk}\n" +
-                          $"Forecast Before ETD OK: {reductionFactor.WeatherForecastBeforeETDOK}\n" +
-                          $"Reduction Factor: {reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"}"
-            };
-            reportData.Sections.Add(outputSection);
-
-            // Add notes
-            reportData.Notes = new List<string>
-        {
-            "The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.",
-            "The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).",
-            "A short voyage is to have a duration of less than 72 hours from departure port to arrival port.",
-            "The weather reports need to be received within 6 hours of departure.",
-            "The forecasted wave height needs to cover the duration of the voyage plus 12 hours."
-        };
-
-            return reportData;
-        }
-
-        //For reduction factor
+        // Refactored: Download Reduction Factor Report using UnifiedReportData
         private async Task DownloadReductionFactorReport()
         {
             try
             {
-                // Create report data
-                var reportData = CreateReductionFactorReportData();
-
-                // Generate file name
+                var reportData = BuildUnifiedReductionFactorReportData();
                 string fileName = $"ReductionFactorReport_{DateTime.Now:yyyyMMdd}_{routeModel?.RouteName?.Replace(" ", "_") ?? "Route"}.pdf";
-
-                // Call the PDF service
                 await PdfService.DownloadPdfAsync(reportData, fileName);
             }
             catch (Exception ex)
             {
-                // Handle exception
                 Console.Error.WriteLine($"Error downloading reduction factor report: {ex.Message}");
             }
         }
 
-        private ReportData CreateReductionFactorReportData()
+        // Helper: Build UnifiedReportData for Short Voyage
+        private UnifiedReportData BuildUnifiedShortVoyageReportData()
         {
-            var reportData = new ReportData
+            var data = new UnifiedReportData
             {
-                ReportName = "Route Reduction Factor Report",
-                Title = HeadingText,
-                AttentionText = $"Mr. Alan Bond, Mani Industries (WCN: 123456)"
+                Title = HeadingTextShortVoyage,
+                Attention = "Mr. Alan Bond, Mani Industries (WCN: 123456)",
+                Body = $"Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the voyage is {reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"}. More details can be found below.",
+                Notes = new List<string>
+                {
+                    "The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Short Voyage Reduction Factors.",
+                    "The minimum value of the Short Voyage Reduction Factor is 0.6 and needs to be included in Cargo Securing Manual (CSM).",
+                    "A short voyage is to have a duration of less than 72 hours from departure port to arrival port.",
+                    "The weather reports need to be received within 6 hours of departure.",
+                    "The forecasted wave height needs to cover the duration of the voyage plus 12 hours."
+                }
             };
-
             // User Inputs Section
-            var userInputsSection = new ReportSection
+            var userInputs = new UnifiedReportSection
             {
-                Title = "User Inputs",
+                Heading = "User Inputs",
                 Type = "table",
-                TableData = new List<ReportTableRow>
-        {
-            // Header row
-            new ReportTableRow { Cells = new List<string> { "Parameter", "Value", "Code" } },
-            // Data rows
-            new ReportTableRow { Cells = new List<string> { "Route Name", routeModel?.RouteName ?? "Marseille - Shanghai", "" } },
-            new ReportTableRow { Cells = new List<string> { "Port of Departure", routeModel?.MainDeparturePortSelection?.Port?.Name ?? "Marseille, France", routeModel?.DeparturePorts?.FirstOrDefault()?.Port?.Unlocode ?? "FRMRS" } },
-            new ReportTableRow { Cells = new List<string> { "Loading Port", routeModel?.DeparturePorts?.FirstOrDefault()?.Port?.Name ?? "Singapore", routeModel?.DeparturePorts?.FirstOrDefault()?.Port?.Unlocode ?? "SGSIN" } },
-            new ReportTableRow { Cells = new List<string> { "Port of Arrival", routeModel?.MainArrivalPortSelection?.Port?.Name ?? "Shanghai, China", routeModel?.ArrivalPorts?.FirstOrDefault()?.Port?.Unlocode ?? "CNSGH" } }
-        }
+                Table = new List<KeyValuePair<string, string>>
+                {
+                    new("Vessel Name", reductionFactor.VesselName ?? "N/A"),
+                    new("Vessel IMO", reductionFactor.IMONo ?? "N/A"),
+                    new("Vessel Breadth", reductionFactor.Breadth.ToString()),
+                    new("Port of Departure", reductionFactor.PortOfDeparture ?? "N/A"),
+                    new("Port of Arrival", reductionFactor.PortOfArrival ?? "N/A"),
+                    new("Time Zone", reductionFactor.TimeZone ?? "UTC"),
+                    new("Date of Departure", reductionFactor.DateOfDeparture.ToString("yyyy-MM-dd")),
+                    new("Date of Arrival", reductionFactor.DateOfArrival.ToString("yyyy-MM-dd")),
+                    new("Duration (Hrs)", reductionFactor.Duration.ToString()),
+                    new("ETD", reductionFactor.ETD.ToString("HH:mm")),
+                    new("ETA", reductionFactor.ETA.ToString("HH:mm"))
+                }
             };
-            reportData.Sections.Add(userInputsSection);
-
-            // Output Section
-            var outputSection = new ReportSection
+            data.Sections.Add(userInputs);
+            // Weather Forecast Section
+            var weatherSection = new UnifiedReportSection
             {
-                Title = "Output",
-                Type = "table"
+                Heading = "Weather Forecast",
+                Type = "table",
+                Table = new List<KeyValuePair<string, string>>
+                {
+                    new("Date", reductionFactor.WeatherForecastDate.ToString("yyyy-MM-dd")),
+                    new("Time", reductionFactor.WeatherForecasetTime.ToString("HH:mm")),
+                    new("Before ETD (Hrs)", reductionFactor.WeatherForecastBeforeETD.ToString()),
+                    new("Source", reductionFactor.WeatherForecastSource ?? "www.weather.gov")
+                }
             };
+            data.Sections.Add(weatherSection);
+            // Wave Height Section
+            var waveHeightSection = new UnifiedReportSection
+            {
+                Heading = "Forecast Maximum Significant Wave Height",
+                Type = "table",
+                Table = new List<KeyValuePair<string, string>>
+                {
+                    new("Hswell [m]", reductionFactor.WaveHeightHswell.ToString()),
+                    new("Hwind [m]", reductionFactor.WaveHeightHwind.ToString()),
+                    new("Hs, max [m]", reductionFactor.WaveHsmax.ToString())
+                }
+            };
+            data.Sections.Add(waveHeightSection);
+            // Output Section
+            var outputSection = new UnifiedReportSection
+            {
+                Heading = "Output",
+                Type = "text",
+                Content = $"Duration OK: {reductionFactor.DurationOk}\nForecast Before ETD OK: {reductionFactor.WeatherForecastBeforeETDOK}\nReduction Factor: {reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"}"
+            };
+            data.Sections.Add(outputSection);
+            // Map Section (if available)
+            if (reductionFactor.MapImage != null)
+            {
+                data.Sections.Add(new UnifiedReportSection
+                {
+                    Heading = "Voyage Map",
+                    Type = "image",
+                    ImageData = reductionFactor.MapImage
+                });
+            }
+            // Chart Section (if available)
+            if (reductionFactor.ChartImage != null)
+            {
+                data.Sections.Add(new UnifiedReportSection
+                {
+                    Heading = "Reduction Factor Chart",
+                    Type = "image",
+                    ImageData = reductionFactor.ChartImage
+                });
+            }
+            // Result Section
+            var resultSection = new UnifiedReportSection
+            {
+                Heading = "Limited Short Voyage Reduction Factor",
+                Type = "text",
+                Content = $"Reduction Factor: {reductionFactor.ShortVoyageReductionFactor?.ToString("0.00") ?? "N/A"}"
+            };
+            data.Sections.Add(resultSection);
+            return data;
+        }
 
+        // Helper: Build UnifiedReportData for Reduction Factor (with complex table if needed)
+        private UnifiedReportData BuildUnifiedReductionFactorReportData()
+        {
+            var data = new UnifiedReportData
+            {
+                Title = HeadingText,
+                Attention = "Mr. Alan Bond, Mani Industries (WCN: 123456)",
+                Body = $"Based on your inputs in the ABS Online Reduction Factor Tool, the calculated Reduction Factor for the route from {routeModel?.MainDeparturePortSelection?.Port?.Name} to {routeModel?.MainArrivalPortSelection?.Port?.Name} is {routeModel?.ReductionFactor?.ToString("0.00") ?? "N/A"}. More details can be found below.",
+                Notes = new List<string>
+                {
+                    "The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.",
+                    "ABS Container Securing Guide 6.2.4"
+                }
+            };
+            // User Inputs Section
+            var userInputs = new UnifiedReportSection
+            {
+                Heading = "User Inputs",
+                Type = "table",
+                Table = new List<KeyValuePair<string, string>>
+                {
+                    new("Route Name", routeModel?.RouteName ?? "N/A"),
+                    new("Report Date", routeModel?.ReportDate?.ToString("yyyy-MM-dd") ?? "N/A"),
+                    new("Port of Departure", routeModel?.MainDeparturePortSelection?.Port?.Name + " (" + routeModel?.MainDeparturePortSelection?.Port?.Unlocode + ")"),
+                    new("Port of Arrival", routeModel?.MainArrivalPortSelection?.Port?.Name + " (" + routeModel?.MainArrivalPortSelection?.Port?.Unlocode + ")")
+                }
+            };
+            data.Sections.Add(userInputs);
+            // Vessel Info Section
+            if (routeModel?.Vessel != null)
+            {
+                var vesselInfo = new UnifiedReportSection
+                {
+                    Heading = "Vessel Info",
+                    Type = "table",
+                    Table = new List<KeyValuePair<string, string>>
+                    {
+                        new("Vessel Name", routeModel.Vessel.VesselName),
+                        new("IMO", routeModel.Vessel.IMONumber),
+                        new("Flag", routeModel.Vessel.Flag)
+                    }
+                };
+                data.Sections.Add(vesselInfo);
+            }
+            // Route Info Section (if routeLegs available)
+            if (routeLegs != null && routeLegs.Count > 0)
+            {
+                var routeInfo = new UnifiedReportSection
+                {
+                    Heading = "Route Info",
+                    Type = "table",
+                    Table = routeLegs.Select(leg => new KeyValuePair<string, string>(
+                        $"{leg.DeparturePort} - {leg.ArrivalPort}",
+                        $"{Math.Round(leg.Distance)} nm"
+                    )).ToList()
+                };
+                data.Sections.Add(routeInfo);
+            }
+            // Output Section (dynamic based on notation)
+            var output = new UnifiedReportSection { Heading = "Output", Type = "table" };
             if (isCLPVChecked)
             {
-                // Single reduction factor for CLP-V
-                outputSection.TableData = new List<ReportTableRow>
-        {
-            new ReportTableRow { Cells = new List<string> { "Parameter", "Value" } },
-            new ReportTableRow { Cells = new List<string> { "Reduction Factor", routeReductionFactor?.ToString("0.00") ?? "0.82" } }
-        };
+                output.Table.Add(new KeyValuePair<string, string>("Reduction Factor", routeModel?.ReductionFactor?.ToString("0.00") ?? "N/A"));
             }
             else if (isCLPVParrChecked)
             {
-                // Seasonal reduction factors for CLP-V(PARR)
-                outputSection.TableData = new List<ReportTableRow>
-        {
-            new ReportTableRow { Cells = new List<string> { "Season", "Reduction Factor" } }
-        };
-
                 foreach (var season in seasonalOptions)
                 {
-                    outputSection.TableData.Add(new ReportTableRow
-                    {
-                        Cells = new List<string> { season, GetCorrectedReductionFactor((decimal)routeModel.ReductionFactor, season) }
-                    });
+                    output.Table.Add(new KeyValuePair<string, string>(season, GetCorrectedReductionFactor((decimal)routeModel.ReductionFactor, season)));
                 }
             }
-
-            reportData.Sections.Add(outputSection);
-
-            // Add notes
-            reportData.Notes = new List<string>
-    {
-        "The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.",
-        "ABS Container Securing Guide 6.2.4"
-    };
-
-            return reportData;
+            data.Sections.Add(output);
+            // Map Section (if available)
+            if (routeModel?.MapImage != null)
+            {
+                data.Sections.Add(new UnifiedReportSection
+                {
+                    Heading = "Route Map",
+                    Type = "image",
+                    ImageData = routeModel.MapImage
+                });
+            }
+            return data;
         }
 
         private async Task PrintReport()
@@ -1194,13 +1211,13 @@ namespace NextGenEngApps.DigitalRules.CRoute.Components.Pages
             }
             data.Sections.Add(output);
             // Add map image if available
-            if (reportModel?.MapImage != null)
+            if (routeModel?.MapImage != null)
             {
                 data.Sections.Add(new UnifiedReportSection
                 {
                     Heading = "Route Map",
                     Type = "image",
-                    ImageData = reportModel.MapImage
+                    ImageData = routeModel.MapImage
                 });
             }
             return data;
