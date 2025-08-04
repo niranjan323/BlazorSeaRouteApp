@@ -337,23 +337,49 @@ Longitude = 103.8198
             //await CheckAndCalculateRoute();
             StateHasChanged();
         }
-        private void AddDeparturePort()
+        //start of the code
+        //Modified by Niranjan - Updated AddDeparturePort method to accept insertion index
+        private void AddDeparturePort(int? insertAfterIndex = null)
         {
             var portModel = new PortSelectionModel { SequenceNumber = routeModel.DepartureItems.Count + 1 };
 
-            // Add to combined list
-            routeModel.DepartureItems.Add(new RouteItemModel
+            // Determine insertion index
+            int insertIndex = insertAfterIndex.HasValue ? insertAfterIndex.Value + 1 : routeModel.DepartureItems.Count;
+
+            // Add to combined list at specific position
+            routeModel.DepartureItems.Insert(insertIndex, new RouteItemModel
             {
-                SequenceNumber = routeModel.DepartureItems.Count + 1,
+                SequenceNumber = insertIndex + 1,
                 ItemType = "P",
                 Port = portModel
             });
 
             // Add to ports list if you're still maintaining it
             routeModel.DeparturePorts.Add(portModel);
+            
+            // Resequence remaining items after insertion point
+            for (int i = insertIndex + 1; i < routeModel.DepartureItems.Count; i++)
+            {
+                routeModel.DepartureItems[i].SequenceNumber = i + 1;
+            }
+            
             StateHasChanged();
         }
 
+        //Modified by Niranjan - New method to add departure port after a specific port
+        private void AddDeparturePortAfter(PortSelectionModel afterPort)
+        {
+            var portIndex = routeModel.DepartureItems.FindIndex(item => item.ItemType == "P" && item.Port == afterPort);
+            AddDeparturePort(portIndex);
+        }
+
+        //Modified by Niranjan - New method to add departure port after a specific sequence number
+        private void AddDeparturePortAfterSequence(int sequenceNumber)
+        {
+            var portIndex = routeModel.DepartureItems.FindIndex(item => item.SequenceNumber == sequenceNumber);
+            AddDeparturePort(portIndex);
+        }
+// end of the code part 1
         private async Task RemoveDeparturePort(PortSelectionModel port)
         {
             if (JS is not null && port.Port?.Longitude != null && port.Port?.Latitude != null)
@@ -501,23 +527,49 @@ Longitude = 103.8198
             // await CheckAndCalculateRoute();
             StateHasChanged();
         }
-        private void AddArrivalPort()
+        //start of the code arriaval port
+        //Modified by Niranjan - Updated AddArrivalPort method to accept insertion index
+        private void AddArrivalPort(int? insertAfterIndex = null)
         {
             var portModel = new PortSelectionModel { SequenceNumber = routeModel.ArrivalItems.Count + 1 };
 
-            // Add to combined list
-            routeModel.ArrivalItems.Add(new RouteItemModel
+            // Determine insertion index
+            int insertIndex = insertAfterIndex.HasValue ? insertAfterIndex.Value + 1 : routeModel.ArrivalItems.Count;
+
+            // Add to combined list at specific position
+            routeModel.ArrivalItems.Insert(insertIndex, new RouteItemModel
             {
-                SequenceNumber = routeModel.ArrivalItems.Count + 1,
+                SequenceNumber = insertIndex + 1,
                 ItemType = "P",
                 Port = portModel
             });
 
             // Add to the original ports list
             routeModel.ArrivalPorts.Add(portModel);
+            
+            // Resequence remaining items after insertion point
+            for (int i = insertIndex + 1; i < routeModel.ArrivalItems.Count; i++)
+            {
+                routeModel.ArrivalItems[i].SequenceNumber = i + 1;
+            }
+            
             StateHasChanged();
         }
 
+        //Modified by Niranjan - New method to add arrival port after a specific port
+        private void AddArrivalPortAfter(PortSelectionModel afterPort)
+        {
+            var portIndex = routeModel.ArrivalItems.FindIndex(item => item.ItemType == "P" && item.Port == afterPort);
+            AddArrivalPort(portIndex);
+        }
+
+        //Modified by Niranjan - New method to add arrival port after a specific sequence number
+        private void AddArrivalPortAfterSequence(int sequenceNumber)
+        {
+            var portIndex = routeModel.ArrivalItems.FindIndex(item => item.SequenceNumber == sequenceNumber);
+            AddArrivalPort(portIndex);
+        }
+// end of the code part 2
         private async Task RemoveArrivalPort(PortSelectionModel port)
         {
             if (JS is not null && port.Port?.Longitude != null && port.Port?.Latitude != null)
@@ -785,8 +837,9 @@ Longitude = 103.8198
             arrivalSearchResults.Clear();
         }
 
-
-        private async Task AddDepartureWaypoint()
+//start of the code waypoint
+        //Modified by Niranjan - Updated AddDepartureWaypoint method to accept insertion index
+        private async Task AddDepartureWaypoint(int? insertAfterIndex = null)
         {
             var waypointModel = new WaypointModel
             {
@@ -794,16 +847,25 @@ Longitude = 103.8198
                 PointId = Guid.NewGuid().ToString()
             };
 
-            // Add to combined list
-            routeModel.DepartureItems.Add(new RouteItemModel
+            // Determine insertion index
+            int insertIndex = insertAfterIndex.HasValue ? insertAfterIndex.Value + 1 : routeModel.DepartureItems.Count;
+
+            // Add to combined list at specific position
+            routeModel.DepartureItems.Insert(insertIndex, new RouteItemModel
             {
-                SequenceNumber = routeModel.DepartureItems.Count + 1,
+                SequenceNumber = insertIndex + 1,
                 ItemType = "W",
                 Waypoint = waypointModel
             });
 
             // Add to waypoints list if you're still maintaining it
             routeModel.DepartureWaypoints.Add(waypointModel);
+
+            // Resequence remaining items after insertion point
+            for (int i = insertIndex + 1; i < routeModel.DepartureItems.Count; i++)
+            {
+                routeModel.DepartureItems[i].SequenceNumber = i + 1;
+            }
 
             await EnableWaypointSelection();
 
@@ -812,6 +874,14 @@ Longitude = 103.8198
             //need to add waypoint to geo_points table as we need to maintain in waypoints table
             //await routeAPIService.AddGeoPointAsync(waypointModel.PointId, double.Parse(wp.Latitude), wp.Longitude);
         }
+
+        //Modified by Niranjan - New method to add departure waypoint after a specific sequence number
+        private async Task AddDepartureWaypointAfterSequence(int sequenceNumber)
+        {
+            var waypointIndex = routeModel.DepartureItems.FindIndex(item => item.SequenceNumber == sequenceNumber);
+            await AddDepartureWaypoint(waypointIndex);
+        }
+
         private async Task EnableWaypointSelection()
         {
             if (JS is not null)
@@ -819,7 +889,8 @@ Longitude = 103.8198
                 await JS.InvokeVoidAsync("setWaypointSelection", true);
             }
         }
-        private async Task AddArrivalWaypoint()
+        //Modified by Niranjan - Updated AddArrivalWaypoint method to accept insertion index
+        private async Task AddArrivalWaypoint(int? insertAfterIndex = null)
         {
             var waypointModel = new WaypointModel
             {
@@ -827,10 +898,13 @@ Longitude = 103.8198
                 PointId = Guid.NewGuid().ToString()
             };
 
-            // Add to combined list
-            routeModel.ArrivalItems.Add(new RouteItemModel
+            // Determine insertion index
+            int insertIndex = insertAfterIndex.HasValue ? insertAfterIndex.Value + 1 : routeModel.ArrivalItems.Count;
+
+            // Add to combined list at specific position
+            routeModel.ArrivalItems.Insert(insertIndex, new RouteItemModel
             {
-                SequenceNumber = routeModel.ArrivalItems.Count + 1,
+                SequenceNumber = insertIndex + 1,
                 ItemType = "W",
                 Waypoint = waypointModel
             });
@@ -838,9 +912,22 @@ Longitude = 103.8198
             // Add to the original waypoints list
             routeModel.ArrivalWaypoints.Add(waypointModel);
 
+            // Resequence remaining items after insertion point
+            for (int i = insertIndex + 1; i < routeModel.ArrivalItems.Count; i++)
+            {
+                routeModel.ArrivalItems[i].SequenceNumber = i + 1;
+            }
+
             await EnableWaypointSelection();
         }
 
+        //Modified by Niranjan - New method to add arrival waypoint after a specific sequence number
+        private async Task AddArrivalWaypointAfterSequence(int sequenceNumber)
+        {
+            var waypointIndex = routeModel.ArrivalItems.FindIndex(item => item.SequenceNumber == sequenceNumber);
+            await AddArrivalWaypoint(waypointIndex);
+        }
+// end of the code part 3
         private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
         {
             if (JS is not null)

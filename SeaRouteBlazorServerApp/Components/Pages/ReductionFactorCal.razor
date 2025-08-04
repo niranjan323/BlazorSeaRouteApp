@@ -126,8 +126,8 @@
             </div>
             <!-- Add Port/Waypoint Buttons -->
             <div class="cls_btn_div">
-                <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                <button class="cls_button_light" @onclick="() => AddDeparturePortAfterSequence(0)">+ Add Port</button>
+                <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfterSequence(0)">+ Add Waypoint</button>
             </div>
         </div>
     </div>
@@ -182,8 +182,8 @@
                         }
                     </div>
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="() => AddDeparturePortAfterSequence(portNumber)">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfterSequence(portNumber)">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
@@ -220,8 +220,8 @@
                     </div>
 
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="() => AddDeparturePortAfterSequence(waypointNumber)">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfterSequence(waypointNumber)">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
@@ -266,8 +266,8 @@
             }
             <!-- Add Port/Waypoint Buttons -->
             <div class="cls_btn_div">
-                <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
-                <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+                <button class="cls_button_light" @onclick="() => AddArrivalPortAfterSequence(0)">+ Add Port</button>
+                <button class="cls_button_light" @onclick="() => AddArrivalWaypointAfterSequence(0)">+ Add Waypoint</button>
             </div>
         </div>
     </div>
@@ -327,8 +327,8 @@
                     </div>
                     <!-- Add Port/Waypoint Buttons -->
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="() => AddArrivalPortAfterSequence(portNumber)">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="() => AddArrivalWaypointAfterSequence(portNumber)">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
@@ -365,8 +365,8 @@
                     </div>
 
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="() => AddArrivalPortAfterSequence(waypointNumber)">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="() => AddArrivalWaypointAfterSequence(waypointNumber)">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
