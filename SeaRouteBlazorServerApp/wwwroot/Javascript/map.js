@@ -594,7 +594,17 @@ function drawCombinedRoute(segments) {
         paddingBottomRight: [20, 20],
         duration: 1.5
     });
-    updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries);
+    //start js-1
+    // Only update pins if we have valid routePoints and segmentBoundaries
+    if (routePoints && routePoints.length > 0 && segmentBoundaries && segmentBoundaries.length > 0) {
+        updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries);
+    } else {
+        console.warn("Cannot update pins: missing routePoints or segmentBoundaries", {
+            routePointsLength: routePoints ? routePoints.length : 0,
+            segmentBoundariesLength: segmentBoundaries ? segmentBoundaries.length : 0
+        });
+    }
+    //end js-1
     return routePolyline;
 }
 function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries) {
@@ -604,16 +614,50 @@ function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBou
     portPins = [];
     waypointPins.forEach(pin => map.removeLayer(pin));
     waypointPins = [];
+    //start js-2
+    // Check if we have valid segment boundaries
+    if (!segmentBoundaries || segmentBoundaries.length === 0) {
+        console.warn("No segment boundaries provided, skipping pin updates");
+        return;
+    }
 
     for (let i = 0; i < routePoints.length; i++) {
         let coordIdx;
+        
+        // Safely determine coordinate index based on position
         if (i === 0) {
-            coordIdx = segmentBoundaries[0].startIndex;
+            // First point - use start of first segment
+            if (segmentBoundaries[0] && segmentBoundaries[0].startIndex !== undefined) {
+                coordIdx = segmentBoundaries[0].startIndex;
+            } else {
+                coordIdx = 0; // Fallback to first coordinate
+            }
+        } else if (i === routePoints.length - 1) {
+            // Last point - use end of last segment
+            const lastSegment = segmentBoundaries[segmentBoundaries.length - 1];
+            if (lastSegment && lastSegment.endIndex !== undefined) {
+                coordIdx = lastSegment.endIndex;
+            } else {
+                coordIdx = allCoordinates.length - 1; // Fallback to last coordinate
+            }
         } else {
-            coordIdx = segmentBoundaries[i - 1].endIndex;
+            // Middle points - use end of previous segment
+            const prevSegmentIndex = i - 1;
+            if (prevSegmentIndex < segmentBoundaries.length && segmentBoundaries[prevSegmentIndex]) {
+                coordIdx = segmentBoundaries[prevSegmentIndex].endIndex;
+            } else {
+                // Fallback: calculate approximate position
+                const segmentSize = Math.floor(allCoordinates.length / (routePoints.length - 1));
+                coordIdx = Math.min(i * segmentSize, allCoordinates.length - 1);
+            }
         }
-        if (coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
 
+        // Validate coordinate index
+        if (coordIdx < 0 || coordIdx >= allCoordinates.length) {
+            console.warn(`Invalid coordinate index ${coordIdx} for route point ${i}, skipping`);
+            continue;
+        }
+        //end js-2
         const p = routePoints[i];
         let pin = L.marker(allCoordinates[coordIdx]).addTo(map);
 
