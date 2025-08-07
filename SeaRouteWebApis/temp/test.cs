@@ -1,295 +1,230 @@
-﻿// 1. Updated Request Model
+﻿// 1. Add to RecordsController.cs
+
 using Microsoft.AspNetCore.Mvc;
-using SeaRouteModel.Models;
-using SeaRouteWebApis.Controllers;
-using SeaRouteWebApis.Interfaces;
+using NextGenEngApps.DigitalRules.CRoute.DAL.Repositories;
 
-public class BkWxRouteRequest
+[HttpGet("record_reduction_factors/{id}")]
+public async Task<IActionResult> GetRecordReductionFactors(string id)
 {
-    public string DataSource { get; set; } // Changed from WaveType to DataSource
-    public List<Coordinate> Coordinates { get; set; }
-    public double ExceedanceProbability { get; set; }
-    public double SignificantWaveHeight { get; set; } // Changed from TargetWaveHeight
-    public string SeasonType { get; set; } = "annual"; // New field with default value
-    // Removed PointNumber as it can be deduced from Coordinates.Count
-}
-
-// 2. Updated Response Model
-public class BkWxRouteResponse
-{
-    public string DataSource { get; set; } // Changed from WaveType
-    public List<Coordinate> Coordinates { get; set; }
-    public double ExceedanceProbability { get; set; }
-    public double SignificantWaveHeight { get; set; } // Changed from TargetWaveHeight
-    public string SeasonType { get; set; } // New field
-    public double ReductionFactor { get; set; }
-    // Removed PointNumber
-}
-
-// 3. Updated Controller
-using System.Linq;
-using Microsoft.AspNetCore.Mvc;
-using SeaRouteModel.Models;
-using SeaRouteWebApis.Controllers;
-using SeaRouteWebApis.Interfaces;
-
-namespace NextGenEngApps.DigitalRules.API.Controllers
-{
-    [ApiController]
-    [Route("api/v1/reduction-factor/")]
-    public class ReductionFactorCalculation : SeaRouteBaseController<ReductionFactorRecord>
+    try
     {
-        private readonly IWaveScatterDiagramService _wsdService;
-        private readonly ILogger<ReductionFactorCalculation> _logger;
-        private readonly IRouteSplitService _routeSplitService;
+        if (string.IsNullOrEmpty(id))
+            return BadRequest("Record ID is required");
 
-        public ReductionFactorCalculation(ILoggerFactory loggerFactory, IRepository<ReductionFactorRecord> reductionFactorRepository,
-            IWaveScatterDiagramService wsdService, IRouteSplitService routeSplitService)
-            : base(loggerFactory, reductionFactorRepository)
+        var result = await _recordService.GetRecordReductionFactorsAsync(id);
+
+        if (result == null)
+            return NotFound($"Record with ID {id} not found");
+
+        return Ok(result);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error occurred on GetRecordReductionFactors");
+        return StatusCode(StatusCodes.Status500InternalServerError);
+    }
+}
+
+[HttpGet("{id}")]
+public async Task<IActionResult> GetRecordDetails(string id)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(id))
+            return BadRequest("Record ID is required");
+
+        var result = await _recordService.GetRecordDetailsAsync(id);
+
+        if (result == null)
+            return NotFound($"Record with ID {id} not found");
+
+        return Ok(result);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error occurred on GetRecordDetails");
+        return StatusCode(StatusCodes.Status500InternalServerError);
+    }
+}
+
+// 2. Add to IRecordService interface
+
+Task<RecordReductionFactorsDto?> GetRecordReductionFactorsAsync(string recordId);
+Task<RecordDetailsDto?> GetRecordDetailsAsync(string recordId);
+
+
+
+
+
+// 3. Add DTOs (create new files or add to existing DTO file)
+
+public class RecordReductionFactorsDto
+{
+    public string RecordId { get; set; } = string.Empty;
+    public ReductionFactorsResponse ReductionFactors { get; set; } = new();
+}
+
+public class ReductionFactorsResponse
+{
+    public double Annual { get; set; }
+    public double Spring { get; set; }
+    public double Summer { get; set; }
+    public double Fall { get; set; }
+    public double Winter { get; set; }
+}
+
+public class RecordDetailsDto
+{
+    public string RecordId { get; set; } = string.Empty;
+    public string RouteName { get; set; } = string.Empty;
+    public double RouteDistance { get; set; }
+}
+
+// 4. Add to RecordService.cs
+
+public async Task<RecordReductionFactorsDto?> GetRecordReductionFactorsAsync(string recordId)
+{
+    try
+    {
+        if (!Guid.TryParse(recordId, out Guid recordGuid))
+            return null;
+
+        var reductionFactors = await _recordRepository.GetRecordReductionFactorsAsync(recordGuid);
+
+        if (reductionFactors == null)
+            return null;
+
+        return new RecordReductionFactorsDto
         {
-            _wsdService = wsdService;
-            _logger = loggerFactory.CreateLogger<ReductionFactorCalculation>();
-            _routeSplitService = routeSplitService;
+            RecordId = recordId,
+            ReductionFactors = new ReductionFactorsResponse
+            {
+                Annual = reductionFactors.Annual,
+                Spring = reductionFactors.Spring,
+                Summer = reductionFactors.Summer,
+                Fall = reductionFactors.Fall,
+                Winter = reductionFactors.Winter
+            }
+        };
+    }
+    catch (Exception)
+    {
+        throw;
+    }
+}
+
+public async Task<RecordDetailsDto?> GetRecordDetailsAsync(string recordId)
+{
+    try
+    {
+        if (!Guid.TryParse(recordId, out Guid recordGuid))
+            return null;
+
+        var record = await _recordRepository.GetRecordDetailsAsync(recordGuid);
+
+        if (record == null)
+            return null;
+
+        return new RecordDetailsDto
+        {
+            RecordId = recordId,
+            RouteName = record.RouteName ?? string.Empty,
+            RouteDistance = record.RouteDistance ?? 0
+        };
+    }
+    catch (Exception)
+    {
+        throw;
+    }
+}
+
+// 5. Add to IRecordRepository interface
+
+Task<ReductionFactorsInfo?> GetRecordReductionFactorsAsync(Guid recordId);
+Task<RecordBasicInfo?> GetRecordDetailsAsync(Guid recordId);
+
+// 6. Add models for repository response (add to your Models folder)
+
+public class ReductionFactorsInfo
+{
+    public double Annual { get; set; }
+    public double Spring { get; set; }
+    public double Summer { get; set; }
+    public double Fall { get; set; }
+    public double Winter { get; set; }
+}
+
+public class RecordBasicInfo
+{
+    public string? RouteName { get; set; }
+    public double? RouteDistance { get; set; }
+}
+
+// 7. Add to RecordRepository.cs
+
+public async Task<ReductionFactorsInfo?> GetRecordReductionFactorsAsync(Guid recordId)
+{
+    try
+    {
+        var reductionFactors = await _dbContext.RecordReductionFactors
+            .Where(rrf => rrf.RecordId == recordId && rrf.IsActive == true)
+            .Select(rrf => new { rrf.SeasonType, rrf.ReductionFactor })
+            .ToListAsync();
+
+        if (!reductionFactors.Any())
+            return null;
+
+        var result = new ReductionFactorsInfo();
+
+        foreach (var factor in reductionFactors)
+        {
+            switch (factor.SeasonType)
+            {
+                case (byte)SeasonType.Annual:
+                    result.Annual = factor.ReductionFactor;
+                    break;
+                case (byte)SeasonType.Spring:
+                    result.Spring = factor.ReductionFactor;
+                    break;
+                case (byte)SeasonType.Summer:
+                    result.Summer = factor.ReductionFactor;
+                    break;
+                case (byte)SeasonType.Fall:
+                    result.Fall = factor.ReductionFactor;
+                    break;
+                case (byte)SeasonType.Winter:
+                    result.Winter = factor.ReductionFactor;
+                    break;
+            }
         }
 
-        [HttpPost("reduction-factor-calculation/")]
-        public IActionResult ProcessRoute([FromBody] BkWxRouteRequest request)
-        {
-            try
-            {
-                // Validate exceedance probability
-                if (request.ExceedanceProbability <= 0 || request.ExceedanceProbability >= 1)
-                {
-                    _logger.LogError("Exceedance probability must be between 0 and 1.");
-                    return BadRequest(new { Message = "Exceedance probability must be between 0 and 1." });
-                }
-
-                // Validate DataSource (changed from WaveType)
-                if (request.DataSource != "ABS" && request.DataSource != "BMT")
-                {
-                    _logger.LogError("Invalid DataSource. Must be 'ABS' or 'BMT'.");
-                    return BadRequest(new { Message = "Invalid DataSource. Must be 'ABS' or 'BMT'." });
-                }
-
-                // Validate SeasonType
-                var validSeasons = new[] { "annual", "spring", "summer", "fall", "winter" };
-                if (!validSeasons.Contains(request.SeasonType?.ToLower()))
-                {
-                    _logger.LogError($"Invalid SeasonType. Must be one of: {string.Join(", ", validSeasons)}");
-                    return BadRequest(new { Message = $"Invalid SeasonType. Must be one of: {string.Join(", ", validSeasons)}" });
-                }
-
-                // Validate coordinates
-                if (request.Coordinates == null || !request.Coordinates.Any())
-                {
-                    _logger.LogError("Coordinates are required and cannot be empty.");
-                    return BadRequest(new { Message = "Coordinates are required and cannot be empty." });
-                }
-
-                // Validate significant wave height
-                if (request.SignificantWaveHeight <= 0)
-                {
-                    _logger.LogError("SignificantWaveHeight must be greater than 0.");
-                    return BadRequest(new { Message = "SignificantWaveHeight must be greater than 0." });
-                }
-
-                // Process Coordinates
-                var coordinatesProcessed = request.Coordinates.Select(coord => new Coordinate
-                {
-                    Longitude = coord.Longitude,
-                    Latitude = coord.Latitude
-                }).ToList();
-
-                // Retrieve the content root path from HttpContext.Items
-                var contentRootPath = HttpContext.Items["ContentRootPath"]?.ToString();
-                if (string.IsNullOrEmpty(contentRootPath))
-                {
-                    return BadRequest(new { Message = "Content root path is not available." });
-                }
-
-                var sessionId = HttpContext.Items["sessionId"]?.ToString();
-                if (string.IsNullOrEmpty(sessionId))
-                {
-                    return BadRequest(new { Message = "Session ID is not available." });
-                }
-
-                // Define the session folder path
-                string sessionFolderPath = Path.Combine(contentRootPath, "temp", sessionId);
-
-                // Call WaveScatterDiagramService with the new seasonType parameter
-                double targetHeight, reductionFactor;
-                _wsdService.CalculateReductionFactor(
-                    coordinatesProcessed,
-                    request.DataSource,
-                    sessionFolderPath,
-                    request.ExceedanceProbability,
-                    request.SeasonType, // Pass the new seasonType parameter
-                    out targetHeight,
-                    out reductionFactor
-                );
-
-                _logger.LogInformation($"Route processed successfully with DataSource: {request.DataSource}, SeasonType: {request.SeasonType}");
-
-                // Return updated response with new schema
-                return Ok(new BkWxRouteResponse
-                {
-                    DataSource = request.DataSource,
-                    Coordinates = coordinatesProcessed,
-                    ExceedanceProbability = request.ExceedanceProbability,
-                    SignificantWaveHeight = targetHeight,
-                    SeasonType = request.SeasonType,
-                    ReductionFactor = reductionFactor
-                });
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogError(ex, "Invalid argument provided.");
-                return BadRequest(new { Message = ex.Message });
-            }
-            catch (FileNotFoundException ex)
-            {
-                _logger.LogError(ex, "Required wave data file not found.");
-                return StatusCode(500, new { Message = $"Wave data file not found: {ex.Message}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing route.");
-                return StatusCode(500, new { Message = $"Error processing route: {ex.Message}" });
-            }
-        }
-
-        [HttpPost("legs")]
-        public IActionResult GetVoyageLegs(List<WaypointModel> waypoints)
-        {
-            try
-            {
-                if (waypoints == null)
-                    return BadRequest();
-
-                var legs = _routeSplitService.GetVoyageLegs(waypoints);
-                return Ok(legs);
-            }
-            catch (Exception)
-            {
-                return BadRequest();
-            }
-        }
+        return result;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"An error occurred while fetching reduction factors for record {recordId}: {ex.Message}");
+        throw;
     }
 }
 
-// 4. Updated IWaveScatterDiagramService Interface
-public interface IWaveScatterDiagramService
+public async Task<RecordBasicInfo?> GetRecordDetailsAsync(Guid recordId)
 {
-    void CalculateReductionFactor(List<Coordinate> coordinates, string dataSource, string sessionFolderPath,
-                                 double exceedanceProbability, string seasonType, out double targetHeight, out double reductionFactor);
-}
-
-// 5. Updated WaveScatterDiagramService Implementation
-public class WaveScatterDiagramService : IWaveScatterDiagramService
-{
-    private readonly IBkWxRoutes _bkWxRoutes;
-    private readonly ILogger<WaveScatterDiagramService> _logger;
-
-    public WaveScatterDiagramService(IBkWxRoutes bkWxRoutes, ILogger<WaveScatterDiagramService> logger)
+    try
     {
-        _bkWxRoutes = bkWxRoutes;
-        _logger = logger;
-    }
-
-    public void CalculateReductionFactor(List<Coordinate> coordinates, string dataSource, string sessionFolderPath,
-                                       double exceedanceProbability, string seasonType, out double targetHeight, out double reductionFactor)
-    {
-        try
-        {
-            // Log the parameters being passed
-            _logger.LogInformation($"Calculating reduction factor with DataSource: {dataSource}, SeasonType: {seasonType}");
-
-            // Validate seasonType
-            var validSeasons = new[] { "annual", "spring", "summer", "fall", "winter" };
-            if (!validSeasons.Contains(seasonType?.ToLower()))
+        var record = await _dbContext.Records
+            .Where(r => r.RecordId == recordId && r.IsActive == true)
+            .Select(r => new RecordBasicInfo
             {
-                throw new ArgumentException($"Invalid season type: {seasonType}. Valid values are: {string.Join(", ", validSeasons)}");
-            }
+                RouteName = r.RouteName,
+                RouteDistance = r.RouteDistance
+            })
+            .FirstOrDefaultAsync();
 
-            // Create route files (F101.tra, F101.ctl) from coordinates
-            CreateRouteFiles(coordinates, dataSource, sessionFolderPath);
-
-            // Call ProcessWaveData with the new seasonType parameter
-            _bkWxRoutes.ProcessWaveData(sessionFolderPath, dataSource, seasonType);
-
-            // Process the generated composite.wsd file to calculate reduction factor
-            var compositeWsdPath = Path.Combine(sessionFolderPath, "composite.wsd");
-            if (!File.Exists(compositeWsdPath))
-            {
-                throw new FileNotFoundException($"Composite WSD file not found at: {compositeWsdPath}");
-            }
-
-            // Calculate reduction factor from the composite WSD
-            CalculateReductionFactorFromWsd(compositeWsdPath, exceedanceProbability, out targetHeight, out reductionFactor);
-
-            _logger.LogInformation($"Reduction factor calculated successfully: {reductionFactor} for season: {seasonType}");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error calculating reduction factor for season: {seasonType}");
-            throw;
-        }
+        return record;
     }
-
-    private void CreateRouteFiles(List<Coordinate> coordinates, string dataSource, string sessionFolderPath)
+    catch (Exception ex)
     {
-        // Implementation to create F101.tra and F101.ctl files
-        // This method should create the route files needed by ProcessWaveData
-        // ... existing implementation ...
-    }
-
-    private void CalculateReductionFactorFromWsd(string wsdFilePath, double exceedanceProbability,
-                                               out double targetHeight, out double reductionFactor)
-    {
-        // Implementation to read composite.wsd and calculate reduction factor
-        // ... existing implementation ...
-        targetHeight = 0.0; // Placeholder
-        reductionFactor = 0.0; // Placeholder
+        _logger.LogError(ex, $"An error occurred while fetching record details for record {recordId}: {ex.Message}");
+        throw;
     }
 }
-
-// 6. Example Request JSON Schema
-/*
-{
-  "dataSource": "BMT",
-  "coordinates": [
-    {
-      "longitude": -74.0059,
-      "latitude": 40.7128
-    },
-    {
-      "longitude": -0.1276,
-      "latitude": 51.5074
-    }
-  ],
-  "exceedanceProbability": 0.01,
-  "significantWaveHeight": 8.5,
-  "seasonType": "winter"
-}
-*/
-
-// 7. Example Response JSON Schema
-/*
-{
-  "dataSource": "BMT",
-  "coordinates": [
-    {
-      "longitude": -74.0059,
-      "latitude": 40.7128
-    },
-    {
-      "longitude": -0.1276,
-      "latitude": 51.5074
-    }
-  ],
-  "exceedanceProbability": 0.01,
-  "significantWaveHeight": 8.5,
-  "seasonType": "winter",
-  "reductionFactor": 0.85
-}
-*/
