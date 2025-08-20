@@ -1,159 +1,178 @@
-﻿using Microsoft.Extensions.Logging;
-using NextGenEngApps.DigitalRules.CRoute.DAL.Models.Domain.ReductionFactorReport;
+﻿using NextGenEngApps.DigitalRules.CRoute.DAL.Models.Domain.ReductionFactorReport;
+using NextGenEngApps.DigitalRules.CRoute.Models;
+using NextGenEngApps.DigitalRules.CRoute.Models.ReductionFactorReport;
 using SeaRouteModel.Models;
 using SeaRouteModel.Reports;
-using System.Text.Json;
+using System.Reflection.Metadata;
 
-namespace YourNamespace.Services
+// Add this ReportNotes class if it doesn't exist
+namespace NextGenEngApps.DigitalRules.CRoute.Models.ReductionFactorReport
 {
-    public interface IReportService
+    public class ReportNotes
     {
-        Task<JsonReportResponse> GetReportDataAsync(string routeVersionId);
-        Task<string> GenerateReportHtmlAsync(string routeVersionId);
-    }
+        public string VesselCriteria { get; set; } = string.Empty;
+        public string GuideTitle { get; set; } = string.Empty;
+        public List<string> Items { get; set; } = new List<string>();
 
-    public class ReportService : IReportService
-    {
-        private readonly HttpClient _httpClient;
-        private readonly ILogger<ReportService> _logger;
-
-        public ReportService(HttpClient httpClient, ILogger<ReportService> logger)
+        public string BuildGuideNote(string guideTitle)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            return $"<i>{guideTitle}</i> (April 2025)";
+        }
+    }
+}
+
+namespace NextGenEngApps.DigitalRules.CRoute.API.Services
+{
+    public class HtmlReportGeneratorService
+    {
+        private readonly ReportDataCollectorService _reportDataCollectorService;
+        private readonly ILogger<HtmlReportGeneratorService> _logger;
+
+        public HtmlReportGeneratorService(
+            ReportDataCollectorService reportDataCollectorService,
+            ILogger<HtmlReportGeneratorService> logger)
+        {
+            _reportDataCollectorService = reportDataCollectorService;
+            _logger = logger;
         }
 
-        public async Task<JsonReportResponse> GetReportDataAsync(string routeVersionId)
+        public async Task<string> GenerateCompleteHtmlReportAsync(string routeVersionId)
         {
             try
             {
-                if (string.IsNullOrEmpty(routeVersionId))
-                    throw new ArgumentException("Route Version ID is required", nameof(routeVersionId));
-
-                var response = await _httpClient.GetAsync($"api/route_versions/{routeVersionId}/json_report");
-
-                if (!response.IsSuccessStatusCode)
+                // Step 1: Get JsonReportResponse from API
+                var jsonResponse = await GetJsonReportResponseAsync(routeVersionId);
+                if (jsonResponse == null)
                 {
-                    _logger.LogError("Failed to get report data for Route Version ID {RouteVersionId}. Status: {StatusCode}",
-                        routeVersionId, response.StatusCode);
-                    return null;
+                    _logger.LogWarning("JsonReportResponse is null for RouteVersionId: {RouteVersionId}", routeVersionId);
+                    return string.Empty;
                 }
 
-                var jsonContent = await response.Content.ReadAsStringAsync();
-                var reportData = JsonSerializer.Deserialize<JsonReportResponse>(jsonContent, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                // Step 2: Map JsonReportResponse to ReportDataCollector
+                var dataCollector = MapJsonResponseToReportDataCollector(jsonResponse);
 
-                return reportData;
+                // Step 3: Generate HTML from ReportDataCollector
+                return GenerateHtmlFromDataCollector(dataCollector);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while getting report data for Route Version {RouteVersionId}", routeVersionId);
+                _logger.LogError(ex, "Error generating HTML report for RouteVersionId: {RouteVersionId}", routeVersionId);
                 throw;
             }
         }
 
-        public async Task<string> GenerateReportHtmlAsync(string routeVersionId)
+        private async Task<JsonReportResponse> GetJsonReportResponseAsync(string routeVersionId)
         {
-            var reportData = await GetReportDataAsync(routeVersionId);
-            if (reportData?.Report == null)
-                return string.Empty;
-
-            // Transform JsonReportResponse to ReportDataCollector for compatibility
-            var dataCollector = TransformToReportDataCollector(reportData);
-
-            // Generate HTML using the transformed data
-            return GenerateHtmlFromDataCollector(dataCollector, reportData);
+            // This should call your existing API endpoint
+            return await _reportDataCollectorService.GetJsonReportAsync(routeVersionId);
         }
 
-        private ReportDataCollector TransformToReportDataCollector(JsonReportResponse jsonReport)
+        private ReportDataCollector MapJsonResponseToReportDataCollector(JsonReportResponse jsonResponse)
         {
+            if (jsonResponse?.Report == null)
+            {
+                _logger.LogWarning("JsonReportResponse or Report is null");
+                return new ReportDataCollector();
+            }
+
             var dataCollector = new ReportDataCollector
             {
-                ReportTitle = jsonReport.Report.Title,
-                RecordId = jsonReport.RecordId
+                ReportTitle = jsonResponse.Report.Title,
+                RecordId = jsonResponse.RecordId
             };
 
-            // Transform Attention Block
-            if (jsonReport.Report.Sections?.Attention != null)
+            // Map Attention Section
+            if (jsonResponse.Report.Sections?.Attention != null)
             {
                 dataCollector.AttentionBlock = new AttentionBlock
                 {
-                    Salutation = jsonReport.Report.Sections.Attention.Salutation,
-                    ABSContact = jsonReport.Report.Sections.Attention.AbsContact
+                    Salutation = jsonResponse.Report.Sections.Attention.Salutation,
+                    ABSContact = jsonResponse.Report.Sections.Attention.AbsContact,
+                    // Extract departure and arrival ports from body or use defaults
+                    DeparturePort = ExtractDeparturePortFromBody(jsonResponse.Report.Sections.Attention.Body),
+                    ArrivalPort = ExtractArrivalPortFromBody(jsonResponse.Report.Sections.Attention.Body),
+                    ReductionFactor = ExtractReductionFactorFromBody(jsonResponse.Report.Sections.Attention.Body)
                 };
             }
 
-            // Transform Report Info
-            if (jsonReport.Report.Sections?.UserInputs?.ReportInfo != null)
+            // Map Report Info
+            if (jsonResponse.Report.Sections?.UserInputs?.ReportInfo != null)
             {
                 dataCollector.ReportInfo = new ReportInfo
                 {
-                    ReportName = jsonReport.Report.Sections.UserInputs.ReportInfo.RouteName,
-                    ReportDate = DateTime.TryParse(jsonReport.Report.Sections.UserInputs.ReportInfo.ReportDate, out var date)
-                        ? date : DateTime.UtcNow
+                    ReportName = jsonResponse.Report.Sections.UserInputs.ReportInfo.RouteName,
+                    ReportDate = DateOnly.TryParse(jsonResponse.Report.Sections.UserInputs.ReportInfo.ReportDate, out var reportDate)
+                        ? reportDate
+                        : DateOnly.FromDateTime(DateTime.UtcNow)
                 };
             }
 
-            // Transform Vessel Info
-            if (jsonReport.Report.Sections?.UserInputs?.Vessel != null)
+            // Map Vessel Info
+            if (jsonResponse.Report.Sections?.UserInputs?.Vessel != null)
             {
                 dataCollector.VesselInfo = new VesselInfo
                 {
-                    IMONumber = jsonReport.Report.Sections.UserInputs.Vessel.Imo,
-                    VesselName = jsonReport.Report.Sections.UserInputs.Vessel.Name,
-                    Flag = jsonReport.Report.Sections.UserInputs.Vessel.Flag
+                    IMONumber = jsonResponse.Report.Sections.UserInputs.Vessel.Imo,
+                    VesselName = jsonResponse.Report.Sections.UserInputs.Vessel.Name,
+                    Flag = jsonResponse.Report.Sections.UserInputs.Vessel.Flag
                 };
             }
 
-            // Transform Route Analysis
-            if (jsonReport.Report.Sections?.RouteAnalysis != null)
+            // Map Route Info (Ports)
+            if (jsonResponse.Report.Sections?.UserInputs?.Ports != null)
             {
-                var reductionFactorResults = jsonReport.Report.Sections.RouteAnalysis.Select(ra => new SegmentReductionFactorResults
+                foreach (var portString in jsonResponse.Report.Sections.UserInputs.Ports)
                 {
-                    VoyageLegOrder = ra.Segment.Order,
-                    Distance = ra.Segment.Distance,
-                    DeparturePort = ExtractPortFromSegmentName(ra.Segment.Name, true),
-                    ArrivalPort = ExtractPortFromSegmentName(ra.Segment.Name, false),
-                    ReductionFactors = new SeasonalReductionFactors
-                    {
-                        Annual = ra.Segment.ReductionFactors.Annual,
-                        Spring = ra.Segment.ReductionFactors.Spring,
-                        Summer = ra.Segment.ReductionFactors.Summer,
-                        Fall = ra.Segment.ReductionFactors.Fall,
-                        Winter = ra.Segment.ReductionFactors.Winter
-                    }
-                }).ToList();
+                    var port = ParsePortFromString(portString);
+                    dataCollector.RouteInfo.Ports.Add(port);
+                }
+            }
 
-                // Add to dataCollector (you'll need to modify ReportDataCollector to allow adding results)
-                foreach (var result in reductionFactorResults)
+            // Map Route Analysis (Reduction Factor Results)
+            if (jsonResponse.Report.Sections?.RouteAnalysis != null)
+            {
+                foreach (var segment in jsonResponse.Report.Sections.RouteAnalysis)
                 {
+                    var result = new SegmentReductionFactorResults
+                    {
+                        VoyageLegOrder = segment.Segment.Order,
+                        Distance = segment.Segment.Distance
+                    };
+
+                    // Set reduction factors
+                    result.ReductionFactors.Annual = segment.Segment.ReductionFactors.Annual;
+                    result.ReductionFactors.Spring = segment.Segment.ReductionFactors.Spring;
+                    result.ReductionFactors.Summer = segment.Segment.ReductionFactors.Summer;
+                    result.ReductionFactors.Fall = segment.Segment.ReductionFactors.Fall;
+                    result.ReductionFactors.Winter = segment.Segment.ReductionFactors.Winter;
+
+                    // Parse departure and arrival ports from segment name
+                    var segmentParts = segment.Segment.Name.Split(" - ");
+                    if (segmentParts.Length == 2)
+                    {
+                        result.DeparturePort = ParsePortFromString(segmentParts[0]);
+                        result.ArrivalPort = ParsePortFromString(segmentParts[1]);
+                    }
+
                     dataCollector.ReductionFactorResults.Add(result);
                 }
+            }
+
+            // Map Notes
+            if (jsonResponse.Report.Sections?.Notes?.Any() == true)
+            {
+                var firstNote = jsonResponse.Report.Sections.Notes.First();
+                dataCollector.Notes = new ReportNotes
+                {
+                    VesselCriteria = firstNote.VesselCriteria,
+                    GuideTitle = ExtractGuideTitleFromNote(firstNote.GuideNote)
+                };
             }
 
             return dataCollector;
         }
 
-        private Port ExtractPortFromSegmentName(string segmentName, bool isDeparture)
-        {
-            // Parse segment name like "Port Name (CODE) - Port Name (CODE)"
-            var parts = segmentName.Split(" - ");
-            var portPart = isDeparture ? parts[0] : parts[1];
-
-            var nameEnd = portPart.LastIndexOf(" (");
-            var name = nameEnd > 0 ? portPart.Substring(0, nameEnd) : "Unknown";
-            var code = portPart.Substring(nameEnd + 2, portPart.Length - nameEnd - 3);
-
-            return new Port
-            {
-                Name = name,
-                Unlocode = code
-            };
-        }
-
-        private string GenerateHtmlFromDataCollector(ReportDataCollector dataCollector, JsonReportResponse jsonReport)
+        private string GenerateHtmlFromDataCollector(ReportDataCollector dataCollector)
         {
             var html = $@"
 <!DOCTYPE html>
@@ -163,283 +182,421 @@ namespace YourNamespace.Services
     <title>{dataCollector.ReportTitle}</title>
     <style>
         body {{
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
             line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
         }}
         .report-container {{
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }}
         .header {{
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
         }}
         .report-section {{
-            margin-bottom: 30px;
+            margin-bottom: 35px;
         }}
         .report-table {{
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 15px;
+            background-color: white;
         }}
         .report-table th, .report-table td {{
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 12px 8px;
             text-align: left;
         }}
         .report-table th {{
             background-color: #f2f2f2;
             font-weight: bold;
+            color: #333;
         }}
         .highlight {{
             color: #0066cc;
+            font-weight: 500;
         }}
         .reduction-factor {{
             font-weight: bold;
             color: #0066cc;
         }}
-        h4, h5 {{
+        h4 {{
             color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }}
+        h5 {{
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
         }}
         .notes-section ul {{
             padding-left: 20px;
+        }}
+        .notes-section li {{
+            margin-bottom: 8px;
         }}
         .seasonal-table {{
             width: 100%;
             margin-top: 20px;
         }}
         .seasonal-table th {{
-            background-color: #f8f9fa;
+            background-color: #0066cc;
+            color: white;
             text-align: center;
+            font-size: 12px;
+        }}
+        .seasonal-header {{
+            background-color: #e3f2fd !important;
+            color: #0066cc !important;
+            font-weight: bold;
+        }}
+        .route-segment-cell {{
+            font-weight: 500;
+        }}
+        .attention-box {{
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }}
+        .download-timestamp {{
+            color: #666;
+            font-size: 14px;
+        }}
+        .route-analysis-section {{
+            overflow-x: auto;
+        }}
+        .entire-route-row {{
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }}
+        .route-splitting-row {{
+            background-color: #ffffff;
+        }}
+        .season-months {{
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+        }}
+        @media print {{
+            body {{ background-color: white; }}
+            .report-container {{ box-shadow: none; }}
         }}
     </style>
 </head>
 <body>
     <div class=""report-container"">
+
+        <!-- Header -->
         <div class=""header"">
             <h4>{dataCollector.ReportTitle}</h4>
-            <p><strong>Downloaded:</strong> {jsonReport.Report.DownloadTimestamp}</p>
-        </div>
+            <p class=""download-timestamp""><strong>Downloaded:</strong> {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}</p>
+        </div>";
 
+            // Only add Attention Section if data exists
+            if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.Salutation) ||
+                !string.IsNullOrEmpty(dataCollector.AttentionBlock?.DeparturePort) ||
+                !string.IsNullOrEmpty(dataCollector.AttentionBlock?.ArrivalPort))
+            {
+                html += $@"
         <!-- Attention Section -->
         <div class=""report-section"">
-            <p><strong>Attention:</strong> {dataCollector.AttentionBlock?.Salutation ?? "Mr. Alan Bond, Mani Industries (WCN: 123456)"}</p>
-            <p>{jsonReport.Report.Sections?.Attention?.Body ?? ""}</p>
-            <p>For any clarifications, contact {dataCollector.AttentionBlock?.ABSContact ?? "Mr. Holland Wright at +65 6371 2xxx or (HWright@eagle.org)"}.</p>
-        </div>
+            <div class=""attention-box"">";
 
+                if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.Salutation))
+                {
+                    html += $@"<p><strong>Attention:</strong> {dataCollector.AttentionBlock.Salutation}</p>";
+                }
+
+                if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.DeparturePort) &&
+                    !string.IsNullOrEmpty(dataCollector.AttentionBlock?.ArrivalPort))
+                {
+                    html += $@"
+                <p>
+                    {AttentionBlock.BuildAttentionBody(
+                                dataCollector.AttentionBlock.DeparturePort,
+                                dataCollector.AttentionBlock.ArrivalPort,
+                                dataCollector.AttentionBlock.ReductionFactor.ToString("F2"))}
+                </p>";
+                }
+
+                if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.ABSContact))
+                {
+                    html += $@"<p>{dataCollector.AttentionBlock.ABSContact}</p>";
+                }
+
+                html += @"
+            </div>
+        </div>";
+            }
+
+            html += @"
         <!-- User Inputs Section -->
         <div class=""report-section"">
             <h5>User Inputs</h5>
-            <table class=""report-table"">
+            <table class=""report-table"">";
+
+            // Add report info rows if data exists
+            if (!string.IsNullOrEmpty(dataCollector.ReportInfo?.ReportName))
+            {
+                html += $@"
                 <tr>
                     <td><strong>Route Name:</strong></td>
-                    <td class=""highlight"">{dataCollector.ReportInfo?.ReportName ?? ""}</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td><strong>Report Date:</strong></td>
-                    <td class=""highlight"">{dataCollector.ReportInfo?.ReportDate.ToString("yyyy-MM-dd") ?? DateTime.UtcNow.ToString("yyyy-MM-dd")}</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td><strong>Vessel Name:</strong></td>
-                    <td class=""highlight"">{dataCollector.VesselInfo?.VesselName ?? ""}</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td><strong>Vessel IMO:</strong></td>
-                    <td class=""highlight"">{dataCollector.VesselInfo?.IMONumber ?? ""}</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td><strong>Flag:</strong></td>
-                    <td class=""highlight"">{dataCollector.VesselInfo?.Flag ?? ""}</td>
+                    <td class=""highlight"">{dataCollector.ReportInfo.ReportName}</td>
                     <td></td>
                 </tr>";
+            }
 
-            // Add ports
-            if (jsonReport.Report.Sections?.UserInputs?.Ports != null)
+            if (dataCollector.ReportInfo?.ReportDate != default)
             {
-                for (int i = 0; i < jsonReport.Report.Sections.UserInputs.Ports.Count; i++)
+                html += $@"
+                <tr>
+                    <td><strong>Report Date:</strong></td>
+                    <td class=""highlight"">{dataCollector.ReportInfo.ReportDate:yyyy-MM-dd}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            // Add vessel info rows if data exists
+            if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.VesselName))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Vessel Name:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.VesselName}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.IMONumber))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Vessel IMO:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.IMONumber}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.Flag))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Flag:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.Flag}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            // Add Ports if they exist
+            if (dataCollector.RouteInfo?.Ports != null && dataCollector.RouteInfo.Ports.Any())
+            {
+                for (int i = 0; i < dataCollector.RouteInfo.Ports.Count; i++)
                 {
-                    var portInfo = jsonReport.Report.Sections.UserInputs.Ports[i];
-                    var portName = i == 0 ? "Port of Departure" :
-                                  i == jsonReport.Report.Sections.UserInputs.Ports.Count - 1 ? "Port of Arrival" :
-                                  $"Loading Port {i}";
+                    var port = dataCollector.RouteInfo.Ports[i];
+                    string portType;
+
+                    if (i == 0)
+                        portType = "Port of Departure:";
+                    else if (i == dataCollector.RouteInfo.Ports.Count - 1)
+                        portType = "Port of Arrival:";
+                    else
+                        portType = $"Loading Port {i}:";
 
                     html += $@"
                 <tr>
-                    <td><strong>{portName}:</strong></td>
-                    <td class=""highlight"">{portInfo}</td>
-                    <td></td>
+                    <td><strong>{portType}</strong></td>
+                    <td class=""highlight"">{port.Unlocode ?? "N/A"}</td>
+                    <td>{port.Name ?? ""}</td>
                 </tr>";
                 }
             }
 
             html += @"
             </table>
-        </div>
+        </div>";
 
-        <!-- Output Section -->
-        <div class=""report-section"">
-            <h5>Output</h5>";
-
-            if (jsonReport.Report.Sections?.RouteAnalysis != null && jsonReport.Report.Sections.RouteAnalysis.Any())
+            // Only add Output Section if reduction factor results exist
+            if (dataCollector.ReductionFactorResults != null && dataCollector.ReductionFactorResults.Any())
             {
                 html += @"
+        <!-- Output Section -->
+        <div class=""report-section route-analysis-section"">
+            <h5>Output</h5>
             <table class=""seasonal-table report-table"">
                 <thead>
                     <tr>
-                        <th rowspan=""2"">Route Segment</th>
-                        <th rowspan=""2"">Distance (nm)</th>
-                        <th rowspan=""2"">Annual</th>
-                        <th colspan=""4"">Seasonal Reduction Factors</th>
+                        <th rowspan=""2""></th>
+                        <th colspan=""3""></th>
+                        <th colspan=""4"" class=""seasonal-header"">Seasonal Reduction Factor</th>
                     </tr>
                     <tr>
-                        <th>Spring</th>
-                        <th>Summer</th>
-                        <th>Fall</th>
-                        <th>Winter</th>
+                        <th class=""seasonal-header"">Routes</th>
+                        <th class=""seasonal-header"">Distance</th>
+                        <th class=""seasonal-header"">Annual Reduction Factor</th>
+                        <th>Spring<br/><span class=""season-months"">(Mar-May)</span></th>
+                        <th>Summer<br/><span class=""season-months"">(Jun-Aug)</span></th>
+                        <th>Fall<br/><span class=""season-months"">(Sep-Nov)</span></th>
+                        <th>Winter<br/><span class=""season-months"">(Dec-Feb)</span></th>
                     </tr>
                 </thead>
                 <tbody>";
 
-                foreach (var segment in jsonReport.Report.Sections.RouteAnalysis)
+                // Entire Route (Order = 0)
+                var entireRoute = dataCollector.ReductionFactorResults.FirstOrDefault(r => r.VoyageLegOrder == 0);
+                if (entireRoute != null)
                 {
                     html += $@"
-                    <tr>
-                        <td>{segment.Segment.Name}</td>
-                        <td>{Math.Round(segment.Segment.Distance)} nm</td>
-                        <td class=""reduction-factor"">{segment.Segment.ReductionFactors.Annual:F2}</td>
-                        <td class=""reduction-factor"">{segment.Segment.ReductionFactors.Spring:F2}</td>
-                        <td class=""reduction-factor"">{segment.Segment.ReductionFactors.Summer:F2}</td>
-                        <td class=""reduction-factor"">{segment.Segment.ReductionFactors.Fall:F2}</td>
-                        <td class=""reduction-factor"">{segment.Segment.ReductionFactors.Winter:F2}</td>
+                    <tr class=""entire-route-row"">
+                        <td><strong>Entire Route</strong></td>
+                        <td class=""route-segment-cell"">{entireRoute.DeparturePort?.Name ?? ""} - {entireRoute.ArrivalPort?.Name ?? ""}</td>
+                        <td>{Math.Round(entireRoute.Distance)} nm</td>
+                        <td class=""reduction-factor"">{entireRoute.ReductionFactors.Annual:F2}</td>
+                        <td class=""reduction-factor"">{entireRoute.ReductionFactors.Spring:F2}</td>
+                        <td class=""reduction-factor"">{entireRoute.ReductionFactors.Summer:F2}</td>
+                        <td class=""reduction-factor"">{entireRoute.ReductionFactors.Fall:F2}</td>
+                        <td class=""reduction-factor"">{entireRoute.ReductionFactors.Winter:F2}</td>
                     </tr>";
+                }
+
+                // Route Splitting (Orders > 0)
+                var routeLegs = dataCollector.ReductionFactorResults.Where(r => r.VoyageLegOrder > 0).OrderBy(r => r.VoyageLegOrder).ToList();
+                if (routeLegs.Any())
+                {
+                    var firstLeg = routeLegs.First();
+                    html += $@"
+                    <tr class=""route-splitting-row"">
+                        <td rowspan=""{routeLegs.Count}""><strong>Route Splitting</strong></td>
+                        <td class=""route-segment-cell"">{firstLeg.DeparturePort?.Name ?? ""} - {firstLeg.ArrivalPort?.Name ?? ""}</td>
+                        <td>{Math.Round(firstLeg.Distance)} nm</td>
+                        <td class=""reduction-factor"">{firstLeg.ReductionFactors.Annual:F2}</td>
+                        <td class=""reduction-factor"">{firstLeg.ReductionFactors.Spring:F2}</td>
+                        <td class=""reduction-factor"">{firstLeg.ReductionFactors.Summer:F2}</td>
+                        <td class=""reduction-factor"">{firstLeg.ReductionFactors.Fall:F2}</td>
+                        <td class=""reduction-factor"">{firstLeg.ReductionFactors.Winter:F2}</td>
+                    </tr>";
+
+                    // Remaining legs
+                    for (int i = 1; i < routeLegs.Count; i++)
+                    {
+                        var leg = routeLegs[i];
+                        html += $@"
+                    <tr class=""route-splitting-row"">
+                        <td class=""route-segment-cell"">{leg.DeparturePort?.Name ?? ""} - {leg.ArrivalPort?.Name ?? ""}</td>
+                        <td>{Math.Round(leg.Distance)} nm</td>
+                        <td class=""reduction-factor"">{leg.ReductionFactors.Annual:F2}</td>
+                        <td class=""reduction-factor"">{leg.ReductionFactors.Spring:F2}</td>
+                        <td class=""reduction-factor"">{leg.ReductionFactors.Summer:F2}</td>
+                        <td class=""reduction-factor"">{leg.ReductionFactors.Fall:F2}</td>
+                        <td class=""reduction-factor"">{leg.ReductionFactors.Winter:F2}</td>
+                    </tr>";
+                    }
                 }
 
                 html += @"
                 </tbody>
-            </table>";
+            </table>
+        </div>";
             }
 
             html += @"
-        </div>
+        <!-- Route Map Placeholder -->
+        <div class=""report-section"">
+            <h5>Route Map</h5>
+            <div style=""height: 200px; width: 100%; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;"">
+                <p style=""color: #666;"">Route Map (Map visualization would be rendered here)</p>
+            </div>
+        </div>";
 
+            // Only add Notes Section if notes data exists
+            if (dataCollector.Notes != null &&
+                (!string.IsNullOrEmpty(dataCollector.Notes.VesselCriteria) || !string.IsNullOrEmpty(dataCollector.Notes.GuideTitle)))
+            {
+                html += @"
         <!-- Notes Section -->
         <div class=""report-section notes-section"">
             <h5>Notes</h5>
             <ul>";
 
-            if (jsonReport.Report.Sections?.Notes != null)
-            {
-                foreach (var note in jsonReport.Report.Sections.Notes)
+                if (!string.IsNullOrEmpty(dataCollector.Notes.VesselCriteria))
                 {
-                    if (!string.IsNullOrEmpty(note.VesselCriteria))
-                    {
-                        html += $"<li>{note.VesselCriteria}</li>";
-                    }
-                    if (!string.IsNullOrEmpty(note.GuideNote))
-                    {
-                        html += $"<li><i>{note.GuideNote}</i></li>";
-                    }
+                    html += $@"<li>{dataCollector.Notes.VesselCriteria}</li>";
                 }
-            }
-            else
-            {
+
+                if (!string.IsNullOrEmpty(dataCollector.Notes.GuideTitle))
+                {
+                    html += $@"<li><i>{dataCollector.Notes.GuideTitle}</i> (April 2025)</li>";
+                }
+
                 html += @"
-                <li>The vessel is to have CLP-V or CLP-V(PARR) notation, and the onboard Computer Lashing Program is to be approved to handle Route Reduction Factors.</li>
-                <li><i>ABS Guide for Certification of Container Security Systems</i> (April 2025)</li>";
+            </ul>
+        </div>";
             }
 
             html += @"
-            </ul>
-        </div>
     </div>
 </body>
 </html>";
 
             return html;
         }
-    }
 
-    // Define the JSON response models based on your BuildJsonReportFromDataCollector method
-    public class JsonReportResponse
-    {
-        public string RouteVersionId { get; set; }
-        public string RecordId { get; set; }
-        public ReportData Report { get; set; }
-    }
+        #region Helper Methods
 
-    public class ReportData
-    {
-        public string Title { get; set; }
-        public string DownloadTimestamp { get; set; }
-        public ReportSections Sections { get; set; }
-    }
+        private PortInfo ParsePortFromString(string portString)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(portString, @"^(.+?)\s*\(([^)]+)\)$");
+            if (match.Success)
+            {
+                return new PortInfo
+                {
+                    Name = match.Groups[1].Value.Trim(),
+                    Unlocode = match.Groups[2].Value.Trim() == "N/A" ? null : match.Groups[2].Value.Trim()
+                };
+            }
+            return new PortInfo { Name = portString.Trim(), Unlocode = null };
+        }
 
-    public class ReportSections
-    {
-        public AttentionSection Attention { get; set; }
-        public UserInputsSection UserInputs { get; set; }
-        public List<RouteAnalysisSegment> RouteAnalysis { get; set; }
-        public List<ReportNote> Notes { get; set; }
-    }
+        private string ExtractDeparturePortFromBody(string body)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(body, @"route from\s+(.+?)\s+to");
+            return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
+        }
 
-    public class AttentionSection
-    {
-        public string Salutation { get; set; }
-        public string Body { get; set; }
-        public string AbsContact { get; set; }
-    }
+        private string ExtractArrivalPortFromBody(string body)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(body, @"to\s+(.+?)\s+is");
+            return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
+        }
 
-    public class UserInputsSection
-    {
-        public ReportInfoSection ReportInfo { get; set; }
-        public VesselSection Vessel { get; set; }
-        public List<string> Ports { get; set; }
-    }
+        private double ExtractReductionFactorFromBody(string body)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(body, @"is\s+([\d.]+)");
+            return match.Success && double.TryParse(match.Groups[1].Value, out var factor) ? factor : 0.0;
+        }
 
-    public class ReportInfoSection
-    {
-        public string RouteName { get; set; }
-        public string ReportDate { get; set; }
-    }
+        private string ExtractGuideTitleFromNote(string guideNote)
+        {
+            if (string.IsNullOrEmpty(guideNote))
+                return "ABS Guide for Certification of Container Security Systems";
 
-    public class VesselSection
-    {
-        public string Imo { get; set; }
-        public string Name { get; set; }
-        public string Flag { get; set; }
-    }
+            var match = System.Text.RegularExpressions.Regex.Match(guideNote, @"<i>(.+?)</i>");
+            return match.Success ? match.Groups[1].Value.Trim() : "ABS Guide for Certification of Container Security Systems";
+        }
 
-    public class RouteAnalysisSegment
-    {
-        public SegmentInfo Segment { get; set; }
-    }
-
-    public class SegmentInfo
-    {
-        public string Name { get; set; }
-        public int Order { get; set; }
-        public double Distance { get; set; }
-        public ReductionFactorsInfo ReductionFactors { get; set; }
-    }
-
-    public class ReductionFactorsInfo
-    {
-        public decimal Annual { get; set; }
-        public decimal Spring { get; set; }
-        public decimal Summer { get; set; }
-        public decimal Fall { get; set; }
-        public decimal Winter { get; set; }
-    }
-
-    public class ReportNote
-    {
-        public string VesselCriteria { get; set; }
-        public string GuideNote { get; set; }
+        #endregion
     }
 }
