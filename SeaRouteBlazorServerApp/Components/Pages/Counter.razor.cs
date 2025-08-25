@@ -430,54 +430,461 @@ namespace NextGenEngApps.DigitalRules.CRoute.API.Services
 
         private string GenerateHtmlFromDataCollector(ReportDataCollector dataCollector)
         {
-            // Implementation similar to your existing HTML generation but adapted for short voyage
-            // This would include the short voyage specific data like forecast times, wave heights, etc.
-            // For brevity, I'm providing a simplified version - you can extend this based on your HTML template
-
-            return $@"
+            string html = $@"
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset=""utf-8"">
     <title>{dataCollector.ReportTitle}</title>
-    <!-- Your existing CSS styles -->
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }}
+        .report-container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }}
+        .report-section {{
+            margin-bottom: 35px;
+        }}
+        .report-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: white;
+        }}
+        .report-table th, .report-table td {{
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }}
+        .report-table th {{
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #333;
+        }}
+        .highlight {{
+            color: #0066cc;
+            font-weight: 500;
+        }}
+        .reduction-factor {{
+            font-weight: bold;
+            color: #0066cc;
+        }}
+        h4 {{
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }}
+        h5 {{
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }}
+        .notes-section ul {{
+            padding-left: 20px;
+        }}
+        .notes-section li {{
+            margin-bottom: 8px;
+        }}
+        .short-voyage-table {{
+            width: 100%;
+            margin-top: 20px;
+        }}
+        .short-voyage-table th {{
+            background-color: #0066cc;
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            padding: 12px;
+        }}
+        .short-voyage-table td {{
+            text-align: center;
+            font-weight: 500;
+            padding: 10px;
+        }}
+        .attention-box {{
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }}
+        .download-timestamp {{
+            color: #666;
+            font-size: 14px;
+        }}
+        .short-voyage-details {{
+            background-color: #e3f2fd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 25px;
+        }}
+        .detail-grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }}
+        .detail-item {{
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 4px solid #0066cc;
+        }}
+        .detail-label {{
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .detail-value {{
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 5px;
+        }}
+        .calculation-section {{
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 25px;
+        }}
+        .formula-display {{
+            font-family: 'Courier New', monospace;
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+            margin: 10px 0;
+        }}
+        @media print {{
+            body {{ background-color: white; }}
+            .report-container {{ box-shadow: none; }}
+        }}
+    </style>
 </head>
 <body>
     <div class=""report-container"">
+
+        <!-- Header -->
         <div class=""header"">
             <h4>{dataCollector.ReportTitle}</h4>
             <p class=""download-timestamp""><strong>Downloaded:</strong> {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}</p>
-        </div>
-        
-        <!-- Short Voyage Specific Sections -->
+        </div>";
+
+            // Attention Section
+            if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.Salutation) ||
+                !string.IsNullOrEmpty(dataCollector.AttentionBlock?.DeparturePort))
+            {
+                html += $@"
+        <!-- Attention Section -->
+        <div class=""report-section"">
+            <div class=""attention-box"">";
+
+                if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.Salutation))
+                {
+                    html += $@"<p><strong>Attention:</strong> {dataCollector.AttentionBlock.Salutation}</p>";
+                }
+
+                if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.DeparturePort) &&
+                    !string.IsNullOrEmpty(dataCollector.AttentionBlock?.ArrivalPort))
+                {
+                    html += $@"
+                <p>
+                    {AttentionBlock.BuildShortVoyageAttentionBody(
+                        dataCollector.AttentionBlock.DeparturePort,
+                        dataCollector.AttentionBlock.ArrivalPort,
+                        dataCollector.AttentionBlock.ReductionFactor.ToString("F3"),
+                        dataCollector.ShortVoyageInfo.DepartureTime,
+                        dataCollector.ShortVoyageInfo.ArrivalTime)}
+                </p>";
+                }
+
+                if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.ABSContact))
+                {
+                    html += $@"<p>{dataCollector.AttentionBlock.ABSContact}</p>";
+                }
+
+                html += @"
+            </div>
+        </div>";
+            }
+
+            // User Inputs Section
+            html += @"
+        <!-- User Inputs Section -->
+        <div class=""report-section"">
+            <h5>User Inputs</h5>
+            <table class=""report-table"">";
+
+            if (!string.IsNullOrEmpty(dataCollector.ReportInfo?.ReportName))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Route Name:</strong></td>
+                    <td class=""highlight"">{dataCollector.ReportInfo.ReportName}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (dataCollector.ReportInfo?.ReportDate != default)
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Report Date:</strong></td>
+                    <td class=""highlight"">{dataCollector.ReportInfo.ReportDate:yyyy-MM-dd}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.VesselName))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Vessel Name:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.VesselName}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.IMONumber))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Vessel IMO:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.IMONumber}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.Flag))
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Flag:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.Flag}</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (dataCollector.VesselInfo?.Breadth > 0)
+            {
+                html += $@"
+                <tr>
+                    <td><strong>Vessel Breadth:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.Breadth:F2} m</td>
+                    <td></td>
+                </tr>";
+            }
+
+            if (dataCollector.RouteInfo?.Ports != null && dataCollector.RouteInfo.Ports.Any())
+            {
+                for (int i = 0; i < dataCollector.RouteInfo.Ports.Count; i++)
+                {
+                    var port = dataCollector.RouteInfo.Ports[i];
+                    string portType;
+
+                    if (i == 0)
+                        portType = "Port of Departure:";
+                    else if (i == dataCollector.RouteInfo.Ports.Count - 1)
+                        portType = "Port of Arrival:";
+                    else
+                        portType = $"Loading Port {i}:";
+
+                    html += $@"
+                <tr>
+                    <td><strong>{portType}</strong></td>
+                    <td class=""highlight"">{port.Unlocode ?? "N/A"}</td>
+                    <td>{port.Name ?? ""}</td>
+                </tr>";
+                }
+            }
+
+            html += @"
+            </table>
+        </div>";
+
+            // Short Voyage Details Section
+            html += @"
+        <!-- Short Voyage Details Section -->
         <div class=""report-section"">
             <h5>Short Voyage Details</h5>
-            <table class=""report-table"">
-                <tr>
-                    <td><strong>Departure Time:</strong></td>
-                    <td>{dataCollector.ShortVoyageInfo.DepartureTime:yyyy-MM-dd HH:mm}</td>
-                </tr>
-                <tr>
-                    <td><strong>Arrival Time:</strong></td>
-                    <td>{dataCollector.ShortVoyageInfo.ArrivalTime:yyyy-MM-dd HH:mm}</td>
-                </tr>
-                <tr>
-                    <td><strong>Voyage Duration:</strong></td>
-                    <td>{dataCollector.ShortVoyageInfo.VoyageDuration.TotalHours:F1} hours</td>
-                </tr>
-                <tr>
-                    <td><strong>Short Voyage Reduction Factor:</strong></td>
-                    <td class=""reduction-factor"">{dataCollector.ShortVoyageInfo.ShortVoyageReductionFactor:F3}</td>
-                </tr>
+            <div class=""short-voyage-details"">
+                <div class=""detail-grid"">";
+
+            html += $@"
+                    <div class=""detail-item"">
+                        <div class=""detail-label"">Departure Time</div>
+                        <div class=""detail-value"">{dataCollector.ShortVoyageInfo.DepartureTime:yyyy-MM-dd HH:mm} UTC</div>
+                    </div>
+                    <div class=""detail-item"">
+                        <div class=""detail-label"">Arrival Time</div>
+                        <div class=""detail-value"">{dataCollector.ShortVoyageInfo.ArrivalTime:yyyy-MM-dd HH:mm} UTC</div>
+                    </div>
+                    <div class=""detail-item"">
+                        <div class=""detail-label"">Voyage Duration</div>
+                        <div class=""detail-value"">{dataCollector.ShortVoyageInfo.VoyageDuration.TotalHours:F1} hours</div>
+                    </div>";
+
+            if (dataCollector.ShortVoyageInfo.ForecastTime.HasValue)
+            {
+                html += $@"
+                    <div class=""detail-item"">
+                        <div class=""detail-label"">Forecast Time</div>
+                        <div class=""detail-value"">{dataCollector.ShortVoyageInfo.ForecastTime.Value:yyyy-MM-dd HH:mm} UTC</div>
+                    </div>";
+            }
+
+            if (dataCollector.ShortVoyageInfo.ForecastSwellHeight.HasValue)
+            {
+                html += $@"
+                    <div class=""detail-item"">
+                        <div class=""detail-label"">Forecast Swell Height (Hs)</div>
+                        <div class=""detail-value"">{dataCollector.ShortVoyageInfo.ForecastSwellHeight.Value:F2} m</div>
+                    </div>";
+            }
+
+            if (dataCollector.ShortVoyageInfo.ForecastWindHeight.HasValue)
+            {
+                html += $@"
+                    <div class=""detail-item"">
+                        <div class=""detail-label"">Forecast Wind Height (Hw)</div>
+                        <div class=""detail-value"">{dataCollector.ShortVoyageInfo.ForecastWindHeight.Value:F2} m</div>
+                    </div>";
+            }
+
+            html += @"
+                </div>
+            </div>
+        </div>";
+
+            // Calculation Section
+            if (dataCollector.ShortVoyageInfo.ForecastSwellHeight.HasValue &&
+                dataCollector.ShortVoyageInfo.ForecastWindHeight.HasValue)
+            {
+                html += @"
+        <!-- Calculation Section -->
+        <div class=""report-section"">
+            <h5>Short Voyage Reduction Factor Calculation</h5>
+            <div class=""calculation-section"">";
+
+                var hswell = dataCollector.ShortVoyageInfo.ForecastSwellHeight.Value;
+                var hwind = dataCollector.ShortVoyageInfo.ForecastWindHeight.Value;
+                var breadth = dataCollector.VesselInfo.Breadth;
+                var waveHsmax = dataCollector.ShortVoyageInfo.CalculatedWaveHsmax ?? 0;
+                var reductionFactor = dataCollector.ShortVoyageInfo.ShortVoyageReductionFactor ?? 0;
+
+                html += $@"
+                <p><strong>Step 1:</strong> Calculate Maximum Significant Wave Height (Hs,max)</p>
+                <div class=""formula-display"">
+                    Hs,max = √(Hs² + Hw²)<br/>
+                    Hs,max = √({hswell:F2}² + {hwind:F2}²)<br/>
+                    Hs,max = √({hswell * hswell:F2} + {hwind * hwind:F2})<br/>
+                    <strong>Hs,max = {waveHsmax:F2} m</strong>
+                </div>
+
+                <p><strong>Step 2:</strong> Calculate Short Voyage Reduction Factor</p>
+                <div class=""formula-display"">
+                    RF = max(min(Hs,max / (2 × √B) + 0.4, 1.0), 0.6)<br/>
+                    RF = max(min({waveHsmax:F2} / (2 × √{breadth:F2}) + 0.4, 1.0), 0.6)<br/>
+                    RF = max(min({waveHsmax:F2} / {2 * Math.Sqrt(breadth):F2} + 0.4, 1.0), 0.6)<br/>
+                    RF = max(min({waveHsmax / (2 * Math.Sqrt(breadth)) + 0.4:F3}, 1.0), 0.6)<br/>
+                    <strong>RF = {reductionFactor:F3}</strong>
+                </div>
+
+                <p><em>Where: B = Vessel Breadth ({breadth:F2} m)</em></p>";
+
+                html += @"
+            </div>
+        </div>";
+            }
+
+            // Output Section
+            html += @"
+        <!-- Output Section -->
+        <div class=""report-section"">
+            <h5>Output</h5>
+            <table class=""short-voyage-table report-table"">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Distance (nm)</th>
+                        <th>Short Voyage Reduction Factor</th>
+                        <th>Voyage Duration (hours)</th>
+                    </tr>
+                </thead>
+                <tbody>";
+
+            if (dataCollector.ReductionFactorResults?.Any() == true)
+            {
+                var result = dataCollector.ReductionFactorResults.First();
+                html += $@"
+                    <tr>
+                        <td>{result.DeparturePort?.Name ?? ""} - {result.ArrivalPort?.Name ?? ""}</td>
+                        <td>{Math.Round(result.Distance)} nm</td>
+                        <td class=""reduction-factor"">{dataCollector.ShortVoyageInfo.ShortVoyageReductionFactor:F3}</td>
+                        <td>{dataCollector.ShortVoyageInfo.VoyageDuration.TotalHours:F1}</td>
+                    </tr>";
+            }
+
+            html += @"
+                </tbody>
             </table>
-        </div>
-        
-        <!-- Your existing sections adapted for short voyage -->
-        
+        </div>";
+
+            // Notes Section
+            if (dataCollector.Notes != null)
+            {
+                var shortVoyageNotes = dataCollector.Notes.BuildShortVoyageNotes();
+
+                html += @"
+        <!-- Notes Section -->
+        <div class=""report-section notes-section"">
+            <h5>Notes</h5>
+            <ul>";
+
+                foreach (var note in shortVoyageNotes)
+                {
+                    html += $@"<li>{note}</li>";
+                }
+
+                if (!string.IsNullOrEmpty(dataCollector.Notes.GuideTitle))
+                {
+                    html += $@"<li><i>{dataCollector.Notes.GuideTitle}</i> (April 2025)</li>";
+                }
+
+                html += @"
+            </ul>
+        </div>";
+            }
+
+            html += @"
     </div>
 </body>
 </html>";
+
+            return html;
         }
+    }
+}
+
     }
 }
 
