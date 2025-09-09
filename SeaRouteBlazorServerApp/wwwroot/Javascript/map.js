@@ -134,6 +134,93 @@ function canCalculateRoute() {
     return departurePin && (arrivalPin || portPins.length > 0 || waypointPins.length > 0);
 }
 
+//Sireesha
+function addRoutePointAtPosition(point, position) {
+    routePoints.splice(position, 0, {
+        ...point,
+        sequenceNumber: position
+    });
+
+    resequenceRoutePoints();
+}
+
+function resequenceRoutePoints() {
+    let sequence = 1;
+
+    for (let i = 1; i < routePoints.length - 1; i++) { 
+        if (routePoints[i]) {
+            routePoints[i].sequenceNumber = sequence++;
+        }
+    }
+}
+
+function addPortAtPosition(portData, insertPosition) {
+    const lat = parseFloat(portData.latitude);
+    const lon = parseFloat(portData.longitude);
+    const name = portData.name || "Port";
+
+    const marker = L.marker([lat, lon]).addTo(map);
+    marker.bindPopup(`Port: ${name}`);
+
+    const actualPosition = insertPosition;
+
+
+    portPins.splice(actualPosition - 1, 0, marker);
+
+    const newPoint = {
+        type: 'port',
+        latLng: [lat, lon],
+        name: name,
+        sequenceNumber: insertPosition
+    };
+
+    routePoints.splice(actualPosition, 0, newPoint);
+
+    resequenceRoutePoints();
+    reorganizeRoutePoints();
+}
+
+function removePortByPosition(sequenceNumber) {
+    const routeIndex = routePoints.findIndex(p =>
+        p.type === 'port' && p.sequenceNumber === sequenceNumber
+    );
+
+    if (routeIndex !== -1) {
+        const portArrayIndex = sequenceNumber - 1;
+        if (portPins[portArrayIndex]) {
+            map.removeLayer(portPins[portArrayIndex]);
+            portPins.splice(portArrayIndex, 1);
+        }
+
+        routePoints.splice(routeIndex, 1);
+
+        resequenceRoutePoints();
+        reorganizeRoutePoints();
+
+        return true;
+    }
+    return false;
+}
+
+function addPortAfterSequence(portData, afterSequenceNumber) {
+    addPortAtPosition(portData, afterSequenceNumber + 1);
+
+    if (canCalculateRoute()) {
+        currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
+    }
+}
+
+function removePortAtSequence(sequenceNumber) {
+    const success = removePortByPosition(sequenceNumber);
+
+    if (success && canCalculateRoute()) {
+        currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
+    }
+
+    return success;
+}
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 function setWaypointSelection(active) {
     isWaypointSelectionActive = active;
 
@@ -467,6 +554,7 @@ function processRouteSegment(routeJson, segmentIndex, totalSegments) {
             window.requestAnimationFrame(() => {
                 drawCombinedRoute(routeSegments);
             });
+            currentDotNetHelper.invokeMethodAsync('EnableCalculate');
         }
 
         return segment;
@@ -594,17 +682,7 @@ function drawCombinedRoute(segments) {
         paddingBottomRight: [20, 20],
         duration: 1.5
     });
-    //start js-1
-    // Only update pins if we have valid routePoints and segmentBoundaries
-    if (routePoints && routePoints.length > 0 && segmentBoundaries && segmentBoundaries.length > 0) {
-        updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries);
-    } else {
-        console.warn("Cannot update pins: missing routePoints or segmentBoundaries", {
-            routePointsLength: routePoints ? routePoints.length : 0,
-            segmentBoundariesLength: segmentBoundaries ? segmentBoundaries.length : 0
-        });
-    }
-    //end js-1
+    updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries);
     return routePolyline;
 }
 function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBoundaries) {
@@ -614,50 +692,16 @@ function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBou
     portPins = [];
     waypointPins.forEach(pin => map.removeLayer(pin));
     waypointPins = [];
-    //start js-2
-    // Check if we have valid segment boundaries
-    if (!segmentBoundaries || segmentBoundaries.length === 0) {
-        console.warn("No segment boundaries provided, skipping pin updates");
-        return;
-    }
 
     for (let i = 0; i < routePoints.length; i++) {
         let coordIdx;
-        
-        // Safely determine coordinate index based on position
         if (i === 0) {
-            // First point - use start of first segment
-            if (segmentBoundaries[0] && segmentBoundaries[0].startIndex !== undefined) {
-                coordIdx = segmentBoundaries[0].startIndex;
-            } else {
-                coordIdx = 0; // Fallback to first coordinate
-            }
-        } else if (i === routePoints.length - 1) {
-            // Last point - use end of last segment
-            const lastSegment = segmentBoundaries[segmentBoundaries.length - 1];
-            if (lastSegment && lastSegment.endIndex !== undefined) {
-                coordIdx = lastSegment.endIndex;
-            } else {
-                coordIdx = allCoordinates.length - 1; // Fallback to last coordinate
-            }
+            coordIdx = segmentBoundaries[0].startIndex;
         } else {
-            // Middle points - use end of previous segment
-            const prevSegmentIndex = i - 1;
-            if (prevSegmentIndex < segmentBoundaries.length && segmentBoundaries[prevSegmentIndex]) {
-                coordIdx = segmentBoundaries[prevSegmentIndex].endIndex;
-            } else {
-                // Fallback: calculate approximate position
-                const segmentSize = Math.floor(allCoordinates.length / (routePoints.length - 1));
-                coordIdx = Math.min(i * segmentSize, allCoordinates.length - 1);
-            }
+            coordIdx = segmentBoundaries[i - 1].endIndex;
         }
+        if (coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
 
-        // Validate coordinate index
-        if (coordIdx < 0 || coordIdx >= allCoordinates.length) {
-            console.warn(`Invalid coordinate index ${coordIdx} for route point ${i}, skipping`);
-            continue;
-        }
-        //end js-2
         const p = routePoints[i];
         let pin = L.marker(allCoordinates[coordIdx]).addTo(map);
 
@@ -1364,7 +1408,9 @@ window.drawChart2 = (canvasid, reductionFactorData) => {
     }
 
     // Extract values
-    const xValues = [0.00, 2.82, 8.48, 12.00];
+    const xValues = Array.isArray(reductionFactor.xValues)
+        ? reductionFactor.xValues.map(Number)
+        : [0.00, 2.82, 8.48, 12.00];
     const yValues = [0.6, 0.6, 1.0, 1.0];
 
     // Extract common points
@@ -1492,7 +1538,9 @@ window.drawChart = (canvasId, reductionFactorData, chartIndex = 1) => {
     }
 
     // Extract values (default values for Short Voyage Reduction Factor)
-    const xValues = [0.00, 2.82, 8.48, 12.00];
+    const xValues = Array.isArray(reductionFactor.xValues)
+        ? reductionFactor.xValues.map(Number)
+        : [0.00, 2.82, 8.48, 12.00];
     const yValues = [0.6, 0.6, 1.0, 1.0];
 
     // Extract common points
