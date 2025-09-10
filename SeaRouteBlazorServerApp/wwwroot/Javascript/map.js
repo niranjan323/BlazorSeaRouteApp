@@ -16,7 +16,6 @@ let routePoints = [];
 // Store route segments from FastAPI calls
 let routeSegments = [];
 
-
 // Debounce function to limit the rate of function execution
 function debounce(func, wait) {
     let timeout;
@@ -134,283 +133,6 @@ function canCalculateRoute() {
     // We need at least a departure point and one other point (arrival, port, or waypoint)
     return departurePin && (arrivalPin || portPins.length > 0 || waypointPins.length > 0);
 }
-
-
-// Newly added by Niranjan
-
-
-function addPortAtPosition(portData, targetSequence, isDeparture = true) {
-    if (!portData || !portData.latitude || !portData.longitude) return false;
-
-    const lat = parseFloat(portData.latitude);
-    const lon = parseFloat(portData.longitude);
-    const name = portData.name || "Port";
-    const unlocode = portData.unlocode || "";
-
-    if (isNaN(lat) || isNaN(lon)) return false;
-
-    // Create the marker with optimized options
-    const marker = L.marker([lat, lon], {
-        shadowPane: false,
-        bubblingMouseEvents: true
-    }).addTo(map);
-
-    marker.bindPopup(`Port: ${name} (${unlocode})<br>Lat: ${lat.toFixed(4)}, Lng: ${lon.toFixed(4)}`);
-
-
-    const newRoutePoint = {
-        type: 'port',
-        latLng: [lat, lon],
-        name: name,
-        sequence: targetSequence
-    };
-
-    if (isDeparture) {
-        // Find insertion point in route points for departure section
-        let insertIndex = findInsertionIndex(targetSequence, true);
-        routePoints.splice(insertIndex, 0, newRoutePoint);
-        portPins.splice(insertIndex, 0, marker);
-    } else {
-        // For arrival section
-        let insertIndex = findInsertionIndex(targetSequence, false);
-        routePoints.splice(insertIndex, 0, newRoutePoint);
-        portPins.push(marker); 
-    }
-
-    resequenceRoutePoints(isDeparture);
-
-    return true;
-}
-
-function findInsertionIndex(targetSequence, isDeparture) {
-    if (isDeparture) {
-
-        let insertIndex = 1;
-
-        for (let i = 1; i < routePoints.length; i++) {
-            if (routePoints[i].type === 'arrival') {
-                break;
-            }
-            if (routePoints[i].sequence && routePoints[i].sequence >= targetSequence) {
-                break;
-            }
-            insertIndex = i + 1;
-        }
-        return insertIndex;
-    } else {
-        for (let i = routePoints.length - 1; i >= 0; i--) {
-            if (routePoints[i].type === 'arrival') {
-                return i; // Insert before arrival
-            }
-        }
-        return routePoints.length; 
-    }
-}
-
-function resequenceRoutePoints(isDeparture = true) {
-    let departurePoints = [];
-    let arrivalPoints = [];
-    let mainDeparture = null;
-    let mainArrival = null;
-
-    // Separate points by type
-    routePoints.forEach(point => {
-        if (point.type === 'departure') {
-            mainDeparture = point;
-        } else if (point.type === 'arrival') {
-            mainArrival = point;
-        } else if (isDeparture && (point.type === 'port' || point.type === 'waypoint')) {
-            departurePoints.push(point);
-        } else if (!isDeparture && (point.type === 'port' || point.type === 'waypoint')) {
-            arrivalPoints.push(point);
-        }
-    });
-
-    // Sort departure and arrival points by sequence
-    departurePoints.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
-    arrivalPoints.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
-
-    // Reassign sequence numbers
-    departurePoints.forEach((point, index) => {
-        point.sequence = index + 1;
-    });
-
-    arrivalPoints.forEach((point, index) => {
-        point.sequence = index + 1;
-    });
-
-    // Rebuild routePoints array in correct order
-    routePoints = [];
-
-    if (mainDeparture) routePoints.push(mainDeparture);
-    routePoints.push(...departurePoints);
-    routePoints.push(...arrivalPoints);
-    if (mainArrival) routePoints.push(mainArrival);
-
-    return routePoints;
-}
-
-function removeRoutePointByPosition(sequence, isDeparture, type = 'port') {
-    try {
-        // Find the point to remove
-        const pointIndex = routePoints.findIndex(p =>
-            p.sequence === sequence &&
-            p.type === type &&
-            ((isDeparture && p.type !== 'arrival') || (!isDeparture && p.type !== 'departure'))
-        );
-
-        if (pointIndex === -1) return false;
-
-        const pointToRemove = routePoints[pointIndex];
-
-        // Find corresponding pin and remove from map
-        let pinIndex = -1;
-        if (type === 'port') {
-            pinIndex = portPins.findIndex(pin => {
-                const pinLatLng = pin.getLatLng();
-                return Math.abs(pinLatLng.lat - pointToRemove.latLng[0]) < 0.0001 &&
-                    Math.abs(pinLatLng.lng - pointToRemove.latLng[1]) < 0.0001;
-            });
-
-            if (pinIndex !== -1) {
-                map.removeLayer(portPins[pinIndex]);
-                portPins.splice(pinIndex, 1);
-            }
-        } else if (type === 'waypoint') {
-            pinIndex = waypointPins.findIndex(pin => {
-                const pinLatLng = pin.getLatLng();
-                return Math.abs(pinLatLng.lat - pointToRemove.latLng[0]) < 0.0001 &&
-                    Math.abs(pinLatLng.lng - pointToRemove.latLng[1]) < 0.0001;
-            });
-
-            if (pinIndex !== -1) {
-                map.removeLayer(waypointPins[pinIndex]);
-                waypointPins.splice(pinIndex, 1);
-
-                // Also remove from clicked pins if present
-                const clickedIndex = clickedPins.findIndex(pin => {
-                    const pinLatLng = pin.getLatLng();
-                    return Math.abs(pinLatLng.lat - pointToRemove.latLng[0]) < 0.0001 &&
-                        Math.abs(pinLatLng.lng - pointToRemove.latLng[1]) < 0.0001;
-                });
-
-                if (clickedIndex !== -1) {
-                    map.removeLayer(clickedPins[clickedIndex]);
-                    clickedPins.splice(clickedIndex, 1);
-                }
-            }
-        }
-
-        // Remove from route points
-        routePoints.splice(pointIndex, 1);
-
-        resequenceAfterRemoval(sequence, isDeparture);
-
-        return true;
-    } catch (error) {
-        console.error(`Error removing ${type} at position ${sequence}:`, error);
-        return false;
-    }
-}
-
-
-function resequenceAfterRemoval(removedSequence, isDeparture) {
-    routePoints.forEach(point => {
-        if (point.type !== 'departure' && point.type !== 'arrival') {
-            // Check if this point is in the same section as the removed point
-            const isSameSection = isDeparture ?
-                (point.type === 'port' || point.type === 'waypoint') &&
-                (routePoints.indexOf(point) < routePoints.findIndex(p => p.type === 'arrival')) :
-                (point.type === 'port' || point.type === 'waypoint') &&
-                (routePoints.indexOf(point) > routePoints.findIndex(p => p.type === 'departure'));
-
-            if (isSameSection && point.sequence > removedSequence) {
-                point.sequence--;
-            }
-        }
-    });
-}
-
-function addWaypointAtPosition(latitude, longitude, targetSequence, isDeparture = true) {
-    if (!latitude || !longitude) return false;
-
-    const lat = parseFloat(latitude);
-    const lon = parseFloat(longitude);
-
-    if (isNaN(lat) || isNaN(lon)) return false;
-
-    // Create the marker
-    const newPin = L.marker([lat, lon], {
-        shadowPane: false
-    }).addTo(map);
-
-    newPin.bindPopup(`Waypoint: ${lat.toFixed(5)}, ${lon.toFixed(5)}`);
-
-    // Store pin references
-    clickedPins.push(newPin);
-    waypointPins.push(newPin);
-
-    // Modified by Niranjan - Insert waypoint at specific position
-    const newRoutePoint = {
-        type: 'waypoint',
-        latLng: [lat, lon],
-        name: `Waypoint ${waypointPins.length}`,
-        sequence: targetSequence
-    };
-
-    let insertIndex = findInsertionIndex(targetSequence, isDeparture);
-    routePoints.splice(insertIndex, 0, newRoutePoint);
-
-    // Resequence all route points
-    resequenceRoutePoints(isDeparture);
-
-    return true;
-}
-
-
-function getOrderedRoutePoints() {
-
-    let orderedPoints = [];
-
-    // Add main departure
-    const mainDeparture = routePoints.find(p => p.type === 'departure');
-    if (mainDeparture) orderedPoints.push(mainDeparture);
-
-    // Add departure section items (ports and waypoints before arrival)
-    const arrivalIndex = routePoints.findIndex(p => p.type === 'arrival');
-    const departureItems = routePoints.filter((p, index) =>
-        p.type !== 'departure' &&
-        p.type !== 'arrival' &&
-        (arrivalIndex === -1 || index < arrivalIndex)
-    ).sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
-
-    orderedPoints.push(...departureItems);
-
-    // Add arrival section items
-    const arrivalItems = routePoints.filter((p, index) =>
-        p.type !== 'departure' &&
-        p.type !== 'arrival' &&
-        arrivalIndex !== -1 &&
-        index > arrivalIndex
-    ).sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
-
-    orderedPoints.push(...arrivalItems);
-
-    // Add main arrival
-    const mainArrival = routePoints.find(p => p.type === 'arrival');
-    if (mainArrival) orderedPoints.push(mainArrival);
-
-    return orderedPoints;
-}
-
-
-
-//ended newly added
-
-
-
-
-
 
 function setWaypointSelection(active) {
     isWaypointSelectionActive = active;
@@ -625,7 +347,7 @@ async function searchLocation(query, isDeparture, lat = null, lon = null) {
     }
 }
 // Function to add a port based on API search results with caching
-async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null) {
+async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, sequenceNumber = null) {
     try {
         // If lat and lon are provided, use them directly
         if (lat === null || lon === null) {
@@ -667,12 +389,20 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null) {
         newPin.bindPopup(`Intermediate Port: ${query}`);
         portPins.push(newPin);
 
-        // Add to route points as an intermediate port
-        routePoints.push({
+        // Modified by Niranjan - Add to route points with proper sequencing
+        const newRoutePoint = {
             type: 'port',
             latLng: [lat, lon],
-            name: query
-        });
+            name: query,
+            sequenceNumber: sequenceNumber || (routePoints.length + 1)
+        };
+
+        // Modified by Niranjan - Insert at correct position if sequence number is provided
+        if (sequenceNumber !== null) {
+            insertRoutePointAtSequence(newRoutePoint, sequenceNumber);
+        } else {
+            routePoints.push(newRoutePoint);
+        }
 
         reorganizeRoutePoints();
         zoomInThenOut(lat, lon);
@@ -689,17 +419,25 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null) {
     }
 }
 
-// Ensure route points are properly organized - optimized version
 function reorganizeRoutePoints() {
     // Extract departure and arrival points
     const departurePoint = routePoints.find(p => p.type === 'departure');
     const arrivalPoint = routePoints.find(p => p.type === 'arrival');
     const otherPoints = routePoints.filter(p => p.type !== 'departure' && p.type !== 'arrival');
 
+    otherPoints.sort((a, b) => {
+        if (a.sequenceNumber && b.sequenceNumber) {
+            return a.sequenceNumber - b.sequenceNumber;
+        }
+        return 0;
+    });
+
     // Use efficient array manipulation
     routePoints = departurePoint ? [departurePoint] : [];
     routePoints = routePoints.concat(otherPoints);
     if (arrivalPoint) routePoints.push(arrivalPoint);
+
+    updateSequenceNumbers();
 
     return routePoints;
 }
@@ -1270,7 +1008,10 @@ function removeWaypoint(latitude, longitude) {
         );
 
         if (waypointIndex !== -1) {
-            // Get the array index of the waypoint
+            // Remove from routePoints array
+            routePoints.splice(waypointIndex, 1);
+
+            // Find and remove the corresponding pin from waypointPins array
             const waypointArrayIndex = waypointPins.findIndex(pin => {
                 const pinLatLng = pin.getLatLng();
                 return Math.abs(pinLatLng.lat - latitude) < 0.0001 &&
@@ -1278,8 +1019,34 @@ function removeWaypoint(latitude, longitude) {
             });
 
             if (waypointArrayIndex !== -1) {
-                return removePin('waypoint', waypointArrayIndex);
+                // Remove pin from map
+                map.removeLayer(waypointPins[waypointArrayIndex]);
+                waypointPins.splice(waypointArrayIndex, 1);
             }
+
+            // Also remove from clicked pins if present
+            const clickedIndex = clickedPins.findIndex(pin => {
+                const pinLatLng = pin.getLatLng();
+                return Math.abs(pinLatLng.lat - latitude) < 0.0001 &&
+                    Math.abs(pinLatLng.lng - longitude) < 0.0001;
+            });
+
+            if (clickedIndex !== -1) {
+                map.removeLayer(clickedPins[clickedIndex]);
+                clickedPins.splice(clickedIndex, 1);
+            }
+
+            // Modified by Niranjan - Reorganize and update sequence numbers
+            reorganizeRoutePoints();
+
+            // Notify Blazor for recalculation
+            if (currentDotNetHelper) {
+                window.requestAnimationFrame(() => {
+                    currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
+                });
+            }
+
+            return true;
         }
         return false;
     } catch (error) {
@@ -1300,7 +1067,10 @@ function removePort(portName, latitude, longitude) {
         );
 
         if (portIndex !== -1) {
-            // Get the array index of the port
+            // Remove from routePoints array
+            routePoints.splice(portIndex, 1);
+
+            // Find and remove the corresponding pin from portPins array
             const portArrayIndex = portPins.findIndex(pin => {
                 const pinLatLng = pin.getLatLng();
                 return (pin.getPopup().getContent().includes(portName) ||
@@ -1309,8 +1079,22 @@ function removePort(portName, latitude, longitude) {
             });
 
             if (portArrayIndex !== -1) {
-                return removePin('port', portArrayIndex);
+                // Remove pin from map
+                map.removeLayer(portPins[portArrayIndex]);
+                portPins.splice(portArrayIndex, 1);
             }
+
+            // Modified by Niranjan - Reorganize and update sequence numbers
+            reorganizeRoutePoints();
+
+            // Notify Blazor for recalculation
+            if (currentDotNetHelper) {
+                window.requestAnimationFrame(() => {
+                    currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
+                });
+            }
+
+            return true;
         }
         return false;
     } catch (error) {
@@ -1318,6 +1102,83 @@ function removePort(portName, latitude, longitude) {
         return false;
     }
 }
+//new
+function insertRoutePointAtSequence(newRoutePoint, targetSequenceNumber) {
+    // Find departure and arrival points
+    const departurePoint = routePoints.find(p => p.type === 'departure');
+    const arrivalPoint = routePoints.find(p => p.type === 'arrival');
+
+    // Get all intermediate points (ports and waypoints)
+    const intermediatePoints = routePoints.filter(p => p.type !== 'departure' && p.type !== 'arrival');
+
+    // Insert the new point at the correct position in intermediate points
+    const insertIndex = Math.max(0, Math.min(targetSequenceNumber - 1, intermediatePoints.length));
+    intermediatePoints.splice(insertIndex, 0, newRoutePoint);
+
+    // Rebuild routePoints array with proper order
+    routePoints = [];
+    if (departurePoint) routePoints.push(departurePoint);
+    routePoints = routePoints.concat(intermediatePoints);
+    if (arrivalPoint) routePoints.push(arrivalPoint);
+
+    // Update sequence numbers
+    updateSequenceNumbers();
+}
+
+// Modified by Niranjan - New function to update sequence numbers
+function updateSequenceNumbers() {
+    routePoints.forEach((point, index) => {
+        point.sequenceNumber = index + 1;
+    });
+}
+function addWaypointAtSequence(latitude, longitude, sequenceNumber, name = null) {
+    try {
+        const waypointName = name || `Waypoint ${waypointPins.length + 1}`;
+
+        // Create marker
+        const newPin = L.marker([latitude, longitude], {
+            shadowPane: false
+        }).addTo(map);
+
+        newPin.bindPopup(`${waypointName}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+
+        // Store pin references
+        clickedPins.push(newPin);
+        waypointPins.push(newPin);
+
+        // Create route point with sequence number
+        const newRoutePoint = {
+            type: 'waypoint',
+            latLng: [latitude, longitude],
+            name: waypointName,
+            sequenceNumber: sequenceNumber
+        };
+
+        // Insert at correct position
+        if (sequenceNumber !== null) {
+            insertRoutePointAtSequence(newRoutePoint, sequenceNumber);
+        } else {
+            routePoints.push(newRoutePoint);
+        }
+
+        reorganizeRoutePoints();
+        zoomInThenOut(latitude, longitude);
+
+        // Recalculate route if possible
+        if (canCalculateRoute()) {
+            window.requestAnimationFrame(() => {
+                currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Error adding waypoint at sequence:", error);
+        return false;
+    }
+}
+//end
+
 
 
 function createSeaRoutefromAPIForShort(routeJson) {

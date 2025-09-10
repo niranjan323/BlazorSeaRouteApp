@@ -5,7 +5,6 @@ using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
 using NextGenEngApps.DigitalRules.CRoute.Data;
 using NextGenEngApps.DigitalRules.CRoute.Models;
 using NextGenEngApps.DigitalRules.CRoute.Services.API.Request;
-using SeaRouteBlazorServerApp.Components.Services;
 using SeaRouteModel.Models;
 using System.Diagnostics;
 using System.Text.Json;
@@ -235,6 +234,20 @@ Longitude = 103.8198
                 StateHasChanged();
             }
         }
+        [JSInvokable]
+        public async Task CaptureCoordinatesWithSequence(double latitude, double longitude, int sequenceNumber)
+        {
+            // Find the waypoint that was just added by sequence number
+            var targetItem = routeModel.DepartureItems.FirstOrDefault(x => x.SequenceNumber == sequenceNumber && x.ItemType == "W");
+
+            if (targetItem?.Waypoint != null)
+            {
+                targetItem.Waypoint.Latitude = latitude;
+                targetItem.Waypoint.Longitude = longitude;
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
         private async Task GoBack()
         {
             showReport = false;
@@ -272,8 +285,8 @@ Longitude = 103.8198
             StateHasChanged();
         }
         //  ------------------------  ports  --------------------
+        #region Departure Port Methods
 
-        #region Departure Port Methods - Enhanced by Niranjan
 
         private void OnSearchInputChanged(ChangeEventArgs e)
         {
@@ -299,7 +312,6 @@ Longitude = 103.8198
                 });
             });
         }
-
         private async Task SearchDepartureLocation()
         {
             if (!string.IsNullOrWhiteSpace(departureLocationQuery))
@@ -308,6 +320,7 @@ Longitude = 103.8198
                 var searchResults = await SearchPortsAsync(departureLocationQuery);
 
                 // Create a temporary PortSelectionModel to hold search results
+
                 var tempPortSelection = new PortSelectionModel
                 {
                     SearchTerm = departureLocationQuery,
@@ -321,9 +334,9 @@ Longitude = 103.8198
                     // Store results for display
                     routeModel.MainDeparturePortSelection = tempPortSelection;
                 }
+
             }
         }
-
         private async Task UpdateDeparturePortSearchDepartureLocation(PortSelectionModel portSelection, PortModel newPort)
         {
             portSelection.Port = newPort;
@@ -333,45 +346,39 @@ Longitude = 103.8198
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
                 if (newPort.Latitude != 0 && newPort.Longitude != 0)
                 {
+
                     await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true, newPort.Latitude, newPort.Longitude);
                 }
                 else
                 {
+
                     await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, true);
                 }
             portSelection.SearchResults.Clear();
+            //await CheckAndCalculateRoute();
             StateHasChanged();
         }
-
-        // Enhanced by Niranjan - Better sequence management for adding departure ports
         private void AddDeparturePort()
         {
-            // Find the next sequence number for departure ports
-            int nextSequence = GetNextDepartureSequence();
-
-            var portModel = new PortSelectionModel { SequenceNumber = nextSequence };
+            var portModel = new PortSelectionModel { SequenceNumber = 1 };
             var newRouteItem = new RouteItemModel
             {
-                SequenceNumber = nextSequence,
+                SequenceNumber = 1,
                 ItemType = "P",
                 Port = portModel
             };
 
-            // Insert at the end of departure items (before any arrival items)
-            int insertIndex = GetInsertionIndexForDepartureItems();
-            routeModel.DepartureItems.Insert(insertIndex, newRouteItem);
+            routeModel.DepartureItems.Insert(0, newRouteItem);
             routeModel.DeparturePorts.Add(portModel);
 
-            // Enhanced by Niranjan - Maintain proper sequencing
-            ResequenceDepartureItemsEnhanced();
+            ResequenceDepartureItems();
+
             StateHasChanged();
         }
-
-        // Enhanced by Niranjan - Improved method for adding port after specific sequence
+        //nn
         private void AddDeparturePortAfter(int afterSequenceNumber)
         {
-            // Find the correct insertion point
-            int insertIndex = GetInsertionIndexAfterSequence(afterSequenceNumber, routeModel.DepartureItems);
+            int insertIndex = routeModel.DepartureItems.FindIndex(x => x.SequenceNumber == afterSequenceNumber) + 1;
 
             var portModel = new PortSelectionModel { SequenceNumber = afterSequenceNumber + 1 };
             var newRouteItem = new RouteItemModel
@@ -380,38 +387,17 @@ Longitude = 103.8198
                 ItemType = "P",
                 Port = portModel
             };
-
             routeModel.DepartureItems.Insert(insertIndex, newRouteItem);
             routeModel.DeparturePorts.Add(portModel);
-
-            // Enhanced by Niranjan - Better resequencing
-            ResequenceDepartureItemsEnhanced();
-
-            // Notify JavaScript about the change
-            if (JS != null && portModel.Port != null)
-            {
-                InvokeAsync(async () =>
-                {
-                    await JS.InvokeVoidAsync("addPortAtPosition",
-                        new
-                        {
-                            name = portModel.Port.Name,
-                            latitude = portModel.Port.Latitude,
-                            longitude = portModel.Port.Longitude,
-                            unlocode = portModel.Port.Unlocode
-                        },
-                        portModel.SequenceNumber,
-                        true); // isDeparture = true
-                });
-            }
+            ResequenceDepartureItems();
 
             StateHasChanged();
         }
 
-        // Enhanced by Niranjan - Improved waypoint addition with proper sequencing
+//nn
         private async Task AddDepartureWaypointAfter(int afterSequenceNumber)
         {
-            int insertIndex = GetInsertionIndexAfterSequence(afterSequenceNumber, routeModel.DepartureItems);
+            int insertIndex = routeModel.DepartureItems.FindIndex(x => x.SequenceNumber == afterSequenceNumber) + 1;
 
             var waypointModel = new WaypointModel
             {
@@ -426,34 +412,22 @@ Longitude = 103.8198
                 Waypoint = waypointModel
             };
 
+ 
             routeModel.DepartureItems.Insert(insertIndex, newRouteItem);
             routeModel.DepartureWaypoints.Add(waypointModel);
 
-            // Enhanced by Niranjan - Better resequencing
-            ResequenceDepartureItemsEnhanced();
+            ResequenceDepartureItems();
 
             await EnableWaypointSelection();
             StateHasChanged();
         }
 
-        // Enhanced by Niranjan - Improved resequencing method
-        private void ResequenceDepartureItemsEnhanced()
+        private void ResequenceDepartureItems()
         {
-            // Sort items by their current sequence number first to maintain relative order
-            var sortedItems = routeModel.DepartureItems
-                .OrderBy(x => x.SequenceNumber)
-                .ToList();
-
-            // Clear and rebuild the list in correct order
-            routeModel.DepartureItems.Clear();
-            routeModel.DepartureItems.AddRange(sortedItems);
-
-            // Reassign sequence numbers
             for (int i = 0; i < routeModel.DepartureItems.Count; i++)
             {
                 var item = routeModel.DepartureItems[i];
                 item.SequenceNumber = i + 1;
-
                 if (item.ItemType == "P" && item.Port != null)
                 {
                     item.Port.SequenceNumber = i + 1;
@@ -464,27 +438,24 @@ Longitude = 103.8198
                 }
             }
         }
-
-        // Enhanced by Niranjan - Improved port removal with JavaScript synchronization
+        //nn
         private async Task RemoveDeparturePort(PortSelectionModel port)
         {
-            // Notify JavaScript first
             if (JS is not null && port.Port?.Longitude != null && port.Port?.Latitude != null)
             {
-                await JS.InvokeVoidAsync("removeRoutePointByPosition",
-                    port.SequenceNumber,
-                    true, // isDeparture
-                    "port");
+                await JS.InvokeVoidAsync("removePort", port.Port.Name, port.Port.Latitude, port.Port.Longitude);
             }
 
             var itemToRemove = routeModel.DepartureItems.FirstOrDefault(i => i.ItemType == "P" && i.Port == port);
             if (itemToRemove != null)
             {
-                int removedSequence = itemToRemove.SequenceNumber;
+        
+                var removedSequenceNumber = itemToRemove.SequenceNumber;
+
                 routeModel.DepartureItems.Remove(itemToRemove);
 
-                // Enhanced by Niranjan - Adjust sequence numbers for items after the removed one
-                foreach (var item in routeModel.DepartureItems.Where(x => x.SequenceNumber > removedSequence))
+      
+                foreach (var item in routeModel.DepartureItems.Where(x => x.SequenceNumber > removedSequenceNumber))
                 {
                     item.SequenceNumber--;
                     if (item.ItemType == "P" && item.Port != null)
@@ -502,35 +473,6 @@ Longitude = 103.8198
             StateHasChanged();
         }
 
-        // Enhanced by Niranjan - Helper method to find next sequence number
-        private int GetNextDepartureSequence()
-        {
-            if (!routeModel.DepartureItems.Any())
-                return 1;
-
-            return routeModel.DepartureItems.Max(x => x.SequenceNumber) + 1;
-        }
-
-        // Enhanced by Niranjan - Helper method to find insertion index for departure items
-        private int GetInsertionIndexForDepartureItems()
-        {
-            // Insert at the end of the departure items list
-            return routeModel.DepartureItems.Count;
-        }
-
-        // Enhanced by Niranjan - Helper method to find insertion index after specific sequence
-        private int GetInsertionIndexAfterSequence(int afterSequence, List<RouteItemModel> items)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].SequenceNumber > afterSequence)
-                {
-                    return i;
-                }
-            }
-            return items.Count; // Insert at the end if no item with higher sequence found
-        }
-
         private void HandleDepartureInputChanged(PortSelectionModel portSelection)
         {
             _debounceService.Debounce(async () =>
@@ -545,6 +487,7 @@ Longitude = 103.8198
                     {
                         portSelection?.SearchResults?.Clear();
                     }
+
                     StateHasChanged();
                 });
             });
@@ -559,29 +502,31 @@ Longitude = 103.8198
 
             // Call API to get search results
             portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
+
+
+
             StateHasChanged();
         }
-
+        //nn
         private async Task UpdateDeparturePort(PortSelectionModel portSelection, PortModel newPort)
         {
             portSelection.Port = newPort;
             portSelection.SearchTerm = newPort.Name;
 
-            // Call JS visualization after getting API results
+            var sequenceNumber = portSelection.SequenceNumber;
+
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
             {
                 await JS.InvokeVoidAsync("zoomAndPinLocation", portSelection.SearchTerm, true, newPort.Latitude,
-                    newPort.Longitude);
+                    newPort.Longitude, sequenceNumber);
             }
 
             portSelection.SearchResults.Clear();
             StateHasChanged();
         }
-
         #endregion
 
-        #region Arrival Port Methods - Enhanced by Niranjan
-
+        #region Arrival Port Methods
         private void OnArrivalSearchInputChanged(ChangeEventArgs e)
         {
             arrivalLocationQuery = e.Value?.ToString();
@@ -628,90 +573,71 @@ Longitude = 103.8198
                     // Store results for display
                     routeModel.MainArrivalPortSelection = tempPortSelection;
                 }
+
+
             }
         }
-
         private async Task UpdateArrivalPortSearchArrivalLocation(PortSelectionModel portSelection, PortModel newPort)
         {
             portSelection.Port = newPort;
             portSelection.SearchTerm = newPort.Name;
             arrivalLocationQuery = newPort.Name;
-
             // Call the JavaScript visualization after API search
             if (!string.IsNullOrWhiteSpace(portSelection.SearchTerm))
                 if (newPort.Latitude != 0 && newPort.Longitude != 0)
                 {
+
                     await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false, newPort.Latitude, newPort.Longitude);
                 }
                 else
                 {
+
                     await JS.InvokeVoidAsync("searchLocation", portSelection.SearchTerm, false);
                 }
 
             portSelection.SearchResults.Clear();
+            // await CheckAndCalculateRoute();
             StateHasChanged();
         }
-
-        // Enhanced by Niranjan - Improved arrival port addition with sequencing
         private void AddArrivalPort()
         {
-            // Find the next sequence number for arrival ports
-            int nextSequence = GetNextArrivalSequence();
+            var portModel = new PortSelectionModel { SequenceNumber = routeModel.ArrivalItems.Count + 1 };
 
-            var portModel = new PortSelectionModel { SequenceNumber = nextSequence };
-
-            // Add to combined list with proper sequencing
+            // Add to combined list
             routeModel.ArrivalItems.Add(new RouteItemModel
             {
-                SequenceNumber = nextSequence,
+                SequenceNumber = routeModel.ArrivalItems.Count + 1,
                 ItemType = "P",
                 Port = portModel
             });
 
             // Add to the original ports list
             routeModel.ArrivalPorts.Add(portModel);
-
-            // Enhanced by Niranjan - Maintain proper sequencing for arrival items
-            ResequenceArrivalItemsEnhanced();
             StateHasChanged();
         }
 
-        // Enhanced by Niranjan - Improved arrival port removal with JavaScript synchronization
         private async Task RemoveArrivalPort(PortSelectionModel port)
         {
-            // Notify JavaScript first
             if (JS is not null && port.Port?.Longitude != null && port.Port?.Latitude != null)
             {
-                await JS.InvokeVoidAsync("removeRoutePointByPosition",
-                    port.SequenceNumber,
-                    false, // isDeparture = false
-                    "port");
+                await JS.InvokeVoidAsync("removePort", port.Port.Name, port.Port.Latitude, port.Port.Longitude);
             }
-
             var itemToRemove = routeModel.ArrivalItems.FirstOrDefault(i => i.ItemType == "P" && i.Port == port);
             if (itemToRemove != null)
             {
-                int removedSequence = itemToRemove.SequenceNumber;
                 routeModel.ArrivalItems.Remove(itemToRemove);
-
-                // Enhanced by Niranjan - Adjust sequence numbers for items after the removed one
-                foreach (var item in routeModel.ArrivalItems.Where(x => x.SequenceNumber > removedSequence))
+                // Resequence remaining items
+                for (int i = 0; i < routeModel.ArrivalItems.Count; i++)
                 {
-                    item.SequenceNumber--;
-                    if (item.ItemType == "P" && item.Port != null)
-                    {
-                        item.Port.SequenceNumber = item.SequenceNumber;
-                    }
-                    else if (item.ItemType == "W" && item.Waypoint != null)
-                    {
-                        item.Waypoint.SequenceNumber = item.SequenceNumber;
-                    }
+                    routeModel.ArrivalItems[i].SequenceNumber = i + 1;
                 }
             }
-
             routeModel.ArrivalPorts.Remove(port);
+
             StateHasChanged();
         }
+
+
 
         private async Task SearchArrivalPortsForExisting(PortSelectionModel portSelection)
         {
@@ -722,6 +648,9 @@ Longitude = 103.8198
 
             // Call API to get search results
             portSelection.SearchResults = await SearchPortsAsync(portSelection.SearchTerm);
+
+
+
             StateHasChanged();
         }
 
@@ -738,307 +667,8 @@ Longitude = 103.8198
             portSelection.SearchResults.Clear();
             StateHasChanged();
         }
-
-        // Enhanced by Niranjan - Helper method for arrival sequence management
-        private int GetNextArrivalSequence()
-        {
-            if (!routeModel.ArrivalItems.Any())
-                return 1;
-
-            return routeModel.ArrivalItems.Max(x => x.SequenceNumber) + 1;
-        }
-
-        // Enhanced by Niranjan - Enhanced resequencing method for arrival items
-        private void ResequenceArrivalItemsEnhanced()
-        {
-            // Sort items by their current sequence number first to maintain relative order
-            var sortedItems = routeModel.ArrivalItems
-                .OrderBy(x => x.SequenceNumber)
-                .ToList();
-
-            // Clear and rebuild the list in correct order
-            routeModel.ArrivalItems.Clear();
-            routeModel.ArrivalItems.AddRange(sortedItems);
-
-            // Reassign sequence numbers
-            for (int i = 0; i < routeModel.ArrivalItems.Count; i++)
-            {
-                var item = routeModel.ArrivalItems[i];
-                item.SequenceNumber = i + 1;
-
-                if (item.ItemType == "P" && item.Port != null)
-                {
-                    item.Port.SequenceNumber = i + 1;
-                }
-                else if (item.ItemType == "W" && item.Waypoint != null)
-                {
-                    item.Waypoint.SequenceNumber = i + 1;
-                }
-            }
-        }
-
         #endregion
 
-        #region 
-
-        // Enhanced by Niranjan - Improved waypoint removal with JavaScript synchronization
-        private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
-        {
-            // Notify JavaScript first
-            if (JS != null && waypoint != null)
-            {
-                await JS.InvokeVoidAsync("removeRoutePointByPosition",
-                    waypoint.SequenceNumber,
-                    true, // isDeparture
-                    "waypoint");
-            }
-
-            var itemToRemove = routeModel.DepartureItems.FirstOrDefault(i => i.ItemType == "W" && i.Waypoint == waypoint);
-            if (itemToRemove != null)
-            {
-                int removedSequence = itemToRemove.SequenceNumber;
-                routeModel.DepartureItems.Remove(itemToRemove);
-
-                // Enhanced by Niranjan - Adjust sequence numbers for items after the removed one
-                foreach (var item in routeModel.DepartureItems.Where(x => x.SequenceNumber > removedSequence))
-                {
-                    item.SequenceNumber--;
-                    if (item.ItemType == "P" && item.Port != null)
-                    {
-                        item.Port.SequenceNumber = item.SequenceNumber;
-                    }
-                    else if (item.ItemType == "W" && item.Waypoint != null)
-                    {
-                        item.Waypoint.SequenceNumber = item.SequenceNumber;
-                    }
-                }
-            }
-
-            routeModel.DepartureWaypoints.Remove(waypoint);
-            StateHasChanged();
-        }
-
-        // Enhanced by Niranjan - Improved arrival waypoint removal with JavaScript synchronization
-        private async Task RemoveArrivalWaypoint(WaypointModel waypoint)
-        {
-            // Notify JavaScript first
-            if (JS != null && waypoint != null)
-            {
-                await JS.InvokeVoidAsync("removeRoutePointByPosition",
-                    waypoint.SequenceNumber,
-                    false, // isDeparture = false
-                    "waypoint");
-            }
-
-            var itemToRemove = routeModel.ArrivalItems.FirstOrDefault(i => i.ItemType == "W" && i.Waypoint == waypoint);
-            if (itemToRemove != null)
-            {
-                int removedSequence = itemToRemove.SequenceNumber;
-                routeModel.ArrivalItems.Remove(itemToRemove);
-
-                // Enhanced by Niranjan - Adjust sequence numbers for items after the removed one
-                foreach (var item in routeModel.ArrivalItems.Where(x => x.SequenceNumber > removedSequence))
-                {
-                    item.SequenceNumber--;
-                    if (item.ItemType == "P" && item.Port != null)
-                    {
-                        item.Port.SequenceNumber = item.SequenceNumber;
-                    }
-                    else if (item.ItemType == "W" && item.Waypoint != null)
-                    {
-                        item.Waypoint.SequenceNumber = item.SequenceNumber;
-                    }
-                }
-            }
-
-            routeModel.ArrivalWaypoints.Remove(waypoint);
-            StateHasChanged();
-        }
-
-        // Enhanced by Niranjan - Improved arrival waypoint addition
-        private async Task AddArrivalWaypoint()
-        {
-            // Find the next sequence number for arrival waypoints
-            int nextSequence = GetNextArrivalSequence();
-
-            var waypointModel = new WaypointModel
-            {
-                SequenceNumber = nextSequence,
-                PointId = Guid.NewGuid().ToString()
-            };
-
-            var newRouteItem = new RouteItemModel
-            {
-                SequenceNumber = nextSequence,
-                ItemType = "W",
-                Waypoint = waypointModel
-            };
-
-            // Add to arrival items with proper sequencing
-            routeModel.ArrivalItems.Add(newRouteItem);
-            routeModel.ArrivalWaypoints.Add(waypointModel);
-
-            // Enhanced by Niranjan - Better resequencing for arrival items
-            ResequenceArrivalItemsEnhanced();
-
-            await EnableWaypointSelection();
-            StateHasChanged();
-        }
-
-        #endregion
-
-        #region Enhanced Route Management - Enhanced by Niranjan
-
-        // Enhanced by Niranjan - Method to synchronize route points between C# and JavaScript
-        private async Task SynchronizeRoutePoints()
-        {
-            if (JS != null)
-            {
-                try
-                {
-                    // Get ordered route points from JavaScript
-                    await JS.InvokeVoidAsync("resequenceRoutePoints", true); // For departure section
-                    await JS.InvokeVoidAsync("resequenceRoutePoints", false); // For arrival section
-                }
-                catch (Exception ex)
-                {
-                    // Handle JavaScript synchronization errors
-                    Console.WriteLine($"Error synchronizing route points: {ex.Message}");
-                }
-            }
-        }
-
-        // Enhanced by Niranjan - Method to validate route point consistency
-        private void ValidateRoutePointConsistency()
-        {
-            // Check departure items consistency
-            var departureSequences = routeModel.DepartureItems.Select(x => x.SequenceNumber).OrderBy(x => x).ToList();
-            for (int i = 0; i < departureSequences.Count; i++)
-            {
-                if (departureSequences[i] != i + 1)
-                {
-                    // Fix sequence numbering
-                    ResequenceDepartureItemsEnhanced();
-                    break;
-                }
-            }
-
-            // Check arrival items consistency
-            var arrivalSequences = routeModel.ArrivalItems.Select(x => x.SequenceNumber).OrderBy(x => x).ToList();
-            for (int i = 0; i < arrivalSequences.Count; i++)
-            {
-                if (arrivalSequences[i] != i + 1)
-                {
-                    // Fix sequence numbering
-                    ResequenceArrivalItemsEnhanced();
-                    break;
-                }
-            }
-        }
-
-        // Enhanced by Niranjan - Comprehensive method to rebuild route structure
-        private async Task RebuildRouteStructure()
-        {
-            // Validate and fix any sequence inconsistencies
-            ValidateRoutePointConsistency();
-
-            // Synchronize with JavaScript
-            await SynchronizeRoutePoints();
-
-            // Trigger route recalculation if needed
-            if (routeModel.MainDeparturePortSelection?.Port != null &&
-                routeModel.MainArrivalPortSelection?.Port != null)
-            {
-                // Trigger route calculation
-                StateHasChanged();
-            }
-        }
-
-        // Enhanced by Niranjan - Method to get complete ordered route for API calls
-        private List<object> GetCompleteOrderedRoute()
-        {
-            var completeRoute = new List<object>();
-
-            // Add main departure
-            if (routeModel.MainDeparturePortSelection?.Port != null)
-            {
-                completeRoute.Add(new
-                {
-                    Type = "departure",
-                    Port = routeModel.MainDeparturePortSelection.Port,
-                    Sequence = 0
-                });
-            }
-
-            // Add departure items in sequence order
-            var orderedDepartureItems = routeModel.DepartureItems
-                .OrderBy(x => x.SequenceNumber)
-                .ToList();
-
-            foreach (var item in orderedDepartureItems)
-            {
-                if (item.ItemType == "P" && item.Port?.Port != null)
-                {
-                    completeRoute.Add(new
-                    {
-                        Type = "port",
-                        Port = item.Port.Port,
-                        Sequence = item.SequenceNumber
-                    });
-                }
-                else if (item.ItemType == "W" && item.Waypoint != null)
-                {
-                    completeRoute.Add(new
-                    {
-                        Type = "waypoint",
-                        Waypoint = item.Waypoint,
-                        Sequence = item.SequenceNumber
-                    });
-                }
-            }
-
-            // Add arrival items in sequence order
-            var orderedArrivalItems = routeModel.ArrivalItems
-                .OrderBy(x => x.SequenceNumber)
-                .ToList();
-
-            foreach (var item in orderedArrivalItems)
-            {
-                if (item.ItemType == "P" && item.Port?.Port != null)
-                {
-                    completeRoute.Add(new
-                    {
-                        Type = "port",
-                        Port = item.Port.Port,
-                        Sequence = item.SequenceNumber + 1000 // Offset to distinguish from departure items
-                    });
-                }
-                else if (item.ItemType == "W" && item.Waypoint != null)
-                {
-                    completeRoute.Add(new
-                    {
-                        Type = "waypoint",
-                        Waypoint = item.Waypoint,
-                        Sequence = item.SequenceNumber + 1000 // Offset to distinguish from departure items
-                    });
-                }
-            }
-
-            // Add main arrival
-            if (routeModel.MainArrivalPortSelection?.Port != null)
-            {
-                completeRoute.Add(new
-                {
-                    Type = "arrival",
-                    Port = routeModel.MainArrivalPortSelection.Port,
-                    Sequence = 9999 // High sequence to ensure it's last
-                });
-            }
-
-            return completeRoute.OrderBy(x => ((dynamic)x).Sequence).ToList();
-        }
-
-        #endregion
         // Common port search method that calls the API
         public async Task<List<PortModel>> SearchPortsAsync(string searchTerm)
         {
@@ -1384,25 +1014,37 @@ Longitude = 103.8198
             await EnableWaypointSelection();
         }
 
+        //nn
         private async Task RemoveDepartureWaypoint(WaypointModel waypoint)
         {
-            if (JS is not null)
+            if (JS is not null && waypoint.Longitude != null && waypoint.Latitude != null)
             {
-                await JS.InvokeVoidAsync("setWaypointSelection", false);
-                if (waypoint.Latitude != null && waypoint.Longitude != null)
-                    await JS.InvokeVoidAsync("removeWaypoint", waypoint.Latitude, waypoint.Longitude);
+                await JS.InvokeVoidAsync("removeWaypoint", waypoint.Latitude, waypoint.Longitude);
             }
+
             var itemToRemove = routeModel.DepartureItems.FirstOrDefault(i => i.ItemType == "W" && i.Waypoint == waypoint);
             if (itemToRemove != null)
             {
+                var removedSequenceNumber = itemToRemove.SequenceNumber;
+
                 routeModel.DepartureItems.Remove(itemToRemove);
-                // Resequence remaining items
-                for (int i = 0; i < routeModel.DepartureItems.Count; i++)
+
+                foreach (var item in routeModel.DepartureItems.Where(x => x.SequenceNumber > removedSequenceNumber))
                 {
-                    routeModel.DepartureItems[i].SequenceNumber = i + 1;
+                    item.SequenceNumber--;
+                    if (item.ItemType == "P" && item.Port != null)
+                    {
+                        item.Port.SequenceNumber = item.SequenceNumber;
+                    }
+                    else if (item.ItemType == "W" && item.Waypoint != null)
+                    {
+                        item.Waypoint.SequenceNumber = item.SequenceNumber;
+                    }
                 }
             }
+
             routeModel.DepartureWaypoints.Remove(waypoint);
+            StateHasChanged();
 
         }
 
