@@ -1,254 +1,500 @@
-﻿
-using Microsoft.JSInterop;
-using SeaRouteModel.Models;
-
-private async Task EnableWaypointSelection(int? targetSequenceNumber = null)
+﻿private string GenerateHtmlFromDataCollector(ReportDataCollector dataCollector, bool isCLPVChecked = false)
 {
-    if (JS != null)
+    string html = "";
+    html = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <title>{dataCollector.ReportTitle}</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }}
+        .report-container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0066cc;
+        }}
+        .report-section {{
+            margin-bottom: 35px;
+        }}
+        .report-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: white;
+        }}
+        .report-table th, .report-table td {{
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }}
+        .report-table th {{
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #333;
+        }}
+        .highlight {{
+            color: #0066cc;
+            font-weight: 500;
+        }}
+        .reduction-factor {{
+            font-weight: bold;
+            color: #0066cc;
+        }}
+        h4 {{
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }}
+        h5 {{
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }}
+        .notes-section ul {{
+            padding-left: 20px;
+        }}
+        .notes-section li {{
+            margin-bottom: 8px;
+        }}
+        .seasonal-table {{
+            width: 100%;
+            margin-top: 20px;
+        }}
+        .seasonal-table th {{
+            background-color: #0066cc;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+        }}
+        .seasonal-header {{
+            background-color: #e3f2fd !important;
+            color: #0066cc !important;
+            font-weight: bold;
+        }}
+        .route-segment-cell {{
+            font-weight: 500;
+        }}
+        .attention-box {{
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }}
+        .download-timestamp {{
+            color: #666;
+            font-size: 14px;
+        }}
+        .route-analysis-section {{
+            overflow-x: auto;
+        }}
+        .entire-route-row {{
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }}
+        .route-splitting-row {{
+            background-color: #ffffff;
+        }}
+        .season-months {{
+            font-size: 10px;
+            color: #999;
+            font-style: italic;
+        }}
+        /* CLP-V specific styles */
+        .clpv-reduction-factor {{
+            font-size: 16px;
+            margin-bottom: 20px;
+        }}
+        .route_content {{
+            margin-top: 20px;
+        }}
+        .cls_route_div {{
+            width: 100%;
+        }}
+        .cls_route_table {{
+            width: 100%;
+        }}
+        .cls_route_table table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }}
+        .cls_route_table td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }}
+        .cls_table_div_outline {{
+            display: flex;
+            width: 100%;
+        }}
+        .cls_table_div {{
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }}
+        .cls_width33 {{
+            width: 33.33%;
+        }}
+        .cls_width25 {{
+            width: 25%;
+        }}
+        .cls_table_img {{
+            max-width: 30px;
+            max-height: 30px;
+            margin-bottom: 5px;
+        }}
+        @media print {{
+            body {{ background-color: white; }}
+            .report-container {{ box-shadow: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class=""report-container"">
+
+        <!-- Header -->
+        <div class=""header"">
+            <h4>{dataCollector.ReportTitle}</h4>
+            <p class=""download-timestamp""><strong>Downloaded:</strong> {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}</p>
+        </div>";
+
+    if (
+        !string.IsNullOrEmpty(dataCollector.AttentionBlock?.DeparturePort) ||
+        !string.IsNullOrEmpty(dataCollector.AttentionBlock?.ArrivalPort))
     {
-        // Modified by Niranjan - Pass sequence number to JavaScript
-        if (targetSequenceNumber.HasValue)
+        html += $@"
+        <!-- Attention Section -->
+        <div class=""report-section"">
+            <div class=""attention-box"">";
+
+        if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.DeparturePort) &&
+            !string.IsNullOrEmpty(dataCollector.AttentionBlock?.ArrivalPort))
         {
-            await JS.InvokeVoidAsync("setWaypointSelection", true, targetSequenceNumber.Value);
+            html += $@"
+                <p>
+                    {AttentionBlock.BuildAttentionBody(
+                                dataCollector.AttentionBlock.DeparturePort,
+                                dataCollector.AttentionBlock.ArrivalPort,
+                                dataCollector.AttentionBlock.ReductionFactor.ToString("F2"))}
+                </p>";
+        }
+
+        if (!string.IsNullOrEmpty(dataCollector.AttentionBlock?.ABSContact))
+        {
+            html += $@"<p>{dataCollector.AttentionBlock.ABSContact}</p>";
+        }
+
+        html += @"
+            </div>
+        </div>";
+    }
+
+    html += @"
+        <!-- User Inputs Section -->
+        <div class=""report-section"">
+            <h5>User Inputs</h5>
+            <table class=""report-table"">";
+
+    if (!string.IsNullOrEmpty(dataCollector.ReportInfo?.ReportName))
+    {
+        html += $@"
+                <tr>
+                    <td><strong>Route Name:</strong></td>
+                    <td class=""highlight"">{dataCollector.ReportInfo.ReportName}</td>
+                    <td></td>
+                </tr>";
+    }
+
+    if (dataCollector.ReportInfo?.ReportDate != default)
+    {
+        html += $@"
+                <tr>
+                    <td><strong>Report Date:</strong></td>
+                    <td class=""highlight"">{dataCollector.ReportInfo.ReportDate:yyyy-MM-dd}</td>
+                    <td></td>
+                </tr>";
+    }
+
+    if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.VesselName))
+    {
+        html += $@"
+                <tr>
+                    <td><strong>Vessel Name:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.VesselName}</td>
+                    <td></td>
+                </tr>";
+    }
+
+    if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.IMONumber))
+    {
+        html += $@"
+                <tr>
+                    <td><strong>Vessel IMO:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.IMONumber}</td>
+                    <td></td>
+                </tr>";
+    }
+
+    if (!string.IsNullOrEmpty(dataCollector.VesselInfo?.Flag))
+    {
+        html += $@"
+                <tr>
+                    <td><strong>Flag:</strong></td>
+                    <td class=""highlight"">{dataCollector.VesselInfo.Flag}</td>
+                    <td></td>
+                </tr>";
+    }
+
+    if (dataCollector.RouteInfo?.Ports != null && dataCollector.RouteInfo.Ports.Any())
+    {
+        for (int i = 0; i < dataCollector.RouteInfo.Ports.Count; i++)
+        {
+            var port = dataCollector.RouteInfo.Ports[i];
+            string portType;
+
+            if (i == 0)
+                portType = "Port of Departure:";
+            else if (i == dataCollector.RouteInfo.Ports.Count - 1)
+                portType = "Port of Arrival:";
+            else
+                portType = $"Loading Port {i}:";
+
+            html += $@"
+                <tr>
+                    <td><strong>{portType}</strong></td>
+                    <td class=""highlight"">{port.Unlocode ?? "N/A"}</td>
+                    <td>{port.Name ?? ""}</td>
+                </tr>";
+        }
+    }
+
+    html += @"
+            </table>
+        </div>";
+
+    // Output Section - Conditional rendering based on isCLPVChecked
+    if (dataCollector.ReductionFactorResults != null && dataCollector.ReductionFactorResults.Any())
+    {
+        html += @"
+        <!-- Output Section -->
+        <div class=""report-section"">
+            <h5>Output</h5>";
+
+        if (isCLPVChecked)
+        {
+            // Simple reduction factor display for CLP-V
+            var entireRoute = dataCollector.ReductionFactorResults.FirstOrDefault(r => r.VoyageLegOrder == 0);
+            if (entireRoute != null)
+            {
+                // Apply the max logic: max(reductionFactor, 0.80)
+                decimal reductionFactor = Math.Max((decimal)entireRoute.ReductionFactors.Annual, 0.80m);
+
+                html += $@"
+            <p class=""clpv-reduction-factor"">
+                <strong>Reduction Factor: </strong>
+                <span class=""reduction-factor"">{Math.Round(reductionFactor, 2):F2}</span>
+            </p>";
+            }
         }
         else
         {
-            await JS.InvokeVoidAsync("setWaypointSelection", true);
+            // Full detailed table for CLP-V(PARR) - existing implementation
+            html += @"
+            <div class=""route_content"">
+                <div class=""cls_route_div"">
+                    <div class=""cls_route_table"">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td rowspan=""2""></td>
+                                    <td colspan=""3""></td>
+                                    <td colspan=""4"">
+                                        <img src=""img/group-3805-1@1x.png"" alt=""Seasonal Reduction Factor"" class=""cls_table_img"" />
+                                        <span style=""font-size: 12px;""> Seasonal Reduction Factor </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan=""3"">
+                                        <div class=""cls_table_div_outline"">
+                                            <div class=""cls_table_div cls_width33"">
+                                                <img src=""img/group-3812-1@1x.png"" alt=""Routes"" class=""cls_table_img"" />
+                                                Routes
+                                            </div>
+                                            <div class=""cls_table_div cls_width33"">
+                                                <img src=""img/group-3814-2@1x.png"" alt=""Distance"" class=""cls_table_img"" />
+                                                Distance
+                                            </div>
+                                            <div class=""cls_table_div cls_width33"">
+                                                <img src=""img/group-3832-1@1x.png"" alt=""Annual Reduction Factor"" class=""cls_table_img"" />
+                                                Annual Reduction Factor
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td colspan=""4"">
+                                        <div class=""cls_table_div_outline"">
+                                            <div class=""cls_table_div cls_width25"">
+                                                <img src=""img/spring.png"" alt=""Spring"" class=""cls_table_img"" />
+                                                Spring
+                                                <p>(Mar-May)</p>
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                <img src=""img/summer.png"" alt=""Summer"" class=""cls_table_img"" />
+                                                Summer
+                                                <p>(Jun-Aug)</p>
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                <img src=""img/fall.png"" alt=""Fall"" class=""cls_table_img"" />
+                                                Fall
+                                                <p>(Sep-Nov)</p>
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                <img src=""img/winter.png"" alt=""Winter"" class=""cls_table_img"" />
+                                                Winter
+                                                <p>(Dec-Feb)</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>";
+
+            var entireRoute = dataCollector.ReductionFactorResults.FirstOrDefault(r => r.VoyageLegOrder == 0);
+            if (entireRoute != null)
+            {
+                html += $@"
+                                <tr>
+                                    <td><span style=""font-size: 12px;"">Entire Route</span></td>
+                                    <td colspan=""3"">
+                                        <div class=""cls_table_div_outline"">
+                                            <div class=""cls_table_div cls_width33"">
+                                                {entireRoute.DeparturePort?.Name ?? ""} - {entireRoute.ArrivalPort?.Name ?? ""}
+                                            </div>
+                                            <div class=""cls_table_div cls_width33"">
+                                                {Math.Round(entireRoute.Distance)} nm
+                                            </div>
+                                            <div class=""cls_table_div cls_width33"">
+                                                {entireRoute.ReductionFactors.Annual:F2}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td colspan=""4"">
+                                        <div class=""cls_table_div_outline"">
+                                            <div class=""cls_table_div cls_width25"">
+                                                {entireRoute.ReductionFactors.Spring:F2}
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                {entireRoute.ReductionFactors.Summer:F2}
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                {entireRoute.ReductionFactors.Fall:F2}
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                {entireRoute.ReductionFactors.Winter:F2}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>";
+            }
+
+            var routeLegs = dataCollector.ReductionFactorResults.Where(r => r.VoyageLegOrder > 0).OrderBy(r => r.VoyageLegOrder).ToList();
+            foreach (var leg in routeLegs)
+            {
+                html += $@"
+                                <tr>
+                                    <td><span style=""font-size: 12px;"">Route Splitting</span></td>
+                                    <td colspan=""3"">
+                                        <div class=""cls_table_div_outline"">
+                                            <div class=""cls_table_div cls_width33"">
+                                                {leg.DeparturePort?.Name ?? ""} - {leg.ArrivalPort?.Name ?? ""}
+                                            </div>
+                                            <div class=""cls_table_div cls_width33"">
+                                                {Math.Round(leg.Distance)} nm
+                                            </div>
+                                            <div class=""cls_table_div cls_width33"">
+                                                {leg.ReductionFactors.Annual:F2}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td colspan=""4"">
+                                        <div class=""cls_table_div_outline"">
+                                            <div class=""cls_table_div cls_width25"">
+                                                {leg.ReductionFactors.Spring:F2}
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                {leg.ReductionFactors.Summer:F2}
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                {leg.ReductionFactors.Fall:F2}
+                                            </div>
+                                            <div class=""cls_table_div cls_width25"">
+                                                {leg.ReductionFactors.Winter:F2}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>";
+            }
+
+            html += @"
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>";
         }
+
+        html += @"
+        </div>";
     }
-}
 
-// Modified by Niranjan - Enhanced AddDepartureWaypointAfter to use sequence-aware waypoint selection
-private async Task AddDepartureWaypointAfter(int afterSequenceNumber)
-{
-    int insertIndex = routeModel.DepartureItems.FindIndex(x => x.SequenceNumber == afterSequenceNumber) + 1;
-
-    var waypointModel = new WaypointModel
+    if (dataCollector.Notes != null &&
+        (!string.IsNullOrEmpty(dataCollector.Notes.VesselCriteria) || !string.IsNullOrEmpty(dataCollector.Notes.GuideTitle)))
     {
-        SequenceNumber = afterSequenceNumber + 1,
-        PointId = Guid.NewGuid().ToString()
-    };
+        html += @"
+        <!-- Notes Section -->
+        <div class=""report-section notes-section"">
+            <h5>Notes</h5>
+            <ul>";
 
-    var newRouteItem = new RouteItemModel
-    {
-        SequenceNumber = afterSequenceNumber + 1,
-        ItemType = "W",
-        Waypoint = waypointModel
-    };
-
-    routeModel.DepartureItems.Insert(insertIndex, newRouteItem);
-    routeModel.DepartureWaypoints.Add(waypointModel);
-
-    ResequenceDepartureItemsEnhanced();
-
-    // Modified by Niranjan - Enable waypoint selection with target sequence number
-    await EnableWaypointSelection(afterSequenceNumber + 1);
-    StateHasChanged();
-}
-
-// Modified by Niranjan - Enhanced parent class CaptureCoordinates method
-[JSInvokable]
-public void CaptureCoordinates(double latitude, double longitude)
-{
-    if (reductionFactorCalRef != null)
-    {
-        // Forward coordinates to child component
-        reductionFactorCalRef.CaptureCoordinates(latitude, longitude);
-    }
-}
-
-// Modified by Niranjan - New method to handle coordinates with sequence
-[JSInvokable]
-public void CaptureCoordinatesWithSequence(double latitude, double longitude, int sequenceNumber)
-{
-    if (reductionFactorCalRef != null)
-    {
-        // Forward coordinates with sequence to child component
-        reductionFactorCalRef.CaptureCoordinatesWithSequence(latitude, longitude, sequenceNumber);
-    }
-}
-
-// Modified by Niranjan - Enhanced child page CaptureCoordinates method
-public void CaptureCoordinates(double latitude, double longitude)
-{
-    if (routeModel.DepartureWaypoints.Count > 0)
-    {
-        var lastWaypoint = routeModel.DepartureWaypoints.Last();
-        lastWaypoint.Latitude = latitude.ToString();
-        lastWaypoint.Longitude = longitude.ToString();
-        StateHasChanged();
-    }
-}
-
-// Modified by Niranjan - New method in child page to handle sequence-based coordinate capture
-public void CaptureCoordinatesWithSequence(double latitude, double longitude, int sequenceNumber)
-{
-    // Find the waypoint by sequence number
-    var targetWaypoint = routeModel.DepartureWaypoints
-        .FirstOrDefault(w => w.SequenceNumber == sequenceNumber);
-
-    if (targetWaypoint != null)
-    {
-        targetWaypoint.Latitude = latitude.ToString();
-        targetWaypoint.Longitude = longitude.ToString();
-        StateHasChanged();
-    }
-    else
-    {
-        // Fallback to the last waypoint if sequence-based lookup fails
-        CaptureCoordinates(latitude, longitude);
-    }
-}
-
-// Modified by Niranjan - Enhanced CheckAndUpdateMap method for waypoints
-private async Task CheckAndUpdateMap(WaypointModel waypoint)
-{
-    if (double.TryParse(waypoint.Latitude, out double lat) &&
-        double.TryParse(waypoint.Longitude, out double lon))
-    {
-        if (JS != null)
+        if (!string.IsNullOrEmpty(dataCollector.Notes.VesselCriteria))
         {
-            // Modified by Niranjan - Use editWaypoint with sequence number
-            await JS.InvokeVoidAsync("editWaypoint", lat, lon, waypoint.SequenceNumber);
-        }
-    }
-}
-==============================================================================================
-// Modified by Niranjan - Enhanced editWaypoint function with sequence support
-function editWaypoint(lat, lon, sequenceNumber = null) {
-    const latitude = lat;
-    const longitude = lon;
-    
-    // Use a single operation for both marker creation and array update
-    const newPin = L.marker([latitude, longitude], {
-        // Disable shadow for performance
-        shadowPane: false
-    }).addTo(map);
-    
-    // Add popup only when clicked, not on creation
-    newPin.bindPopup(`Waypoint: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-    
-    // Store pin references
-    clickedPins.push(newPin);
-    waypointPins.push(newPin);
-    
-    // Modified by Niranjan - Create waypoint with proper sequence support
-    const newRoutePoint = {
-        type: 'waypoint',
-        latLng: [latitude, longitude],
-        name: `Waypoint ${waypointPins.length}`,
-        sequenceNumber: sequenceNumber || (routePoints.length + 1)
-    };
-    
-    // Modified by Niranjan - Insert at correct position if sequence number is provided
-    if (sequenceNumber !== null) {
-        insertRoutePointAtSequence(newRoutePoint, sequenceNumber);
-    } else {
-        routePoints.push(newRoutePoint);
-    }
-    
-    // Use optimized zoom function
-    zoomInThenOut(latitude, longitude);
-    
-    // Modified by Niranjan - Capture coordinates with sequence information
-    if (sequenceNumber !== null) {
-        currentDotNetHelper.invokeMethodAsync('CaptureCoordinatesWithSequence', latitude, longitude, sequenceNumber);
-    } else {
-        currentDotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
-    }
-    
-    // Only recalculate route once if we have enough points
-    if (canCalculateRoute()) {
-        reorganizeRoutePoints();
-        // Use requestAnimationFrame for smoother UI updates
-        window.requestAnimationFrame(() => {
-            currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
-        });
-    }
-    
-    // Disable selection after click
-    setWaypointSelection(false);
-}
-
-// Modified by Niranjan - Enhanced map click handler to support sequence-aware waypoint addition
-map.on('click', function (e) {
-    if (isWaypointSelectionActive) {
-        const latitude = e.latlng.lat;
-        const longitude = e.latlng.lng;
-
-        // Modified by Niranjan - Get the target sequence number for the new waypoint
-        // This should be set when waypoint selection is activated
-        const targetSequenceNumber = window.pendingWaypointSequence || null;
-
-        // Use a single operation for both marker creation and array update
-        const newPin = L.marker([latitude, longitude], {
-            // Disable shadow for performance
-            shadowPane: false
-        }).addTo(map);
-
-        // Add popup only when clicked, not on creation
-        newPin.bindPopup(`Waypoint: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-
-        // Store pin references
-        clickedPins.push(newPin);
-        waypointPins.push(newPin);
-
-        // Modified by Niranjan - Create waypoint with sequence support
-        const newRoutePoint = {
-            type: 'waypoint',
-            latLng: [latitude, longitude],
-            name: `Waypoint ${waypointPins.length}`,
-            sequenceNumber: targetSequenceNumber || (routePoints.length + 1)
-        };
-
-        // Modified by Niranjan - Insert at correct position
-        if (targetSequenceNumber !== null) {
-            insertRoutePointAtSequence(newRoutePoint, targetSequenceNumber);
-        } else {
-            routePoints.push(newRoutePoint);
+            html += $@"<li>{dataCollector.Notes.VesselCriteria}</li>";
         }
 
-        // Use optimized zoom function
-        zoomInThenOut(latitude, longitude);
-
-        // Modified by Niranjan - Capture coordinates with sequence
-        if (targetSequenceNumber !== null) {
-            currentDotNetHelper.invokeMethodAsync('CaptureCoordinatesWithSequence', latitude, longitude, targetSequenceNumber);
-        } else {
-            currentDotNetHelper.invokeMethodAsync('CaptureCoordinates', latitude, longitude);
+        if (!string.IsNullOrEmpty(dataCollector.Notes.GuideTitle))
+        {
+            html += $@"<li><i>{dataCollector.Notes.GuideTitle}</i> (April 2025)</li>";
         }
 
-        // Only recalculate route once if we have enough points
-        if (canCalculateRoute()) {
-            reorganizeRoutePoints();
-            // Use requestAnimationFrame for smoother UI updates
-            window.requestAnimationFrame(() => {
-                currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
-            });
-        }
-
-        // Modified by Niranjan - Clear pending sequence and disable selection
-        window.pendingWaypointSequence = null;
-        setWaypointSelection(false);
-    }
-});
-
-// Modified by Niranjan - Enhanced setWaypointSelection to support sequence
-function setWaypointSelection(active, targetSequenceNumber = null) {
-    isWaypointSelectionActive = active;
-    
-    // Modified by Niranjan - Store the target sequence number for waypoint placement
-    if (active && targetSequenceNumber !== null) {
-        window.pendingWaypointSequence = targetSequenceNumber;
-    } else if (!active) {
-        window.pendingWaypointSequence = null;
+        html += @"
+            </ul>
+        </div>";
     }
 
-    // Update cursor style once
-    map.getContainer().style.cursor = active ? 'crosshair' : '';
+    html += @"
+    </div>
+</body>
+</html>";
 
-    // Only update tooltip display if needed
-    if (!active && coordTooltip.style.display !== 'none') {
-        coordTooltip.style.display = 'none';
-    }
+    return html;
 }
