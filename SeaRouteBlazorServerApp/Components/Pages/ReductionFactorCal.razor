@@ -1,16 +1,19 @@
-﻿@page "/reductionfactorcal"
-@using SeaRouteBlazorServerApp.Components.Services
+﻿@page "/ReductionFactorCalculation"
+@inject IJSRuntime JS
 @rendermode InteractiveServer
+@using NextGenEngApps.DigitalRules.CRoute.Data
+@using NextGenEngApps.DigitalRules.CRoute.Models
 @inject IJSRuntime JS
 @inject HttpClient Http
-@inject ILogger<ReductionFactorCal> Logger
+@inject ILogger<ReductionFactorCalculation> Logger
 @inject DebounceService _debounceService
-@inject SeaRouteBlazorServerApp.Components.Services.IPdfService PdfService
-@inject NavigationManager _navigationManager
-<!-- Back Button -->
-@* <button class="back-btn" @onclick="GoBack">⬅ Back</button> *@
+@inject CRoute.Services.ICRouteAPIService routeAPIService
+@inject CRoute.Services.IAuthenticationService authService;
+@inject IHttpClientFactory HttpClientFactory
+<button class="back-btn" @onclick="GoBack">
+    <img src="img/back arrow.svg" alt="Back" style="width:16px; height:16px; margin-right:5px;" /> Back
+</button>
 
-<button class="back-btn" @onclick="GoBack">⬅ Back</button>
 
 <div class="route_content">
     <!-- Route Name Section -->
@@ -18,7 +21,7 @@
     <div class="cls_route_div">
         <div class="cls_route_div_rep">
             <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                <img src="Images/group-92@1x.png" alt="Route Icon" class="icon" />
+                <img src="img/group-92@1x.png" alt="Route Icon" class="icon" />
                 <h3 class="heading_Customize">
                     Customize Route
                 </h3>
@@ -29,65 +32,82 @@
 
     <div class="cls_route_div">
 
-        <!-- RED RADIO BUTTON SECTION -->
-        <div style="margin-bottom: 16px;">
-            <span style="font-weight: 400px;">* Is this calculation intended for one of the following ABS notations?</span><br />
-
-            <label style="color: red; margin-right: 10px;">
-                <input type="radio" name="absNotation" value="CLP-V"  style="accent-color: red;" />
-                ABS CLP-V
-            </label>
-
-            <label style="color: red; margin-right: 10px;">
-                <input type="radio" name="absNotation" value="CLP-V(PARR)"  style="accent-color: red;" />
-                ABS CLP-V(PARR)
-            </label>
-
-            <label style="color: red;">
-                <input type="radio" name="absNotation" value="none"  style="accent-color: red;" />
-                none
-            </label>
-        </div>
-
-        <!-- ROUTE NAME INPUT -->
         <div class="cls_route_div_rep">
+
             <div class="content_div">
-                <label class="content_div_label1">Route Name</label>
+                <label class="content_div_label">Route Name <span class="required-indicator">*</span></label>
                 <input type="text" class="content_div_input" @bind="routeModel.RouteName" placeholder="Enter route name" />
             </div>
         </div>
 
-        <!-- SEASON TYPE INPUT WITH RED NOTE -->
-        <div class="cls_route_div_rep">
-            <div class="content_div">
-                <label class="content_div_label1">Season Type</label>
-                <div style="color: red; font-size: 13px; margin-bottom: 5px;">
-                    Note: Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+    </div>
+
+    <!-- vessel info Section -->
+
+    <div class="cls_vessel_outline" style="background-color:#F4F4F4;">
+
+
+        <div class="cls_vessel_container_con">
+            <div class="cls_vessel_container">
+
+                <div class="cls_vessel_div">
+                    <label class="cls_vessel_div_label">Vessel Name <span class="required-indicator">*</span></label>
+                    <input type="text" @bind="routeModel.Vessel.VesselName" class="content_div_input" />
                 </div>
-                <div class="cls_block">
+                <div class="cls_vessel_div">
+                    <label class="cls_vessel_div_label">IMO Number <span class="required-indicator">*</span></label>
                     <input type="text"
-                    class="content_div_input"
-                    placeholder="Select Season Type"
-                    @bind="routeModel.SeasonalType"
-                    @onfocus="OnFocus"
-                    @onblur="OnBlur" />
-                    @if (showDropdown)
-                    {
-                        <div class="cls_dropdown_outline cls_block" @onclick:stopPropagation>
-                            <div class="cls_dropdown_div">
-                                @foreach (var option in seasonalOptions)
-                                {
-                                    <label class="cls_dropdown_label" @onmousedown="() => SelectOption(option)">
-                                        @option
-                                    </label>
-                                }
-                            </div>
-                        </div>
-                    }
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           maxlength="7"
+                           @bind="routeModel.Vessel.IMONumber"
+                           class="content_div_input"
+                           oninput="validateIMONumber(this)" />
+                    <span style="color:red; font-size:smaller;" id="imoError"></span>
                 </div>
             </div>
+            <div class="cls_vessel_div_btm">
+                <div class="cls_vessel_div">
+
+                    <label class="cls_vessel_div_label">Flag <span class="required-indicator">*</span></label>
+
+                    <select @bind="routeModel.Vessel.Flag" class="content_div_input">
+
+                        <option value="">-- Select Flag --</option>
+
+                        <option>Liberia</option>
+
+                        <option>Marshall Islands</option>
+
+                        <option>Hong Kong</option>
+
+                        <option>Bahamas</option>
+
+                        <option>Singapore</option>
+
+                        <option>Greece</option>
+
+                        <option>Malta</option>
+
+                        <option>China</option>
+
+                        <option>Cyprus</option>
+
+                        <option>Japan</option>
+
+                    </select>
+
+                </div>
+                <div class="cls_vessel_div">
+                    <label class="cls_vessel_div_label">Report Date <span class="required-indicator">*</span></label>
+                    <input type="date" @bind="routeModel.ReportDate" class="content_div_input" />
+                </div>
+
+            </div>
         </div>
+
     </div>
+
 
 
     <!-- Departure Section -->
@@ -99,26 +119,26 @@
             {
                 <div class="cls_sub_heading">
                     <span class="content_div_label_blue">@routeModel.MainDeparturePortSelection.Port.Unlocode</span>
-                    <span class="content_div_label">@routeModel.MainDeparturePortSelection.Port.Name, @routeModel.MainDeparturePortSelection.Port.Country</span>
+                    <span class="content_div_label">@routeModel?.MainDeparturePortSelection?.Port?.Name, @routeModel?.MainDeparturePortSelection?.Port?.Country</span>
                 </div>
             }
             <!-- Search Input -->
             <div class="cls_block">
                 <div class="cls_input_outline cls_flex_gap_8px cls_margin_top_6px">
                     <input type="text"
-                    value="@departureLocationQuery"
-                    @oninput="OnSearchInputChanged"
-                    placeholder="Enter departure location" />
-                    <img src="path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
+                           value="@departureLocationQuery"
+                           @oninput="OnSearchInputChanged"
+                           placeholder="Enter departure location" />
+                    <img src="img/path-484@1x.png" class="icon" @onclick="SearchDepartureLocation" />
                 </div>
                 <!-- Search Results Dropdown for Main Departure -->
                 @if (routeModel.MainDeparturePortSelection?.SearchResults?.Any() == true)
                 {
-                    <div class="search-results">
+                    <div class="">
                         @foreach (var result in routeModel.MainDeparturePortSelection.SearchResults)
                         {
                             <div class="search-result-item" @onclick="() => UpdateDeparturePortSearchDepartureLocation(routeModel.MainDeparturePortSelection, result)">
-                                <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                <span>@result.Name (@result.Unlocode)</span>
                             </div>
                         }
                     </div>
@@ -126,18 +146,16 @@
             </div>
             <!-- Add Port/Waypoint Buttons -->
             <div class="cls_btn_div">
-                <button class="cls_button_light" @onclick="() => AddDeparturePortAfterSequence(0)">+ Add Port</button>
-                <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfterSequence(0)">+ Add Waypoint</button>
+                <button class="cls_button_light" @onclick="AddDeparturePort">+ Add Port</button>
+                <button class="cls_button_light" @onclick="AddDepartureWaypoint">+ Add Waypoint</button>
             </div>
         </div>
     </div>
 
     <!-- Dynamic Departure Ports Section -->
-
-
     @foreach (var item in routeModel.DepartureItems)
     {
-        @if (item.ItemType == "Port")
+        @if (item.ItemType == "P")
         {
             var port = item.Port;
             var portNumber = item.SequenceNumber;
@@ -157,50 +175,50 @@
                     @if (port.Port != null)
                     {
                         <div class="cls_sub_heading">
-                            <span class="content_div_label">@port.Port.Unlocode</span>
-                            <span class="content_div_label_blue">@port.Port.Name, @port.Port.Country</span>
+                            <span class="content_div_label_blue">@port.Port.Unlocode</span>
+                            <span class="content_div_label">@port.Port.Name, @port.Port.Country </span>
                         </div>
                     }
                     <!-- Port Search Section -->
                     <div class="port-search-container">
-                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                        @bind="port.SearchTerm"
-                        @bind:event="oninput"
-                        @bind:after="() => HandleDepartureInputChanged(port)"
-                        placeholder="Search ports..." />
 
+                        <input type="text" class="content_div_input w-100 cls_margin_top_6px"
+                               @bind="port.SearchTerm"
+                               @bind:event="oninput"
+                               @bind:after="() => HandleDepartureInputChanged(port)"
+                               placeholder="Search ports..." />
                         @if (port.SearchResults.Any())
                         {
-                            <div class="search-results">
+                            <div>
                                 @foreach (var result in port.SearchResults)
                                 {
                                     <div class="search-result-item" @onclick="() => UpdateDeparturePort(port, result)">
-                                        <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                                        <span>@result.Name (@result.Unlocode)</span>
                                     </div>
                                 }
                             </div>
                         }
                     </div>
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="() => AddDeparturePortAfterSequence(portNumber)">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfterSequence(portNumber)">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="() => AddDeparturePortAfter(item.SequenceNumber)">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfter(item.SequenceNumber)">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
         }
-        else if (item.ItemType == "Waypoint")
+        else if (item.ItemType == "W")
         {
             var waypoint = item.Waypoint;
             var waypointNumber = item.SequenceNumber;
 
             <div class="cls_route_div">
                 <div class="cls_route_div_rep">
-                    <h4 class="route_content_heading1">Departure Waypoint @waypointNumber</h4>
+                    <h4 class="route_content_heading1"> Waypoint @waypointNumber</h4>
                     <div class="cls_sub_heading">
                         <div class="cls_flex cls_flex_gap_8px cls_flex_justify_space w-100">
                             <span class="content_div_label">Waypoint</span>
-                            <div class="cls_btn_minimize">
-                                <div class="cls_btn_minimize_div" @onclick="() => RemoveDepartureWaypoint(waypoint)"></div>
+                            <div class="cls_btn_minimize" @onclick="() => RemoveDepartureWaypoint(waypoint)">
+                                <div class="cls_btn_minimize_div"></div>
                             </div>
                         </div>
                     </div>
@@ -216,20 +234,17 @@
                             <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
                         </div>
 
-                        <img src="Images/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
+                        <img src="img/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
                     </div>
 
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="() => AddDeparturePortAfterSequence(waypointNumber)">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfterSequence(waypointNumber)">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="() => AddDeparturePortAfter(item.SequenceNumber)">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="() => AddDepartureWaypointAfter(item.SequenceNumber)">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
         }
     }
-
-
-
 
     <!-- Arrival Section -->
     <div class="cls_route_div">
@@ -240,17 +255,17 @@
             {
                 <div class="cls_sub_heading">
                     <span class="content_div_label_blue">@routeModel.MainArrivalPortSelection.Port.Unlocode</span>
-                    <span class="content_div_label">@routeModel.MainArrivalPortSelection.Port.Name, @routeModel.MainArrivalPortSelection.Port.Country</span>
+                    <span class="content_div_label">@routeModel?.MainArrivalPortSelection?.Port?.Name, @routeModel?.MainArrivalPortSelection?.Port?.Country </span>
                 </div>
             }
             <!-- Search Input -->
             <div class="cls_margin_top_6px cls_input_outline cls_flex_gap_8px">
 
                 <input type="text"
-                value="@arrivalLocationQuery"
-                @oninput="OnArrivalSearchInputChanged"
-                placeholder="Enter arrival location" />
-                <img src="Images/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
+                       value="@arrivalLocationQuery"
+                       @oninput="OnArrivalSearchInputChanged"
+                       placeholder="Enter arrival location" />
+                <img src="img/path-424-7@1x.png" alt="Search" @onclick="SearchArrivalLocation" />
             </div>
             <!-- Search Results Dropdown for Main Arrival -->
             @if (routeModel.MainArrivalPortSelection?.SearchResults?.Any() == true)
@@ -259,24 +274,23 @@
                     @foreach (var result in routeModel.MainArrivalPortSelection.SearchResults)
                     {
                         <div class="search-result-item" @onclick="() => UpdateArrivalPortSearchArrivalLocation(routeModel.MainArrivalPortSelection, result)">
-                            <span>@result.Name, @result.Country (@result.Unlocode)</span>
+                            <span>@result.Name (@result.Unlocode)</span>
                         </div>
                     }
                 </div>
             }
             <!-- Add Port/Waypoint Buttons -->
-            <div class="cls_btn_div">
-                <button class="cls_button_light" @onclick="() => AddArrivalPortAfterSequence(0)">+ Add Port</button>
-                <button class="cls_button_light" @onclick="() => AddArrivalWaypointAfterSequence(0)">+ Add Waypoint</button>
-            </div>
+            @* <div class="cls_btn_div">
+<button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+<button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
+</div> *@
         </div>
     </div>
 
     <!-- Dynamic Arrival Ports Section -->
-    <!-- Combined Arrival Items Section -->
     @foreach (var item in routeModel.ArrivalItems)
     {
-        @if (item.ItemType == "Port")
+        @if (item.ItemType == "P")
         {
             var port = item.Port;
             var portNumber = item.SequenceNumber;
@@ -296,23 +310,18 @@
                     @if (port.Port != null)
                     {
                         <div class="cls_sub_heading">
-                            <span class="content_div_label">@port.Port.Unlocode</span>
-                            <span class="content_div_label_blue">@port.Port.Name, @port.Port.Country</span>
+                            <span class="content_div_label">@port.Port.Name, @port.Port.Country</span>
+                            <span class="content_div_label_blue">@port.Port.Unlocode</span>
                         </div>
                     }
                     <!-- Port Search Section -->
                     <div class="port-search-container">
-                        @* <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                               @bind="port.SearchTerm"
-                               @bind:event="oninput"
-                               @onkeypress="(e) => HandleArrivalEnterKey(e, port)"
-                               placeholder="Search ports..." /> *@
 
                         <input type="text" class="content_div_input w-100 cls_margin_top_6px"
-                        @bind="port.SearchTerm"
-                        @bind:event="oninput"
-                        @bind:after="() => HandleDepartureInputChanged(port)"
-                        placeholder="Search ports..." />
+                               @bind="port.SearchTerm"
+                               @bind:event="oninput"
+                               @bind:after="() => HandleDepartureInputChanged(port)"
+                               placeholder="Search ports..." />
                         @if (port.SearchResults.Any())
                         {
                             <div class="search-results">
@@ -327,13 +336,13 @@
                     </div>
                     <!-- Add Port/Waypoint Buttons -->
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="() => AddArrivalPortAfterSequence(portNumber)">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="() => AddArrivalWaypointAfterSequence(portNumber)">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
         }
-        else if (item.ItemType == "Waypoint")
+        else if (item.ItemType == "W")
         {
             var waypoint = item.Waypoint;
             var waypointNumber = item.SequenceNumber;
@@ -361,46 +370,47 @@
                             <input type="text" class="content_div_input" style="flex: 1;" @bind="waypoint.Longitude" placeholder="Longitude">
                         </div>
 
-                        <img src="Images/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
+                        <img src="img/path-424-7@1x.png" alt="icon" style="width: 20px; margin-bottom:6px;" @onclick="() => CheckAndUpdateMap(waypoint)" />
                     </div>
 
                     <div class="cls_btn_div">
-                        <button class="cls_button_light" @onclick="() => AddArrivalPortAfterSequence(waypointNumber)">+ Add Port</button>
-                        <button class="cls_button_light" @onclick="() => AddArrivalWaypointAfterSequence(waypointNumber)">+ Add Waypoint</button>
+                        <button class="cls_button_light" @onclick="AddArrivalPort">+ Add Port</button>
+                        <button class="cls_button_light" @onclick="AddArrivalWaypoint">+ Add Waypoint</button>
                     </div>
                 </div>
             </div>
         }
     }
 
-    <div class="cls_flex">
+
+    @*  <div class="cls_flex">
         <div class="cls_route_div_rep">
 
-            <div class="content_div">
-                <label class="content_div_label1">Exceedance Probability</label>
-                <input type="number"
-                step="any"
-                class="content_div_input"
-                placeholder="Exceedance Probability"
-                @bind="routeModel.ExceedanceProbability"
-                @oninput="ValidateExceedanceProbability" />
-                @if (!isValidExceedanceProbability)
-                {
-                    <div style="color: red; font-size: 0.8rem;">Value must be > 0 and &lt; 1</div>
-                }
-            </div>
-        </div>
-        <div class="cls_route_div_rep">
+<div class="content_div">
+<label class="content_div_label1">Exceedance Probability</label>
+<input type="number"
+  step="any"
+  class="content_div_input"
+  placeholder="Exceedance Probability"
+  @bind="routeModel.ExceedanceProbability"
+  @oninput="ValidateExceedanceProbability" />
+@if (!isValidExceedanceProbability)
+{
+<div style="color: red; font-size: 0.8rem;">Value must be > 0 and &lt; 1</div>
+}
+</div>
+</div>
+<div class="cls_route_div_rep">
 
             <div class="content_div">
                 <label class="content_div_label1">Wave type</label>
                 <div class="cls_block">
                     <input type="text"
-                    class="content_div_input"
-                    placeholder="Select Wave type"
-                    @bind="routeModel.WayType"
-                    @onfocus="OnFocuswaypoint"
-                    @onblur="OnBlurwaypoint" />
+                           class="content_div_input"
+                           placeholder="Select Wave type"
+                           @bind="routeModel.WayType"
+                           @onfocus="OnFocuswaypoint"
+                           @onblur="OnBlurwaypoint" />
                     @if (showDropdownforwaypoint)
                     {
                         <div class="cls_dropdown_outline_waypont cls_block" @onclick:stopPropagation>
@@ -417,12 +427,22 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> *@
 
 
 
     <div class="cls_flex cls_flex_justify_center cls_mar_top_btm_22px">
-        <button class="cls_button_blue" @onclick="CalculateRouteReductionFactor">Calculate Route Reduction Factor</button>
+        <button class="@(isMapLoading ? "cls_button_grey" : "cls_button_blue")"
+                @onclick="CalculateRouteReductionFactorReport" disabled="@isMapLoading">
+            @if (isLoading)
+            {
+                <span>Calculating...</span>
+            }
+            else
+            {
+                <span>Calculate Route Reduction Factor</span>
+            }
+        </button>
     </div>
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -435,14 +455,13 @@
 @if (showResultsForReductionFactor)
 {
     <div class="cls_block">
-
         <div class="route_content">
             <div class="cls_route_div">
-                <div class="cls_route_div_rep">
+                <div class="cls_route_div_rep scroll_to_route">
                     <div class="cls_flex cls_flex_gap_8px cls_flex_align_center">
-                        <img src="Images/group-92@1x.png" alt="Route Icon" class="icon">
+                        <img src="img/group-92@1x.png" alt="Route Icon" class="icon">
                         <h3 class="heading_Customize">
-                            Route
+                            Route - @routeModel?.RouteName
                         </h3>
                     </div>
                 </div>
@@ -450,329 +469,240 @@
             <div class="cls_route_div">
                 <div class="cls_route_div_rep">
                     <div class="content_div">
-                        <div class="title-text">Marseille - Shanghai</div>
-                        <div class="route-details">Marseille, France • Singapore • Singapore • Shanghai, China</div>
-                        
+                        <div class="title-text">@routeModel?.MainDeparturePortSelection?.Port?.Name - @routeModel?.MainArrivalPortSelection?.Port?.Name</div>
+
+                        <div class="route-details">
+                            @routeModel?.MainDeparturePortSelection?.Port?.Name, @routeModel?.MainDeparturePortSelection?.Port?.Country ●
+
+                            @* Display Intermediate Departure Ports (only ports, not waypoints) *@
+                            @if (routeModel?.DepartureItems != null && routeModel.DepartureItems.Any(i => i.ItemType == "P" && i.Port?.Port != null))
+                            {
+                                @foreach (var item in routeModel.DepartureItems.Where(i => i.ItemType == "P" && i.Port?.Port != null))
+                                {
+                                    @item.Port!.Port!.Name
+
+                                    <text> , </text> @item.Port!.Port!.Country
+
+                                    <text> ● </text>
+
+                                }
+
+                            }
+
+
+
+                            @routeModel?.MainArrivalPortSelection?.Port?.Name, @routeModel?.MainArrivalPortSelection?.Port?.Country
+                        </div>
                     </div>
                 </div>
                 <div class="cls_red_outline">
+                    <img src="img/group-3826@1x.png" alt="Note Icon" style="width:16px; height:16px; vertical-align:middle; margin-right:5px;" />
                     Note :
                     <ul>
                         <li>
-                            Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+                            Seasonal reduction factor is only applicable for vessels with ABS CLP-V(PARR) notation
                         </li>
                         <li>
-                            Seasonal reduction factor is only applicable for vessels with CLP-V(PARR) notation
+                            Route-Splitting for reduction factor is only applicable for vessels with ABS CLP-V(PARR) notation
                         </li>
                     </ul>
-
                 </div>
             </div>
-
         </div>
-
-
-   
 
         <div class="route_content">
             <div class="cls_route_div">
                 <div class="cls_route_table">
                     <table>
                         <tbody>
-                        <tr>
-                            <td rowspan="2"></td>
-                            <td colspan="3">
-
-                            </td>
-                            <td colspan="4">
-                                <img src="./Images/seasonal.png" alt="Alternate Text" class="cls_table_img" />
-                                Seasonal Reduction Factor
-                            </td>
-                        </tr>
+                            <tr>
+                                <td rowspan="2"></td>
+                                <td colspan="3">
+                                </td>
+                                <td colspan="4">
+                                    <img src="img/group-3805-1@1x.png" alt="Seasonal Reduction Factor" class="cls_table_img" />
+                                    <span style="font-size: 12px;"> Seasonal Reduction Factor </span>
+                                </td>
+                            </tr>
                             <tr>
                                 <td colspan="3">
                                     <div class="cls_table_div_outline">
                                         <div class="cls_table_div cls_width33">
-                                            <img src="./Images/routes.png" alt="Alternate Text" class="cls_table_img" />
-                                            Routes <br />
-                                            &nbsp;
+                                            <img src="img/group-3812-1@1x.png" alt="Routes" class="cls_table_img" />
+                                            Routes
                                         </div>
 
                                         <div class="cls_table_div cls_width33">
-                                            <img src="./Images/reduction.png" alt="Alternate Text" class="cls_table_img" />
+                                            <img src="img/group-3814-2@1x.png" alt="Distance" class="cls_table_img" />
+                                            Distance
+                                        </div>
+
+                                        <div class="cls_table_div cls_width33">
+                                            <img src="img/group-3832-1@1x.png" alt="Annual Reduction Factor" class="cls_table_img" />
                                             Annual Reduction Factor
                                         </div>
-
-                                        <div class="cls_table_div cls_width33">
-                                            <img src="./Images/distance.png" alt="Alternate Text" class="cls_table_img" />
-                                            Distance <br />
-                                            &nbsp;
-                                        </div>
                                     </div>
-                                    
                                 </td>
                                 <td colspan="4">
                                     <div class="cls_table_div_outline">
-                                        <div class="cls_table_div cls_width25">
-                                            <img src="./Images/spring.png" alt="Alternate Text" class="cls_table_img" />
-                                            Spring <br />
-                                            &nbsp;
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                            <img src="./Images/summer.png" alt="Alternate Text" class="cls_table_img" />
-                                           Summer <br />
-                                            &nbsp;
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                            <img src="./Images/fall.png" alt="Alternate Text" class="cls_table_img" />
-                                           Fall <br />
-                                            &nbsp;
-                                        </div>
-                                        <div class="cls_table_div cls_width25">
-                                            <img src="./Images/winter.png" alt="Alternate Text" class="cls_table_img" />
-                                            Winter <br />
-                                            &nbsp;
-                                        </div>
+                                        @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+                                        {
+                                            <div class="cls_table_div cls_width25">
+                                                <img src="img/@(season.ToLower()).png" alt="@season" class="cls_table_img" />
+                                                @season
+                                                <p>(@string.Join("-", seasonMonths.GetValueOrDefault(season, new List<string>())))</p>
+                                            </div>
+                                        }
                                     </div>
-
                                 </td>
-                               
-                               
-                                
                             </tr>
 
                             <tr>
-                                <td>Entire Route</td>
+                                <td><span style="font-size: 12px;">Entire Route</span></td>
                                 <td colspan="3">
                                     <div class="cls_table_div_outline">
                                         <div class="cls_table_div cls_width33">
-                                           Shangai - Hamburg
+                                            @routeModel?.MainDeparturePortSelection?.Port?.Name - @routeModel?.MainArrivalPortSelection?.Port?.Name
                                         </div>
 
                                         <div class="cls_table_div cls_width33">
-                                           1000nm
+                                            @if (routeModel?.TotalDistance != null)
+                                            {
+                                                @(Math.Round(routeModel.TotalDistance)) <text> nm</text>
+                                            }
                                         </div>
 
                                         <div class="cls_table_div cls_width33">
-                                          0.85
+                                            @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual"))
                                         </div>
                                     </div>
-
                                 </td>
                                 <td colspan="4">
                                     <div class="cls_table_div_outline">
-                                        <div class="cls_table_div cls_width25">
-                                           0.85
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                       0.85
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
-                                        <div class="cls_table_div cls_width25">
-                                            0.82
-                                        </div>
+                                        @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+                                        {
+                                            <div class="cls_table_div cls_width25">
+                                                @string.Format("{0:0.00}", GetSeasonalReductionFactor(season))
+                                            </div>
+                                        }
                                     </div>
-
                                 </td>
-
-
-
                             </tr>
 
-                            <tr class="cls_route_table_tr">
-                                <td rowspan="2">Route Splitting</td>
-                                <td colspan="3">
-                                    <div class="cls_table_div_outline">
-                                        <div class="cls_table_div cls_width33">
-                                            Shangai - Hamburg
+                            @if (routeLegs != null && routeLegs.Any())
+                            {
+                                <tr class="cls_route_table_tr">
+                                    <td rowspan="@routeLegs.Count()">
+                                        <span style="font-size: 12px;">Route Splitting</span>
+                                    </td>
+                                    @{
+                                        var firstLeg = routeLegs.First();
+                                    }
+                                    <td colspan="3">
+                                        <div class="cls_table_div_outline">
+                                            <div class="cls_table_div cls_width33">
+                                                @firstLeg.DeparturePort - @firstLeg.ArrivalPort
+                                            </div>
+
+                                            <div class="cls_table_div cls_width33">
+                                                <span>@(Math.Round(firstLeg.Distance)) nm</span>
+                                            </div>
+
+                                            <div class="cls_table_div cls_width33">
+                                                @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual", false, 1))
+                                            </div>
                                         </div>
-
-                                        <div class="cls_table_div cls_width33">
-                                            1000nm
+                                    </td>
+                                    <td colspan="4">
+                                        <div class="cls_table_div_outline">
+                                            @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+                                            {
+                                                <div class="cls_table_div cls_width25">
+                                                    @string.Format("{0:0.00}", GetSeasonalReductionFactor(season, false, 1))
+                                                </div>
+                                            }
                                         </div>
+                                    </td>
+                                </tr>
 
-                                        <div class="cls_table_div cls_width33">
-                                            0.85
-                                        </div>
-                                    </div>
+                                @for (int i = 1; i < routeLegs.Count(); i++)
+                                {
+                                    var leg = routeLegs.ElementAt(i);
+                                    <tr class="cls_route_table_tr">
+                                        <td colspan="3">
+                                            <div class="cls_table_div_outline">
+                                                <div class="cls_table_div cls_width33">
+                                                    @leg.DeparturePort - @leg.ArrivalPort
+                                                </div>
 
-                                </td>
-                                <td colspan="4">
-                                    <div class="cls_table_div_outline">
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
+                                                <div class="cls_table_div cls_width33">
+                                                    <span>@(Math.Round(leg.Distance)) nm</span>
+                                                </div>
 
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
-                                        <div class="cls_table_div cls_width25">
-                                            0.82
-                                        </div>
-                                    </div>
-
-                                </td>
-
-
-
-                            </tr>
-
-                            <tr class="cls_route_table_tr">
-                                <td colspan="3">
-                                    <div class="cls_table_div_outline">
-                                        <div class="cls_table_div cls_width33">
-                                            Shangai - Hamburg
-                                        </div>
-
-                                        <div class="cls_table_div cls_width33">
-                                            1000nm
-                                        </div>
-
-                                        <div class="cls_table_div cls_width33">
-                                            0.85
-                                        </div>
-                                    </div>
-
-                                </td>
-                                <td colspan="4">
-                                    <div class="cls_table_div_outline">
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
-
-                                        <div class="cls_table_div cls_width25">
-                                            0.85
-                                        </div>
-                                        <div class="cls_table_div cls_width25">
-                                            0.82
-                                        </div>
-                                    </div>
-
-                                </td>
-
-
-
-                            </tr>
-
-
+                                                <div class="cls_table_div cls_width33">
+                                                    @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual", false, i + 1))
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td colspan="4">
+                                            <div class="cls_table_div_outline">
+                                                @foreach (var season in seasonalOptions.Where(s => s != "Annual"))
+                                                {
+                                                    <div class="cls_table_div cls_width25">
+                                                        @string.Format("{0:0.00}", GetSeasonalReductionFactor(season, false, i + 1))
+                                                    </div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            @* else
+{
+<!-- Debug: routeLegs is null or empty -->
+<tr><td colspan="8" style="color:red;">No route legs found (routeLegs is null or empty)</td></tr>
+} *@
                         </tbody>
                     </table>
-
                 </div>
             </div>
 
-
             <div class="cls_alert_div">
-                @* action buttons *@
+                @if (!string.IsNullOrEmpty(saveErrorMessage))
+                {
+                    <div class="cls_flex cls_flex_justify_center cls_width_100 text-danger">
+                        @saveErrorMessage
+                    </div>
+                }
                 @if (isRouteSaved)
                 {
-                    <div style="color: green;  text-align: center; width: 100%;">
+                    <div style="color: green; text-align: center; width: 100%;">
                         ✔ Route Saved
                     </div>
                 }
             </div>
-            <div class="cls_cards_outline">
 
-                <div class="cls_card_div" @onclick="AddEditVesselInfo">
-                    <img src="Images/path-7601-11@1x.png" alt="Edit" />
-                    <span>Add/Edit Vessel Info</span>
-                </div>
+            <div class="cls_cards_outline">
+                @*<div class="cls_card_div" @onclick="AddEditVesselInfo">
+<img src="img/add_edit.svg" alt="Edit" />
+<span>Add/Edit Vessel Info</span>
+</div> *@
                 <div class="cls_card_div" @onclick="ShowReportForReductionFactor">
-                    <img src="Images/show-report@1x.png" alt="Report" />
+                    <img src="img/show-report@1x.png" alt="Report" />
                     <span>Show Report</span>
                 </div>
                 <div class="cls_card_div" @onclick="SaveRoute">
-                    <img src="Images/group-758-4@1x.png" alt="Save" />
+                    <img src="img/group-758-4@1x.png" alt="Save" />
                     <span>Save Route</span>
                 </div>
                 <div class="cls_card_div" @onclick="ShowAbsReport">
-                    <img src="Images/group-3725-2@1x.png" alt="Submit" />
+                    <img src="img/group-3725-2@1x.png" alt="Submit" />
                     <span>
                         Submit for
                         ABS Record
                     </span>
                 </div>
             </div>
-
-
         </div>
-
     </div>
-}
-
-@code{
-
-    private async Task DownloadReportHtmlAsPdf()
-    {
-        try
-        {
-            Logger.LogInformation("Starting PDF download process...");
-            
-            // Use the enhanced HTML preparation that captures maps and charts
-            var html = await JS.InvokeAsync<string>("prepareHtmlForPdf", "report-content-container");
-            if (string.IsNullOrEmpty(html))
-            {
-                Logger.LogWarning("Enhanced HTML preparation failed, falling back to basic method");
-                // Fallback to the original method if enhanced method fails
-                html = await JS.InvokeAsync<string>("getHtmlForPdf", "report-content-container");
-            }
-            
-            if (string.IsNullOrEmpty(html))
-            {
-                Logger.LogError("Failed to get HTML content for PDF generation");
-                throw new InvalidOperationException("Could not generate HTML content for PDF");
-            }
-            
-            Logger.LogInformation($"HTML content generated successfully. Length: {html.Length}");
-            
-            // Optionally, add a <base> tag for relative URLs
-            var baseUrl = _navigationManager.BaseUri;
-            string fileName = $"Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-            
-            try
-            {
-                Logger.LogInformation("Attempting primary PDF download method...");
-                // Try the primary download method
-                await PdfService.DownloadPdfAsync(html, fileName, baseUrl);
-                Logger.LogInformation("Primary PDF download method completed successfully");
-            }
-            catch (Exception primaryEx)
-            {
-                Logger.LogWarning(primaryEx, "Primary PDF download method failed, trying alternative method");
-                
-                try
-                {
-                    Logger.LogInformation("Attempting alternative PDF download method...");
-                    // Try the alternative download method
-                    await PdfService.DownloadPdfAsyncAlternative(html, fileName, baseUrl);
-                    Logger.LogInformation("Alternative PDF download method completed successfully");
-                }
-                catch (Exception alternativeEx)
-                {
-                    Logger.LogError(alternativeEx, "Both PDF download methods failed");
-                    throw new InvalidOperationException("Failed to download PDF. Please try again.", alternativeEx);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error downloading PDF from HTML");
-            // You might want to show a user-friendly error message here
-            throw;
-        }
-    }
 }
