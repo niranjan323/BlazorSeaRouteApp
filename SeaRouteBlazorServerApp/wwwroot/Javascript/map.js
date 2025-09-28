@@ -346,12 +346,10 @@ async function searchLocation(query, isDeparture, lat = null, lon = null) {
         console.error("Error fetching location:", error);
     }
 }
-// Function to add a port based on API search results with caching
+
 async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, sequenceNumber = null) {
     try {
-        // If lat and lon are provided, use them directly
         if (lat === null || lon === null) {
-            // Use cache if available
             const cacheKey = `port-${query}`;
 
             let data;
@@ -361,7 +359,6 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, se
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
                 data = await response.json();
 
-                // Cache the result for future use
                 if (data.length > 0) {
                     locationCache.set(cacheKey, data);
                 }
@@ -375,12 +372,10 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, se
                 return;
             }
         } else {
-            // Convert to float to ensure proper handling
             lat = parseFloat(lat);
             lon = parseFloat(lon);
         }
 
-        // Add pin and store it in the array - optimize marker creation
         const newPin = L.marker([lat, lon], {
             shadowPane: false,
             bubblingMouseEvents: true
@@ -389,7 +384,6 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, se
         newPin.bindPopup(`Intermediate Port: ${query}`);
         portPins.push(newPin);
 
-        // Modified by Niranjan - Add to route points with proper sequencing
         const newRoutePoint = {
             type: 'port',
             latLng: [lat, lon],
@@ -397,7 +391,6 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, se
             sequenceNumber: sequenceNumber || (routePoints.length + 1)
         };
 
-        // Modified by Niranjan - Insert at correct position if sequence number is provided
         if (sequenceNumber !== null) {
             insertRoutePointAtSequence(newRoutePoint, sequenceNumber);
         } else {
@@ -407,9 +400,7 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, se
         reorganizeRoutePoints();
         zoomInThenOut(lat, lon);
 
-        // Check if we can calculate a route
         if (canCalculateRoute()) {
-            // Use requestAnimationFrame for smoother UI updates
             window.requestAnimationFrame(() => {
                 currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
             });
@@ -420,7 +411,6 @@ async function zoomAndPinLocation(query, isDeparture, lat = null, lon = null, se
 }
 
 function reorganizeRoutePoints() {
-    // Extract departure and arrival points
     const departurePoint = routePoints.find(p => p.type === 'departure');
     const arrivalPoint = routePoints.find(p => p.type === 'arrival');
     const otherPoints = routePoints.filter(p => p.type !== 'departure' && p.type !== 'arrival');
@@ -431,8 +421,6 @@ function reorganizeRoutePoints() {
         }
         return 0;
     });
-
-    // Use efficient array manipulation
     routePoints = departurePoint ? [departurePoint] : [];
     routePoints = routePoints.concat(otherPoints);
     if (arrivalPoint) routePoints.push(arrivalPoint);
@@ -625,11 +613,12 @@ function updatePinsToMatchAllRoutePoints(allCoordinates, routePoints, segmentBou
     for (let i = 0; i < routePoints.length; i++) {
         let coordIdx;
         if (i === 0) {
-            coordIdx = segmentBoundaries[0].startIndex;
+            coordIdx = segmentBoundaries?.[0]?.startIndex ?? 0;
         } else {
-            coordIdx = segmentBoundaries[i - 1].endIndex;
+            coordIdx = segmentBoundaries?.[i - 1]?.endIndex ?? coordIdx;
         }
-        if (coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
+
+        if (coordIdx == null || coordIdx < 0 || coordIdx >= allCoordinates.length) continue;
 
         const p = routePoints[i];
         let pin = L.marker(allCoordinates[coordIdx]).addTo(map);
@@ -1008,10 +997,7 @@ function removeWaypoint(latitude, longitude) {
         );
 
         if (waypointIndex !== -1) {
-            // Remove from routePoints array
-            routePoints.splice(waypointIndex, 1);
-
-            // Find and remove the corresponding pin from waypointPins array
+            // Get the array index of the waypoint
             const waypointArrayIndex = waypointPins.findIndex(pin => {
                 const pinLatLng = pin.getLatLng();
                 return Math.abs(pinLatLng.lat - latitude) < 0.0001 &&
@@ -1019,34 +1005,8 @@ function removeWaypoint(latitude, longitude) {
             });
 
             if (waypointArrayIndex !== -1) {
-                // Remove pin from map
-                map.removeLayer(waypointPins[waypointArrayIndex]);
-                waypointPins.splice(waypointArrayIndex, 1);
+                return removePin('waypoint', waypointArrayIndex);
             }
-
-            // Also remove from clicked pins if present
-            const clickedIndex = clickedPins.findIndex(pin => {
-                const pinLatLng = pin.getLatLng();
-                return Math.abs(pinLatLng.lat - latitude) < 0.0001 &&
-                    Math.abs(pinLatLng.lng - longitude) < 0.0001;
-            });
-
-            if (clickedIndex !== -1) {
-                map.removeLayer(clickedPins[clickedIndex]);
-                clickedPins.splice(clickedIndex, 1);
-            }
-
-            // Modified by Niranjan - Reorganize and update sequence numbers
-            reorganizeRoutePoints();
-
-            // Notify Blazor for recalculation
-            if (currentDotNetHelper) {
-                window.requestAnimationFrame(() => {
-                    currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
-                });
-            }
-
-            return true;
         }
         return false;
     } catch (error) {
@@ -1067,10 +1027,8 @@ function removePort(portName, latitude, longitude) {
         );
 
         if (portIndex !== -1) {
-            // Remove from routePoints array
             routePoints.splice(portIndex, 1);
 
-            // Find and remove the corresponding pin from portPins array
             const portArrayIndex = portPins.findIndex(pin => {
                 const pinLatLng = pin.getLatLng();
                 return (pin.getPopup().getContent().includes(portName) ||
@@ -1079,15 +1037,12 @@ function removePort(portName, latitude, longitude) {
             });
 
             if (portArrayIndex !== -1) {
-                // Remove pin from map
                 map.removeLayer(portPins[portArrayIndex]);
                 portPins.splice(portArrayIndex, 1);
             }
 
-            // Modified by Niranjan - Reorganize and update sequence numbers
             reorganizeRoutePoints();
 
-            // Notify Blazor for recalculation
             if (currentDotNetHelper) {
                 window.requestAnimationFrame(() => {
                     currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
@@ -1102,84 +1057,29 @@ function removePort(portName, latitude, longitude) {
         return false;
     }
 }
-//new
+
 function insertRoutePointAtSequence(newRoutePoint, targetSequenceNumber) {
-    // Find departure and arrival points
     const departurePoint = routePoints.find(p => p.type === 'departure');
     const arrivalPoint = routePoints.find(p => p.type === 'arrival');
 
-    // Get all intermediate points (ports and waypoints)
     const intermediatePoints = routePoints.filter(p => p.type !== 'departure' && p.type !== 'arrival');
 
-    // Insert the new point at the correct position in intermediate points
     const insertIndex = Math.max(0, Math.min(targetSequenceNumber - 1, intermediatePoints.length));
     intermediatePoints.splice(insertIndex, 0, newRoutePoint);
 
-    // Rebuild routePoints array with proper order
     routePoints = [];
     if (departurePoint) routePoints.push(departurePoint);
     routePoints = routePoints.concat(intermediatePoints);
     if (arrivalPoint) routePoints.push(arrivalPoint);
 
-    // Update sequence numbers
     updateSequenceNumbers();
 }
 
-// Modified by Niranjan - New function to update sequence numbers
 function updateSequenceNumbers() {
     routePoints.forEach((point, index) => {
         point.sequenceNumber = index + 1;
     });
 }
-function addWaypointAtSequence(latitude, longitude, sequenceNumber, name = null) {
-    try {
-        const waypointName = name || `Waypoint ${waypointPins.length + 1}`;
-
-        // Create marker
-        const newPin = L.marker([latitude, longitude], {
-            shadowPane: false
-        }).addTo(map);
-
-        newPin.bindPopup(`${waypointName}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-
-        // Store pin references
-        clickedPins.push(newPin);
-        waypointPins.push(newPin);
-
-        // Create route point with sequence number
-        const newRoutePoint = {
-            type: 'waypoint',
-            latLng: [latitude, longitude],
-            name: waypointName,
-            sequenceNumber: sequenceNumber
-        };
-
-        // Insert at correct position
-        if (sequenceNumber !== null) {
-            insertRoutePointAtSequence(newRoutePoint, sequenceNumber);
-        } else {
-            routePoints.push(newRoutePoint);
-        }
-
-        reorganizeRoutePoints();
-        zoomInThenOut(latitude, longitude);
-
-        // Recalculate route if possible
-        if (canCalculateRoute()) {
-            window.requestAnimationFrame(() => {
-                currentDotNetHelper.invokeMethodAsync('RecalculateRoute');
-            });
-        }
-
-        return true;
-    } catch (error) {
-        console.error("Error adding waypoint at sequence:", error);
-        return false;
-    }
-}
-//end
-
-
 
 function createSeaRoutefromAPIForShort(routeJson) {
     try {
