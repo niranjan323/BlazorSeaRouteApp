@@ -1135,6 +1135,7 @@ Longitude = 103.8198
 
         // start
         private bool shouldCalculateVoyageLegs = false;
+        private List<RoutePointInput> cachedRoutePointInputs;
         //end
         public async Task CalculateMultiSegmentRoute()
         {
@@ -1417,29 +1418,35 @@ Longitude = 103.8198
                         PointId = point.PointId
                     });
                 }
+                cachedRoutePointInputs = routePointInputs;
                 //Sireesha
+                //if (shouldCalculateVoyageLegs)
+                //{
+                //    _voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
+                //    routeLegs.Clear();
+
+                //    if (_voyageLegs?.Count > 0)
+                //    {
+                //        foreach (var leg in _voyageLegs)
+                //        {
+                //            routeLegs.Add(new RouteLegModel
+                //            {
+                //                DeparturePort = leg.DeparturePort,
+                //                DeparturePortId = leg.DeparturePortId,
+                //                ArrivalPort = leg.ArrivalPort,
+                //                ArrivalPortId = leg.ArrivalPortId,
+                //                Distance = leg.Distance
+                //            });
+                //        }
+                //    }
+
+                //    // Reset flag after calculation
+                //    shouldCalculateVoyageLegs = false;
+                //}
                 if (shouldCalculateVoyageLegs)
                 {
-                    _voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
-                    routeLegs.Clear();
-
-                    if (_voyageLegs?.Count > 0)
-                    {
-                        foreach (var leg in _voyageLegs)
-                        {
-                            routeLegs.Add(new RouteLegModel
-                            {
-                                DeparturePort = leg.DeparturePort,
-                                DeparturePortId = leg.DeparturePortId,
-                                ArrivalPort = leg.ArrivalPort,
-                                ArrivalPortId = leg.ArrivalPortId,
-                                Distance = leg.Distance
-                            });
-                        }
-                    }
-
-                    // Reset flag after calculation
-                    shouldCalculateVoyageLegs = false;
+                    await CalculateAndUpdateVoyageLegs();
+                    shouldCalculateVoyageLegs = false; 
                 }
                 //end
             }
@@ -1449,6 +1456,35 @@ Longitude = 103.8198
             }
         }
 
+        //Added
+        private async Task CalculateAndUpdateVoyageLegs()
+        {
+            if (cachedRoutePointInputs == null || cachedRoutePointInputs.Count == 0)
+            {
+                Console.WriteLine("No route points available for voyage leg calculation");
+                return;
+            }
+
+            _voyageLegs = SplitRouteIntoVoyageLegs(cachedRoutePointInputs);
+            routeLegs.Clear();
+
+            if (_voyageLegs?.Count > 0)
+            {
+                foreach (var leg in _voyageLegs)
+                {
+                    routeLegs.Add(new RouteLegModel
+                    {
+                        DeparturePort = leg.DeparturePort,
+                        DeparturePortId = leg.DeparturePortId,
+                        ArrivalPort = leg.ArrivalPort,
+                        ArrivalPortId = leg.ArrivalPortId,
+                        Distance = leg.Distance
+                    });
+                }
+            }
+
+            await Task.CompletedTask;
+        }
 
         private class RoutePointRef
         {
