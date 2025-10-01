@@ -5,7 +5,6 @@ using NextGenEngApps.DigitalRules.CRoute.DAL.Models;
 using NextGenEngApps.DigitalRules.CRoute.Data;
 using NextGenEngApps.DigitalRules.CRoute.Models;
 using NextGenEngApps.DigitalRules.CRoute.Services.API.Request;
-using SeaRouteModel.Models;
 using System.Diagnostics;
 using System.Text.Json;
 using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
@@ -1134,10 +1133,9 @@ Longitude = 103.8198
             public string Name { get; set; }
         }
 
-        //Start
+        // start
         private bool shouldCalculateVoyageLegs = false;
-        private List<RoutePointInput> cachedRoutePointInputs;
-
+        //end
         public async Task CalculateMultiSegmentRoute()
         {
             try
@@ -1145,7 +1143,6 @@ Longitude = 103.8198
                 isMapLoading = true;
                 await JS.InvokeVoidAsync("initializeRouteCalculation");
                 var routePoints = await JS.InvokeAsync<List<RoutePointModel>>("getRouteData");
-
                 if (routePoints == null || routePoints.Count < 2)
                     return;
 
@@ -1154,11 +1151,123 @@ Longitude = 103.8198
                 double totalDistance = 0;
                 double totalDuration = 0;
 
-                // Build point mapping (ports and waypoints)
-                BuildPointMapping(pointMapping);
 
-                // Build ordered points from departure items
-                List<RoutePointRef> orderedPoints = BuildOrderedPoints(pointMapping);
+                if (routeModel.MainDeparturePortSelection?.Port != null)
+                {
+                    pointMapping["departure"] = new RoutePointRef
+                    {
+                        Type = "departure",
+                        Latitude = routeModel.MainDeparturePortSelection.Port.Latitude,
+                        Longitude = routeModel.MainDeparturePortSelection.Port.Longitude,
+                        Name = routeModel.MainDeparturePortSelection.Port.Name,
+                        PointId = routeModel.MainDeparturePortSelection.Port.Port_Id
+                    };
+                }
+
+                if (routeModel.MainArrivalPortSelection?.Port != null)
+                {
+                    pointMapping["arrival"] = new RoutePointRef
+                    {
+                        Type = "arrival",
+                        Latitude = routeModel.MainArrivalPortSelection.Port.Latitude,
+                        Longitude = routeModel.MainArrivalPortSelection.Port.Longitude,
+                        Name = routeModel.MainArrivalPortSelection.Port.Name,
+                        PointId = routeModel.MainArrivalPortSelection.Port.Port_Id
+                    };
+                }
+
+                for (int i = 0; i < routeModel.DeparturePorts.Count; i++)
+                {
+                    var port = routeModel.DeparturePorts[i];
+                    if (port.Port != null)
+                    {
+                        pointMapping[$"departurePort{i}"] = new RoutePointRef
+                        {
+                            Type = "port",
+                            Latitude = port.Port.Latitude,
+                            Longitude = port.Port.Longitude,
+                            Name = port.Port.Name,
+                            PointId = port.Port.Port_Id
+                        };
+                    }
+                }
+
+                for (int i = 0; i < routeModel.ArrivalPorts.Count; i++)
+                {
+                    var port = routeModel.ArrivalPorts[i];
+                    if (port.Port != null)
+                    {
+                        pointMapping[$"arrivalPort{i}"] = new RoutePointRef
+                        {
+                            Type = "port",
+                            Latitude = port.Port.Latitude,
+                            Longitude = port.Port.Longitude,
+                            Name = port.Port.Name,
+                            PointId = port.Port.Port_Id
+                        };
+                    }
+                }
+
+                for (int i = 0; i < routeModel.DepartureWaypoints.Count; i++)
+                {
+                    var waypoint = routeModel.DepartureWaypoints[i];
+                    if (double.TryParse(waypoint.Latitude, out double lat) &&
+                        double.TryParse(waypoint.Longitude, out double lng))
+                    {
+                        pointMapping[$"departureWaypoint{i}"] = new RoutePointRef
+                        {
+                            Type = "waypoint",
+                            Latitude = lat,
+                            Longitude = lng,
+                            Name = $"Waypoint {i + 1}",
+                            PointId = waypoint.PointId
+                        };
+                    }
+                }
+
+                for (int i = 0; i < routeModel.ArrivalWaypoints.Count; i++)
+                {
+                    var waypoint = routeModel.ArrivalWaypoints[i];
+                    if (double.TryParse(waypoint.Latitude, out double lat) &&
+                        double.TryParse(waypoint.Longitude, out double lng))
+                    {
+                        pointMapping[$"arrivalWaypoint{i}"] = new RoutePointRef
+                        {
+                            Type = "waypoint",
+                            Latitude = lat,
+                            Longitude = lng,
+                            Name = $"Waypoint {i + 1}",
+                            PointId = waypoint.PointId
+                        };
+                    }
+                }
+
+                List<RoutePointRef> orderedPoints = new();
+                foreach (var item in routeModel.DepartureItems.OrderBy(x => x.SequenceNumber))
+                {
+                    if (item.ItemType == "P" && item.Port?.Port != null)
+                    {
+                        var matchingPort = pointMapping
+                            .Where(kvp => kvp.Value.Type == "port" &&
+                                          kvp.Value.PointId == item.Port.Port.Port_Id)
+                            .Select(kvp => kvp.Value)
+                            .FirstOrDefault();
+
+                        if (matchingPort != null)
+                            orderedPoints.Add(matchingPort);
+                    }
+                    else if (item.ItemType == "W" && item.Waypoint != null)
+                    {
+                        var matchingWaypoint = pointMapping
+                            .Where(kvp => kvp.Value.Type == "waypoint" &&
+                                          kvp.Value.PointId == item.Waypoint.PointId)
+                            .Select(kvp => kvp.Value)
+                            .FirstOrDefault();
+
+                        if (matchingWaypoint != null)
+                            orderedPoints.Add(matchingWaypoint);
+                    }
+                }
 
                 bool hasDeparture = orderedPoints.Count > 0 &&
                                     (orderedPoints[0].Type == "departure" || routePoints[0].Type == "departure");
@@ -1166,7 +1275,6 @@ Longitude = 103.8198
                 List<List<Coordinate>> allSegmentCoordinates = new();
                 double referenceLongitude = 0;
 
-                // Calculate route segments
                 if (hasDeparture && orderedPoints.Count >= 2)
                 {
                     for (int i = 0; i < orderedPoints.Count - 1; i++)
@@ -1174,46 +1282,166 @@ Longitude = 103.8198
                         var origin = orderedPoints[i];
                         var destination = orderedPoints[i + 1];
 
-                        var segmentInfo = await CalculateRouteSegment(origin, destination, i);
-
-                        if (segmentInfo != null)
+                        var segmentRequest = new RouteRequest
                         {
-                            var transformedCoordinates = (i == 0)
-                                ? segmentInfo.Coordinates
-                                : CoordinateUtils.TransformSegmentCoordinates(segmentInfo.Coordinates, referenceLongitude);
+                            Origin = new[] { origin.Longitude, origin.Latitude },
+                            Destination = new[] { destination.Longitude, destination.Latitude },
+                            Restrictions = new[] { "northwest" },
+                            include_ports = false,
+                            Units = "nm",
+                            only_terminals = true
+                        };
 
-                            if (transformedCoordinates.Count > 0)
+                        using var httpClient = new HttpClient();
+                        httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
+                        var result = await httpClient.PostAsJsonAsync(CalculateSearouteEndpoint, segmentRequest);
+
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var jsonString = await result.Content.ReadAsStringAsync();
+                            using var jsonDoc = JsonDocument.Parse(jsonString);
+                            var root = jsonDoc.RootElement;
+
+                            if (root.TryGetProperty("route", out var routeElement) &&
+                                routeElement.TryGetProperty("properties", out var propertiesElement))
                             {
-                                referenceLongitude = transformedCoordinates.Last().Longitude;
+                                List<Coordinate> rawCoordinates = new();
+
+                                if (routeElement.TryGetProperty("geometry", out var geometryElement) &&
+                                    geometryElement.TryGetProperty("coordinates", out var coordinatesElement) &&
+                                    coordinatesElement.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var coord in coordinatesElement.EnumerateArray())
+                                    {
+                                        if (coord.ValueKind == JsonValueKind.Array && coord.GetArrayLength() >= 2)
+                                        {
+                                            rawCoordinates.Add(new Coordinate
+                                            {
+                                                Longitude = coord[0].GetDouble(),
+                                                Latitude = coord[1].GetDouble()
+                                            });
+                                        }
+                                    }
+                                }
+
+                                List<Coordinate> transformedCoordinates =
+                                (i == 0) ? rawCoordinates : CoordinateUtils.TransformSegmentCoordinates(rawCoordinates, referenceLongitude);
+                                if (transformedCoordinates.Count > 0)
+                                {
+                                    referenceLongitude = transformedCoordinates.Last().Longitude;
+                                }
+
+                                allSegmentCoordinates.Add(transformedCoordinates);
+
+                                double segmentDistance = 0, segmentDuration = 0;
+                                string units = "nm";
+
+                                if (propertiesElement.TryGetProperty("length", out var lengthElement))
+                                    segmentDistance = lengthElement.GetDouble();
+
+                                if (propertiesElement.TryGetProperty("duration_hours", out var durationElement))
+                                    segmentDuration = durationElement.GetDouble();
+
+                                if (propertiesElement.TryGetProperty("units", out var unitsElement))
+                                    units = unitsElement.GetString();
+
+                                totalDistance += segmentDistance;
+                                totalDuration += segmentDuration;
+
+                                routeSegments.Add(new RouteSegmentInfo
+                                {
+                                    SegmentIndex = i,
+                                    StartPointName = origin.Name,
+                                    EndPointName = destination.Name,
+                                    Distance = segmentDistance,
+                                    DurationHours = segmentDuration,
+                                    Units = units,
+                                    StartCoordinates = new[] { origin.Longitude, origin.Latitude },
+                                    EndCoordinates = new[] { destination.Longitude, destination.Latitude },
+                                    StartPointId = origin.PointId,
+                                    EndPointId = destination.PointId
+                                });
+
+                                var segmentGeoJson = new
+                                {
+                                    type = "Feature",
+                                    properties = new { },
+                                    geometry = new
+                                    {
+                                        type = "LineString",
+                                        coordinates = transformedCoordinates.Select(c => new[] { c.Longitude, c.Latitude })
+                                    }
+                                };
+
+                                var segmentJson = JsonSerializer.Serialize(segmentGeoJson);
+                                await JS.InvokeVoidAsync("processRouteSegment", segmentJson, i, orderedPoints.Count - 1);
                             }
-
-                            allSegmentCoordinates.Add(transformedCoordinates);
-
-                            totalDistance += segmentInfo.Distance;
-                            totalDuration += segmentInfo.DurationHours;
-
-                            routeSegments.Add(segmentInfo);
-
-                            // Visualize segment on map
-                            await VisualizeRouteSegment(transformedCoordinates, i, orderedPoints.Count - 1);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Error calculating segment {i}: {result.StatusCode}");
                         }
                     }
                 }
 
-                // Update route model with segment data
                 routeModel.RouteSegments = routeSegments;
                 routeModel.TotalDistance = totalDistance;
                 routeModel.TotalDurationHours = totalDuration;
 
-                // Build route point inputs and cache them
-                cachedRoutePointInputs = BuildRoutePointInputs(orderedPoints, allSegmentCoordinates, routeSegments);
+                var routePointInputs = new List<RoutePointInput>();
+                for (int i = 0; i < orderedPoints.Count; i++)
+                {
+                    var point = orderedPoints[i];
+                    double segmentDistance = 0;
+                    List<double[]> segmentCoordinates = new();
 
-                // ONLY calculate voyage legs if explicitly requested
+                    if (i < allSegmentCoordinates.Count)
+                    {
+                        segmentCoordinates = allSegmentCoordinates[i]
+                            .Select(c => new[] { c.Longitude, c.Latitude })
+                            .ToList();
+                    }
+
+                    if (i < routeSegments.Count)
+                    {
+                        segmentDistance = routeSegments[i].Distance;
+                    }
+
+                    routePointInputs.Add(new RoutePointInput
+                    {
+                        Type = point.Type == "departure" ? "port" : point.Type,
+                        Name = point.Name,
+                        LatLng = new[] { point.Latitude, point.Longitude },
+                        SegmentDistance = segmentDistance,
+                        SegmentCoordinates = segmentCoordinates,
+                        PointId = point.PointId
+                    });
+                }
+                //Sireesha
                 if (shouldCalculateVoyageLegs)
                 {
-                    await CalculateAndUpdateVoyageLegs();
-                    shouldCalculateVoyageLegs = false; // Reset flag
+                    _voyageLegs = SplitRouteIntoVoyageLegs(routePointInputs);
+                    routeLegs.Clear();
+
+                    if (_voyageLegs?.Count > 0)
+                    {
+                        foreach (var leg in _voyageLegs)
+                        {
+                            routeLegs.Add(new RouteLegModel
+                            {
+                                DeparturePort = leg.DeparturePort,
+                                DeparturePortId = leg.DeparturePortId,
+                                ArrivalPort = leg.ArrivalPort,
+                                ArrivalPortId = leg.ArrivalPortId,
+                                Distance = leg.Distance
+                            });
+                        }
+                    }
+
+                    // Reset flag after calculation
+                    shouldCalculateVoyageLegs = false;
                 }
+                //end
             }
             catch (Exception ex)
             {
@@ -1222,302 +1450,6 @@ Longitude = 103.8198
         }
 
 
-
-        private void BuildPointMapping(Dictionary<string, RoutePointRef> pointMapping)
-        {
-            // Main departure port
-            if (routeModel.MainDeparturePortSelection?.Port != null)
-            {
-                pointMapping["departure"] = new RoutePointRef
-                {
-                    Type = "departure",
-                    Latitude = routeModel.MainDeparturePortSelection.Port.Latitude,
-                    Longitude = routeModel.MainDeparturePortSelection.Port.Longitude,
-                    Name = routeModel.MainDeparturePortSelection.Port.Name,
-                    PointId = routeModel.MainDeparturePortSelection.Port.Port_Id
-                };
-            }
-
-            // Main arrival port
-            if (routeModel.MainArrivalPortSelection?.Port != null)
-            {
-                pointMapping["arrival"] = new RoutePointRef
-                {
-                    Type = "arrival",
-                    Latitude = routeModel.MainArrivalPortSelection.Port.Latitude,
-                    Longitude = routeModel.MainArrivalPortSelection.Port.Longitude,
-                    Name = routeModel.MainArrivalPortSelection.Port.Name,
-                    PointId = routeModel.MainArrivalPortSelection.Port.Port_Id
-                };
-            }
-
-            // Departure ports
-            for (int i = 0; i < routeModel.DeparturePorts.Count; i++)
-            {
-                var port = routeModel.DeparturePorts[i];
-                if (port.Port != null)
-                {
-                    pointMapping[$"departurePort{i}"] = new RoutePointRef
-                    {
-                        Type = "port",
-                        Latitude = port.Port.Latitude,
-                        Longitude = port.Port.Longitude,
-                        Name = port.Port.Name,
-                        PointId = port.Port.Port_Id
-                    };
-                }
-            }
-
-            // Arrival ports
-            for (int i = 0; i < routeModel.ArrivalPorts.Count; i++)
-            {
-                var port = routeModel.ArrivalPorts[i];
-                if (port.Port != null)
-                {
-                    pointMapping[$"arrivalPort{i}"] = new RoutePointRef
-                    {
-                        Type = "port",
-                        Latitude = port.Port.Latitude,
-                        Longitude = port.Port.Longitude,
-                        Name = port.Port.Name,
-                        PointId = port.Port.Port_Id
-                    };
-                }
-            }
-
-            // Departure waypoints
-            for (int i = 0; i < routeModel.DepartureWaypoints.Count; i++)
-            {
-                var waypoint = routeModel.DepartureWaypoints[i];
-                if (double.TryParse(waypoint.Latitude, out double lat) &&
-                    double.TryParse(waypoint.Longitude, out double lng))
-                {
-                    pointMapping[$"departureWaypoint{i}"] = new RoutePointRef
-                    {
-                        Type = "waypoint",
-                        Latitude = lat,
-                        Longitude = lng,
-                        Name = $"Waypoint {i + 1}",
-                        PointId = waypoint.PointId
-                    };
-                }
-            }
-
-            // Arrival waypoints
-            for (int i = 0; i < routeModel.ArrivalWaypoints.Count; i++)
-            {
-                var waypoint = routeModel.ArrivalWaypoints[i];
-                if (double.TryParse(waypoint.Latitude, out double lat) &&
-                    double.TryParse(waypoint.Longitude, out double lng))
-                {
-                    pointMapping[$"arrivalWaypoint{i}"] = new RoutePointRef
-                    {
-                        Type = "waypoint",
-                        Latitude = lat,
-                        Longitude = lng,
-                        Name = $"Waypoint {i + 1}",
-                        PointId = waypoint.PointId
-                    };
-                }
-            }
-        }
-
-
-        private List<RoutePointRef> BuildOrderedPoints(Dictionary<string, RoutePointRef> pointMapping)
-        {
-            List<RoutePointRef> orderedPoints = new();
-
-            foreach (var item in routeModel.DepartureItems.OrderBy(x => x.SequenceNumber))
-            {
-                if (item.ItemType == "P" && item.Port?.Port != null)
-                {
-                    var matchingPort = pointMapping
-                        .Where(kvp => kvp.Value.Type == "port" &&
-                                      kvp.Value.PointId == item.Port.Port.Port_Id)
-                        .Select(kvp => kvp.Value)
-                        .FirstOrDefault();
-
-                    if (matchingPort != null)
-                        orderedPoints.Add(matchingPort);
-                }
-                else if (item.ItemType == "W" && item.Waypoint != null)
-                {
-                    var matchingWaypoint = pointMapping
-                        .Where(kvp => kvp.Value.Type == "waypoint" &&
-                                      kvp.Value.PointId == item.Waypoint.PointId)
-                        .Select(kvp => kvp.Value)
-                        .FirstOrDefault();
-
-                    if (matchingWaypoint != null)
-                        orderedPoints.Add(matchingWaypoint);
-                }
-            }
-
-            return orderedPoints;
-        }
-
-        private async Task<RouteSegmentInfo> CalculateRouteSegment(RoutePointRef origin, RoutePointRef destination, int segmentIndex)
-        {
-            var segmentRequest = new RouteRequest
-            {
-                Origin = new[] { origin.Longitude, origin.Latitude },
-                Destination = new[] { destination.Longitude, destination.Latitude },
-                Restrictions = new[] { "northwest" },
-                include_ports = false,
-                Units = "nm",
-                only_terminals = true
-            };
-
-            using var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri(Configuration["ApiUrl"]);
-            var result = await httpClient.PostAsJsonAsync(CalculateSearouteEndpoint, segmentRequest);
-
-            if (!result.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"Error calculating segment {segmentIndex}: {result.StatusCode}");
-                return null;
-            }
-
-            var jsonString = await result.Content.ReadAsStringAsync();
-            using var jsonDoc = JsonDocument.Parse(jsonString);
-            var root = jsonDoc.RootElement;
-
-            if (!root.TryGetProperty("route", out var routeElement) ||
-                !routeElement.TryGetProperty("properties", out var propertiesElement))
-            {
-                return null;
-            }
-
-            List<Coordinate> coordinates = new();
-            if (routeElement.TryGetProperty("geometry", out var geometryElement) &&
-                geometryElement.TryGetProperty("coordinates", out var coordinatesElement) &&
-                coordinatesElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var coord in coordinatesElement.EnumerateArray())
-                {
-                    if (coord.ValueKind == JsonValueKind.Array && coord.GetArrayLength() >= 2)
-                    {
-                        coordinates.Add(new Coordinate
-                        {
-                            Longitude = coord[0].GetDouble(),
-                            Latitude = coord[1].GetDouble()
-                        });
-                    }
-                }
-            }
-
-            double distance = propertiesElement.TryGetProperty("length", out var lengthElement)
-                ? lengthElement.GetDouble() : 0;
-
-            double duration = propertiesElement.TryGetProperty("duration_hours", out var durationElement)
-                ? durationElement.GetDouble() : 0;
-
-            string units = propertiesElement.TryGetProperty("units", out var unitsElement)
-                ? unitsElement.GetString() : "nm";
-
-            return new RouteSegmentInfo
-            {
-                SegmentIndex = segmentIndex,
-                StartPointName = origin.Name,
-                EndPointName = destination.Name,
-                Distance = distance,
-                DurationHours = duration,
-                Units = units,
-                StartCoordinates = new[] { origin.Longitude, origin.Latitude },
-                EndCoordinates = new[] { destination.Longitude, destination.Latitude },
-                StartPointId = origin.PointId,
-                EndPointId = destination.PointId,
-                Coordinates = coordinates
-            };
-        }
-
-        private async Task VisualizeRouteSegment(List<Coordinate> coordinates, int segmentIndex, int totalSegments)
-        {
-            var segmentGeoJson = new
-            {
-                type = "Feature",
-                properties = new { },
-                geometry = new
-                {
-                    type = "LineString",
-                    coordinates = coordinates.Select(c => new[] { c.Longitude, c.Latitude })
-                }
-            };
-
-            var segmentJson = JsonSerializer.Serialize(segmentGeoJson);
-            await JS.InvokeVoidAsync("processRouteSegment", segmentJson, segmentIndex, totalSegments);
-        }
-
-
-        private async Task CalculateAndUpdateVoyageLegs()
-        {
-            if (cachedRoutePointInputs == null || cachedRoutePointInputs.Count == 0)
-            {
-                Console.WriteLine("No route points available for voyage leg calculation");
-                return;
-            }
-
-            _voyageLegs = SplitRouteIntoVoyageLegs(cachedRoutePointInputs);
-            routeLegs.Clear();
-
-            if (_voyageLegs?.Count > 0)
-            {
-                foreach (var leg in _voyageLegs)
-                {
-                    routeLegs.Add(new RouteLegModel
-                    {
-                        DeparturePort = leg.DeparturePort,
-                        DeparturePortId = leg.DeparturePortId,
-                        ArrivalPort = leg.ArrivalPort,
-                        ArrivalPortId = leg.ArrivalPortId,
-                        Distance = leg.Distance
-                    });
-                }
-            }
-
-            await Task.CompletedTask;
-        }
-
-        private List<RoutePointInput> BuildRoutePointInputs(
-    List<RoutePointRef> orderedPoints,
-    List<List<Coordinate>> allSegmentCoordinates,
-    List<RouteSegmentInfo> routeSegments)
-        {
-            var routePointInputs = new List<RoutePointInput>();
-
-            for (int i = 0; i < orderedPoints.Count; i++)
-            {
-                var point = orderedPoints[i];
-                double segmentDistance = 0;
-                List<double[]> segmentCoordinates = new();
-
-                if (i < allSegmentCoordinates.Count)
-                {
-                    segmentCoordinates = allSegmentCoordinates[i]
-                        .Select(c => new[] { c.Longitude, c.Latitude })
-                        .ToList();
-                }
-
-                if (i < routeSegments.Count)
-                {
-                    segmentDistance = routeSegments[i].Distance;
-                }
-
-                routePointInputs.Add(new RoutePointInput
-                {
-                    Type = point.Type == "departure" ? "port" : point.Type,
-                    Name = point.Name,
-                    LatLng = new[] { point.Latitude, point.Longitude },
-                    SegmentDistance = segmentDistance,
-                    SegmentCoordinates = segmentCoordinates,
-                    PointId = point.PointId
-                });
-            }
-
-            return routePointInputs;
-        }
-
-        //END
         private class RoutePointRef
         {
             public string Type { get; set; }
@@ -1572,8 +1504,6 @@ Longitude = 103.8198
                     isLoading = false;
                     return;
                 }
-                //Sireesha 
-                shouldCalculateVoyageLegs = true;
                 await CheckAndCalculateRoute();
                 if (OnLegsDataReady.HasDelegate)
                 {
