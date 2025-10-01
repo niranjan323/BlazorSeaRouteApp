@@ -489,8 +489,6 @@
 
                             }
 
-
-
                             @routeModel?.MainArrivalPortSelection?.Port?.Name, @routeModel?.MainArrivalPortSelection?.Port?.Country
                         </div>
                     </div>
@@ -506,6 +504,21 @@
                             Route-Splitting for reduction factor is only applicable for vessels with ABS CLP-V(PARR) notation
                         </li>
                     </ul>
+                </div>
+
+                <!-- CLP-V Notation with Annual Reduction Factor -->
+                <div class="clpv-notation-section">
+                    <div class="clpv-box">
+                        <span class="clpv-label">CLP-V</span>
+                        <span class="reduction-factor-display">Reduction Factor: @string.Format("{0:0.00}", GetSeasonalReductionFactor("Annual"))</span>
+                    </div>
+                </div>
+
+                <!-- CLP-V (PARR) Notation -->
+                <div class="clpv-parr-section">
+                    <div class="clpv-parr-box">
+                        <span class="clpv-parr-label">CLP-V (PARR)</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -657,11 +670,6 @@
                                     </tr>
                                 }
                             }
-                            @* else
-{
-<!-- Debug: routeLegs is null or empty -->
-<tr><td colspan="8" style="color:red;">No route legs found (routeLegs is null or empty)</td></tr>
-} *@
                         </tbody>
                     </table>
                 </div>
@@ -683,10 +691,6 @@
             </div>
 
             <div class="cls_cards_outline">
-                @*<div class="cls_card_div" @onclick="AddEditVesselInfo">
-<img src="img/add_edit.svg" alt="Edit" />
-<span>Add/Edit Vessel Info</span>
-</div> *@
                 <div class="cls_card_div" @onclick="ShowReportForReductionFactor">
                     <img src="img/show-report@1x.png" alt="Report" />
                     <span>Show Report</span>
