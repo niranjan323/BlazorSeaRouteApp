@@ -1552,15 +1552,19 @@ Longitude = 103.8198
                     isLoading = false;
                     return;
                 }
+                //Added
+                shouldCalculateVoyageLegs = true;
+                await CheckAndCalculateVoyageLegsAsync();
                 await CheckAndCalculateRoute();
+                //END
+           
+               
                 if (OnLegsDataReady.HasDelegate)
                 {
                     await OnLegsDataReady.InvokeAsync(routeLegs);
                 }
-                //added
+
                 showResultsForReductionFactor = true;
-              await  CheckAndCalculateVoyageLegsAsync();
-                //end
 
                 await Task.CompletedTask;
             }
