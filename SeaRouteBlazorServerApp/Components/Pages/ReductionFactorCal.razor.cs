@@ -1476,7 +1476,7 @@ Longitude = 103.8198
         }
 
 
-        //Added
+
         private async Task CheckAndCalculateVoyageLegsAsync()
         {
             if (shouldCalculateVoyageLegs)
@@ -1485,7 +1485,7 @@ Longitude = 103.8198
                 shouldCalculateVoyageLegs = false;
             }
         }
-        //end
+
 
 
         private async Task CalculateAndUpdateVoyageLegs()
