@@ -1456,7 +1456,19 @@ Longitude = 103.8198
             }
         }
 
+
         //Added
+        private async Task CheckAndCalculateVoyageLegsAsync()
+        {
+            if (shouldCalculateVoyageLegs)
+            {
+                await CalculateAndUpdateVoyageLegs();
+                shouldCalculateVoyageLegs = false;
+            }
+        }
+        //end
+
+
         private async Task CalculateAndUpdateVoyageLegs()
         {
             if (cachedRoutePointInputs == null || cachedRoutePointInputs.Count == 0)
@@ -1545,7 +1557,10 @@ Longitude = 103.8198
                 {
                     await OnLegsDataReady.InvokeAsync(routeLegs);
                 }
+                //added
                 showResultsForReductionFactor = true;
+              await  CheckAndCalculateVoyageLegsAsync();
+                //end
 
                 await Task.CompletedTask;
             }
